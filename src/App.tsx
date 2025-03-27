@@ -9,6 +9,9 @@ import Frontend from "./pages/Frontend";
 import Backend from "./pages/Backend";
 import Fullstack from "./pages/Fullstack";
 import Forum from "./pages/Forum";
+import TopicView from "./pages/TopicView";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
@@ -29,6 +32,9 @@ const App = () => (
             <Route path="/backend" element={<Backend />} />
             <Route path="/fullstack" element={<Fullstack />} />
             <Route path="/forum" element={<Forum />} />
+            <Route path="/topic/:category/:id" element={<TopicView />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </div>

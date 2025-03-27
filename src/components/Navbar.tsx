@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { 
   Sheet, 
   SheetTrigger, 
@@ -51,15 +51,19 @@ const Navbar = () => {
           {/* Навигация для десктопа */}
           <div className="hidden md:flex space-x-1">
             {navItems.map((item) => (
-              <Link
+              <NavLink
                 key={item.path}
                 to={item.path}
-                className={`nav-link ${
-                  location.pathname === item.path ? "active" : ""
-                }`}
+                className={({isActive}) => 
+                  `py-2 px-3 text-sm font-medium rounded-md transition-colors ${
+                    isActive
+                      ? "bg-primary/10 text-primary"
+                      : "hover:bg-secondary"
+                  }`
+                }
               >
                 {item.name}
-              </Link>
+              </NavLink>
             ))}
           </div>
 
@@ -74,9 +78,16 @@ const Navbar = () => {
             >
               {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
             </Button>
-            <Button variant="default" size="sm">
-              Войти
-            </Button>
+            <NavLink to="/login">
+              <Button variant="outline" size="sm">
+                Войти
+              </Button>
+            </NavLink>
+            <NavLink to="/register">
+              <Button variant="default" size="sm">
+                Регистрация
+              </Button>
+            </NavLink>
           </div>
 
           {/* Мобильное меню */}
@@ -102,19 +113,28 @@ const Navbar = () => {
                 </SheetHeader>
                 <div className="flex flex-col space-y-3">
                   {navItems.map((item) => (
-                    <Link
+                    <NavLink
                       key={item.path}
                       to={item.path}
-                      className={`py-2 px-4 rounded-md transition-colors ${
-                        location.pathname === item.path
-                          ? "bg-primary text-primary-foreground"
-                          : "hover:bg-secondary"
-                      }`}
+                      className={({isActive}) => 
+                        `py-2 px-4 rounded-md transition-colors ${
+                          isActive
+                            ? "bg-primary text-primary-foreground"
+                            : "hover:bg-secondary"
+                        }`
+                      }
                     >
                       {item.name}
-                    </Link>
+                    </NavLink>
                   ))}
-                  <Button className="mt-4">Войти</Button>
+                  <div className="pt-4 mt-2 border-t border-border/50">
+                    <NavLink to="/login" className="block mb-2">
+                      <Button variant="outline" className="w-full">Войти</Button>
+                    </NavLink>
+                    <NavLink to="/register">
+                      <Button className="w-full">Регистрация</Button>
+                    </NavLink>
+                  </div>
                 </div>
               </SheetContent>
             </Sheet>

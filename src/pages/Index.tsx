@@ -185,7 +185,7 @@ const Index = () => {
                 </Button>
               </NavLink>
               
-              <NavLink to="/about">
+              <NavLink to="/forum">
                 <Button variant="outline" size="lg" className="rounded-md w-full sm:w-auto">
                   Узнать больше
                 </Button>
