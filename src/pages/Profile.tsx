@@ -1,11 +1,34 @@
 
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { 
+  Settings, 
+  ChevronDown, 
+  ChevronUp, 
+  Mail, 
+  Calendar, 
+  Clock, 
+  Shield, 
+  MessageSquare 
+} from "lucide-react";
+import AvatarUpload from "@/components/AvatarUpload";
+import { useToast } from "@/hooks/use-toast";
 
 interface UserProfile {
   id: string;
@@ -14,11 +37,21 @@ interface UserProfile {
   created_at: string;
 }
 
+interface UserStats {
+  topics_count: number;
+  comments_count: number;
+}
+
 const Profile = () => {
   const { user, loading } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [stats, setStats] = useState<UserStats>({ topics_count: 0, comments_count: 0 });
   const [profileLoading, setProfileLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [activityExpanded, setActivityExpanded] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -42,6 +75,7 @@ const Profile = () => {
           console.error("Error fetching profile:", error);
         } else {
           setProfile(data);
+          setAvatarUrl(data.avatar_url);
         }
       } catch (error) {
         console.error("Error in fetchProfile:", error);
@@ -51,6 +85,43 @@ const Profile = () => {
     };
 
     fetchProfile();
+  }, [user]);
+
+  useEffect(() => {
+    const fetchUserStats = async () => {
+      if (!user) return;
+
+      try {
+        setStatsLoading(true);
+        
+        // Получаем количество тем, созданных пользователем
+        const { data: topicsData, error: topicsError } = await supabase
+          .from("topics")
+          .select("id", { count: "exact" })
+          .eq("user_id", user.id);
+          
+        // Получаем количество комментариев, созданных пользователем
+        const { data: commentsData, error: commentsError } = await supabase
+          .from("comments")
+          .select("id", { count: "exact" })
+          .eq("user_id", user.id);
+          
+        if (topicsError || commentsError) {
+          console.error("Error fetching user stats:", topicsError || commentsError);
+        } else {
+          setStats({
+            topics_count: topicsData?.length || 0,
+            comments_count: commentsData?.length || 0
+          });
+        }
+      } catch (error) {
+        console.error("Error in fetchUserStats:", error);
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+
+    fetchUserStats();
   }, [user]);
 
   // Функция для получения инициалов
@@ -78,6 +149,11 @@ const Profile = () => {
     }).format(date);
   };
 
+  // Обновить URL аватара
+  const handleAvatarChange = (url: string) => {
+    setAvatarUrl(url);
+  };
+
   if (loading || profileLoading) {
     return (
       <div className="container max-w-4xl mx-auto py-10">
@@ -103,49 +179,211 @@ const Profile = () => {
 
   return (
     <div className="container max-w-4xl mx-auto py-10">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold">Профиль пользователя</CardTitle>
-          <CardDescription>
-            Ваша персональная информация на DevTalk
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col md:flex-row gap-6">
-            <Avatar className="h-32 w-32">
-              <AvatarImage 
-                src={user?.user_metadata?.avatar_url || profile?.avatar_url || undefined} 
-                alt={profile?.username || user?.email || ""} 
-              />
-              <AvatarFallback className="text-3xl">
-                {getInitials(profile?.username || user?.email || "")}
-              </AvatarFallback>
-            </Avatar>
-            <div className="space-y-4 flex-1">
-              <div>
-                <h3 className="text-lg font-semibold">
-                  {profile?.username || user?.user_metadata?.username || user?.email}
-                </h3>
-                <p className="text-sm text-muted-foreground">{user?.email}</p>
-              </div>
-              {profile?.created_at && (
-                <div>
-                  <h4 className="text-sm font-medium">Дата регистрации</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {formatDate(profile.created_at)}
-                  </p>
+      <Tabs defaultValue="overview" className="space-y-6">
+        <div className="flex items-center justify-between">
+          <TabsList>
+            <TabsTrigger value="overview">Обзор</TabsTrigger>
+            <TabsTrigger value="activity">Активность</TabsTrigger>
+          </TabsList>
+          <Link to="/settings">
+            <Button variant="outline" size="sm" className="gap-2">
+              <Settings size={16} />
+              <span className="hidden sm:inline">Настройки</span>
+            </Button>
+          </Link>
+        </div>
+        
+        <TabsContent value="overview" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl font-bold">Профиль пользователя</CardTitle>
+              <CardDescription>
+                Ваша персональная информация на DevTalk
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col md:flex-row gap-8">
+                <div className="flex flex-col items-center">
+                  <AvatarUpload 
+                    userId={user!.id} 
+                    url={avatarUrl} 
+                    onAvatarChange={handleAvatarChange}
+                    size="lg"
+                    username={profile?.username || user?.email || ""}
+                  />
                 </div>
-              )}
-              <div>
-                <h4 className="text-sm font-medium">Провайдер аутентификации</h4>
-                <p className="text-sm text-muted-foreground">
-                  {user?.app_metadata?.provider === "google" ? "Google" : "Email/Пароль"}
-                </p>
+                
+                <div className="space-y-6 flex-1">
+                  <div>
+                    <h3 className="text-2xl font-semibold">
+                      {profile?.username || user?.user_metadata?.username || user?.email}
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1 text-muted-foreground">
+                      <Mail size={14} />
+                      <p className="text-sm">{user?.email}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {profile?.created_at && (
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Calendar size={14} />
+                          <h4 className="text-sm font-medium">Дата регистрации</h4>
+                        </div>
+                        <p className="text-sm pl-6">
+                          {formatDate(profile.created_at)}
+                        </p>
+                      </div>
+                    )}
+                    
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Shield size={14} />
+                        <h4 className="text-sm font-medium">Провайдер</h4>
+                      </div>
+                      <p className="text-sm pl-6">
+                        {user?.app_metadata?.provider === "google" ? "Google" : "Email/Пароль"}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="pt-4">
+                    <h4 className="text-sm font-medium mb-3">Статистика</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                      <div className="bg-muted/50 p-3 rounded-lg text-center">
+                        <p className="text-2xl font-semibold">{stats.topics_count}</p>
+                        <p className="text-xs text-muted-foreground">Тем создано</p>
+                      </div>
+                      <div className="bg-muted/50 p-3 rounded-lg text-center">
+                        <p className="text-2xl font-semibold">{stats.comments_count}</p>
+                        <p className="text-xs text-muted-foreground">Комментариев</p>
+                      </div>
+                      <div className="bg-muted/50 p-3 rounded-lg text-center sm:col-span-1 col-span-2">
+                        <p className="text-2xl font-semibold">0</p>
+                        <p className="text-xs text-muted-foreground">Репутация</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+          
+          <Collapsible
+            open={activityExpanded}
+            onOpenChange={setActivityExpanded}
+            className="w-full"
+          >
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex justify-between items-center">
+                  <CardTitle className="text-xl">Последняя активность</CardTitle>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="w-9 p-0">
+                      {activityExpanded ? (
+                        <ChevronUp className="h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </CollapsibleTrigger>
+                </div>
+                <CardDescription>
+                  История вашей недавней активности на форуме
+                </CardDescription>
+              </CardHeader>
+              
+              <CollapsibleContent>
+                <CardContent className="pt-0">
+                  <div className="space-y-4">
+                    {statsLoading ? (
+                      <>
+                        <Skeleton className="h-16 w-full" />
+                        <Skeleton className="h-16 w-full" />
+                      </>
+                    ) : stats.topics_count === 0 && stats.comments_count === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                        <p>У вас пока нет активности на форуме</p>
+                        <p className="text-sm mt-2">Создайте новую тему или оставьте комментарий</p>
+                        <Button variant="outline" className="mt-4" onClick={() => navigate("/forum")}>
+                          Перейти на форум
+                        </Button>
+                      </div>
+                    ) : (
+                      <p className="text-center text-muted-foreground py-4">
+                        Здесь будет отображаться ваша последняя активность
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+        </TabsContent>
+        
+        <TabsContent value="activity" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">Ваша активность на форуме</CardTitle>
+              <CardDescription>
+                История ваших тем и комментариев
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div>
+                  <h3 className="font-medium flex items-center gap-2 mb-4">
+                    <Badge variant="outline" className="rounded-sm">{stats.topics_count}</Badge>
+                    Созданные темы
+                  </h3>
+                  {statsLoading ? (
+                    <>
+                      <Skeleton className="h-16 w-full mb-2" />
+                      <Skeleton className="h-16 w-full" />
+                    </>
+                  ) : stats.topics_count === 0 ? (
+                    <div className="text-center py-4 text-muted-foreground bg-muted/30 rounded-md">
+                      <p>Вы еще не создали ни одной темы</p>
+                      <Button variant="outline" className="mt-2" onClick={() => navigate("/forum")}>
+                        Создать тему
+                      </Button>
+                    </div>
+                  ) : (
+                    <p className="text-center text-muted-foreground py-4">
+                      Здесь будут отображаться ваши темы
+                    </p>
+                  )}
+                </div>
+                
+                <Separator />
+                
+                <div>
+                  <h3 className="font-medium flex items-center gap-2 mb-4">
+                    <Badge variant="outline" className="rounded-sm">{stats.comments_count}</Badge>
+                    Комментарии
+                  </h3>
+                  {statsLoading ? (
+                    <>
+                      <Skeleton className="h-16 w-full mb-2" />
+                      <Skeleton className="h-16 w-full" />
+                    </>
+                  ) : stats.comments_count === 0 ? (
+                    <div className="text-center py-4 text-muted-foreground bg-muted/30 rounded-md">
+                      <p>Вы еще не оставили комментариев</p>
+                    </div>
+                  ) : (
+                    <p className="text-center text-muted-foreground py-4">
+                      Здесь будут отображаться ваши комментарии
+                    </p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
