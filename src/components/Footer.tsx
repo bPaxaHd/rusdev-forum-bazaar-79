@@ -1,27 +1,15 @@
-
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { 
-  Code, 
-  Github, 
-  Mail, 
-  MessageCircle,
-  Twitter,
-  Monitor,
-  Database,
-  Layers
-} from "lucide-react";
-
+import { Code, Github, Mail, MessageCircle, Twitter, Monitor, Database, Layers } from "lucide-react";
 const Footer = () => {
-  return (
-    <footer className="bg-background border-t border-border/50 py-12 mt-16">
+  return <footer className="bg-background border-t border-border/50 py-12 mt-16">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <Code className="text-primary" />
-              <span className="font-semibold text-xl">РусДев</span>
+              <span className="font-semibold text-xl">DevTalk</span>
             </div>
             <p className="text-muted-foreground text-sm">
               Сообщество русскоязычных разработчиков, где мы делимся знаниями, 
@@ -124,8 +112,6 @@ const Footer = () => {
           </div>
         </div>
       </div>
-    </footer>
-  );
+    </footer>;
 };
-
 export default Footer;
