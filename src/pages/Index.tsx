@@ -5,10 +5,8 @@ import TechCategoryCard from "@/components/TechCategoryCard";
 import RecentTopics from "@/components/RecentTopics";
 import { Monitor, Database, Layers, MessageCircle, ArrowRight, ChevronRight } from "lucide-react";
 import { NavLink } from "react-router-dom";
-
 const Index = () => {
-  return (
-    <div className="animate-fade-in">
+  return <div className="animate-fade-in">
       {/* Hero Section */}
       <section className="relative pt-20 pb-16 md:pt-32 md:pb-24 overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
@@ -51,31 +49,21 @@ const Index = () => {
                 <div className="w-8 h-8 rounded-full bg-blue-500/20"></div>
                 <div className="w-8 h-8 rounded-full bg-green-500/20"></div>
               </div>
-              <span className="font-medium">12,000+ участников</span>
+              <span className="font-medium">12+ участников</span>
             </div>
             
             <div className="glass px-4 py-3 rounded-full flex items-center gap-2 animate-scale-in">
               <MessageCircle className="text-primary" size={18} />
-              <span className="font-medium">5,000+ обсуждений</span>
+              <span className="font-medium">5+ обсуждений</span>
             </div>
             
             <div className="glass px-4 py-3 rounded-full flex items-center gap-2 animate-scale-in">
               <div className="flex items-center">
                 <span className="text-sm font-semibold">4.9</span>
                 <div className="flex ml-1">
-                  {[1, 2, 3, 4, 5].map((_, i) => (
-                    <svg
-                      key={i}
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                      className="text-primary"
-                    >
+                  {[1, 2, 3, 4, 5].map((_, i) => <svg key={i} xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-primary">
                       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                    </svg>
-                  ))}
+                    </svg>)}
                 </div>
               </div>
               <span className="font-medium">Рейтинг сообщества</span>
@@ -101,32 +89,11 @@ const Index = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <TechCategoryCard
-              title="Frontend"
-              description="Обсуждение JavaScript, фреймворков и всего, что связано с клиентской разработкой."
-              icon={<Monitor size={24} />}
-              color="bg-blue-500"
-              technologies={["React", "Vue", "Angular", "TypeScript", "CSS", "HTML"]}
-              to="/frontend"
-            />
+            <TechCategoryCard title="Frontend" description="Обсуждение JavaScript, фреймворков и всего, что связано с клиентской разработкой." icon={<Monitor size={24} />} color="bg-blue-500" technologies={["React", "Vue", "Angular", "TypeScript", "CSS", "HTML"]} to="/frontend" />
             
-            <TechCategoryCard
-              title="Backend"
-              description="Серверная разработка, базы данных, API и всё, что работает на стороне сервера."
-              icon={<Database size={24} />}
-              color="bg-green-500"
-              technologies={["Node.js", "Python", "Go", "Java", "SQL", "NoSQL"]}
-              to="/backend"
-            />
+            <TechCategoryCard title="Backend" description="Серверная разработка, базы данных, API и всё, что работает на стороне сервера." icon={<Database size={24} />} color="bg-green-500" technologies={["Node.js", "Python", "Go", "Java", "SQL", "NoSQL"]} to="/backend" />
             
-            <TechCategoryCard
-              title="Fullstack"
-              description="Полный стек разработки, архитектура приложений и комплексные решения."
-              icon={<Layers size={24} />}
-              color="bg-purple-500"
-              technologies={["MERN", "MEAN", "Django", "Laravel", "DevOps", "AWS"]}
-              to="/fullstack"
-            />
+            <TechCategoryCard title="Fullstack" description="Полный стек разработки, архитектура приложений и комплексные решения." icon={<Layers size={24} />} color="bg-purple-500" technologies={["MERN", "MEAN", "Django", "Laravel", "DevOps", "AWS"]} to="/fullstack" />
           </div>
         </div>
       </section>
@@ -193,8 +160,6 @@ const Index = () => {
           </div>
         </div>
       </section>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
