@@ -13,9 +13,17 @@ interface AvatarUploadProps {
   onAvatarChange: (url: string) => void;
   size?: "sm" | "md" | "lg";
   username?: string;
+  showLabel?: boolean;
 }
 
-const AvatarUpload = ({ userId, url, onAvatarChange, size = "md", username }: AvatarUploadProps) => {
+const AvatarUpload = ({ 
+  userId, 
+  url, 
+  onAvatarChange, 
+  size = "md", 
+  username,
+  showLabel = true 
+}: AvatarUploadProps) => {
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
   
@@ -169,35 +177,37 @@ const AvatarUpload = ({ userId, url, onAvatarChange, size = "md", username }: Av
         </AvatarFallback>
       </Avatar>
       
-      <div className="flex flex-col items-center gap-2">
-        <Label 
-          htmlFor="avatar-upload" 
-          className="cursor-pointer flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-        >
-          {uploading ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Загрузка...</span>
-            </>
-          ) : (
-            <>
-              <Upload className="h-4 w-4" />
-              <span>Изменить аватар</span>
-            </>
-          )}
-        </Label>
-        <input
-          id="avatar-upload"
-          type="file"
-          accept="image/*"
-          onChange={uploadAvatar}
-          disabled={uploading}
-          className="sr-only"
-        />
-        <p className="text-xs text-muted-foreground">
-          JPG, PNG или GIF. Макс. размер 2MB.
-        </p>
-      </div>
+      {showLabel && (
+        <div className="flex flex-col items-center gap-2">
+          <Label 
+            htmlFor="avatar-upload" 
+            className="cursor-pointer flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {uploading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Загрузка...</span>
+              </>
+            ) : (
+              <>
+                <Upload className="h-4 w-4" />
+                <span>Изменить аватар</span>
+              </>
+            )}
+          </Label>
+          <input
+            id="avatar-upload"
+            type="file"
+            accept="image/*"
+            onChange={uploadAvatar}
+            disabled={uploading}
+            className="sr-only"
+          />
+          <p className="text-xs text-muted-foreground">
+            JPG, PNG или GIF. Макс. размер 2MB.
+          </p>
+        </div>
+      )}
     </div>
   );
 };
