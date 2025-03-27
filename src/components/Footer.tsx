@@ -1,7 +1,9 @@
+
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Code, Github, Mail, MessageCircle, Twitter, Monitor, Database, Layers } from "lucide-react";
+
 const Footer = () => {
   return <footer className="bg-background border-t border-border/50 py-12 mt-16">
       <div className="container mx-auto px-4">
@@ -62,19 +64,19 @@ const Footer = () => {
             <h3 className="font-medium mb-4">Ресурсы</h3>
             <ul className="space-y-2">
               <li>
-                <a href="#" className="text-muted-foreground hover:text-foreground text-sm">Документация</a>
+                <NavLink to="/documentation" className="text-muted-foreground hover:text-foreground text-sm">Документация</NavLink>
               </li>
               <li>
-                <a href="#" className="text-muted-foreground hover:text-foreground text-sm">Блог</a>
+                <NavLink to="/blog" className="text-muted-foreground hover:text-foreground text-sm">Блог</NavLink>
               </li>
               <li>
-                <a href="#" className="text-muted-foreground hover:text-foreground text-sm">Видеоуроки</a>
+                <NavLink to="/video-tutorials" className="text-muted-foreground hover:text-foreground text-sm">Видеоуроки</NavLink>
               </li>
               <li>
-                <a href="#" className="text-muted-foreground hover:text-foreground text-sm">Карьера</a>
+                <NavLink to="/career" className="text-muted-foreground hover:text-foreground text-sm">Карьера</NavLink>
               </li>
               <li>
-                <a href="#" className="text-muted-foreground hover:text-foreground text-sm">Вакансии</a>
+                <NavLink to="/jobs" className="text-muted-foreground hover:text-foreground text-sm">Вакансии</NavLink>
               </li>
             </ul>
           </div>
@@ -83,16 +85,16 @@ const Footer = () => {
             <h3 className="font-medium mb-4">Сообщество</h3>
             <ul className="space-y-2">
               <li>
-                <a href="#" className="text-muted-foreground hover:text-foreground text-sm">О нас</a>
+                <NavLink to="/about-us" className="text-muted-foreground hover:text-foreground text-sm">О нас</NavLink>
               </li>
               <li>
-                <a href="#" className="text-muted-foreground hover:text-foreground text-sm">Правила форума</a>
+                <NavLink to="/forum-rules" className="text-muted-foreground hover:text-foreground text-sm">Правила форума</NavLink>
               </li>
               <li>
-                <a href="#" className="text-muted-foreground hover:text-foreground text-sm">Контакты</a>
+                <NavLink to="/contacts" className="text-muted-foreground hover:text-foreground text-sm">Контакты</NavLink>
               </li>
               <li>
-                <a href="#" className="text-muted-foreground hover:text-foreground text-sm">Помощь</a>
+                <NavLink to="/help" className="text-muted-foreground hover:text-foreground text-sm">Помощь</NavLink>
               </li>
             </ul>
           </div>
@@ -103,15 +105,16 @@ const Footer = () => {
             © {new Date().getFullYear()} РусДев. Все права защищены.
           </p>
           <div className="flex gap-6 mt-4 md:mt-0">
-            <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
+            <NavLink to="/terms" className="text-sm text-muted-foreground hover:text-foreground">
               Условия использования
-            </a>
-            <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
+            </NavLink>
+            <NavLink to="/privacy" className="text-sm text-muted-foreground hover:text-foreground">
               Политика конфиденциальности
-            </a>
+            </NavLink>
           </div>
         </div>
       </div>
     </footer>;
 };
+
 export default Footer;
