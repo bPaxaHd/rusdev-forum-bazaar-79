@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { Session, User } from "@supabase/supabase-js";
+import { Session, User, Provider } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -8,8 +8,10 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  authLoading: boolean;
   signUp: (email: string, password: string, username: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -19,6 +21,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -40,6 +43,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signUp = async (email: string, password: string, username: string) => {
+    setAuthLoading(true);
     try {
       const { error } = await supabase.auth.signUp({ 
         email, 
@@ -69,10 +73,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error("Error in signUp:", error);
       return { error };
+    } finally {
+      setAuthLoading(false);
     }
   };
 
   const signIn = async (email: string, password: string) => {
+    setAuthLoading(true);
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       
@@ -94,10 +101,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error("Error in signIn:", error);
       return { error };
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const signInWithGoogle = async () => {
+    setAuthLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
+      
+      if (error) {
+        toast({
+          title: "Ошибка входа через Google",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error in signInWithGoogle:", error);
+      toast({
+        title: "Ошибка входа через Google",
+        description: "Не удалось выполнить вход через Google",
+        variant: "destructive",
+      });
+    } finally {
+      setAuthLoading(false);
     }
   };
 
   const signOut = async () => {
+    setAuthLoading(true);
     try {
       await supabase.auth.signOut();
       toast({
@@ -111,11 +150,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: "Не удалось выйти из системы",
         variant: "destructive",
       });
+    } finally {
+      setAuthLoading(false);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      loading, 
+      authLoading, 
+      signUp, 
+      signIn, 
+      signInWithGoogle, 
+      signOut 
+    }}>
       {children}
     </AuthContext.Provider>
   );
