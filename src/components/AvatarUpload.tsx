@@ -41,7 +41,7 @@ const AvatarUpload = ({ userId, url, onAvatarChange, size = "md", username }: Av
       .substring(0, 2);
   };
 
-  // Функция загрузки файла в Supabase Storage
+  // Функция загрузки файла в Supabase Storage с улучшенной безопасностью
   const uploadAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploading(true);
@@ -52,7 +52,10 @@ const AvatarUpload = ({ userId, url, onAvatarChange, size = "md", username }: Av
       
       const file = event.target.files[0];
       const fileExt = file.name.split(".").pop();
-      const filePath = `${userId}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      
+      // Используем userId в пути к файлу для обеспечения безопасности
+      // Формат: userid/filename.ext
+      const filePath = `${userId}/${Math.random().toString(36).substring(2)}.${fileExt}`;
       
       // Проверка типа файла
       if (!file.type.startsWith("image/")) {
@@ -74,10 +77,32 @@ const AvatarUpload = ({ userId, url, onAvatarChange, size = "md", username }: Av
         return;
       }
 
-      // Загрузка файла в bucket avatars
+      // Удаление предыдущих аватаров пользователя перед загрузкой нового
+      // Найти все файлы в папке с идентификатором пользователя
+      const { data: oldAvatars } = await supabase
+        .storage
+        .from("avatars")
+        .list(userId);
+      
+      // Если есть предыдущие аватары, удаляем их
+      if (oldAvatars && oldAvatars.length > 0) {
+        const filesToRemove = oldAvatars.map(f => `${userId}/${f.name}`);
+        await supabase.storage.from("avatars").remove(filesToRemove);
+      }
+
+      // Загрузка файла в bucket avatars с метаданными
       const { error: uploadError, data } = await supabase.storage
         .from("avatars")
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, file, { 
+          upsert: true,
+          contentType: file.type,
+          // Добавляем метаданные для дополнительной безопасности
+          cacheControl: "3600",
+          metadata: {
+            userId: userId,
+            uploadTime: new Date().toISOString()
+          }
+        });
 
       if (uploadError) {
         toast({
@@ -116,6 +141,9 @@ const AvatarUpload = ({ userId, url, onAvatarChange, size = "md", username }: Av
       
       // Вызов колбека для обновления аватара в родительском компоненте
       onAvatarChange(publicUrl);
+      
+      // Логирование действия (можно расширить для сохранения логов в базе данных)
+      console.log(`Аватар обновлен пользователем ${userId} в ${new Date().toISOString()}`);
       
     } catch (error) {
       console.error("Ошибка загрузки:", error);
