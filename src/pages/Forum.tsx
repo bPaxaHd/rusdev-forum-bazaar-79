@@ -14,7 +14,7 @@ interface TopicData {
   title: string;
   content: string;
   user_id: string;
-  category: "frontend" | "backend" | "fullstack";
+  category: string; // Changed from union type to string
   created_at: string;
   updated_at: string;
   likes: number;
@@ -72,7 +72,7 @@ const Forum = () => {
           comments: topic.comments || []
         }));
         
-        setTopics(formattedTopics);
+        setTopics(formattedTopics as TopicData[]);
       } catch (error) {
         console.error("Ошибка при загрузке тем:", error);
       } finally {
@@ -101,23 +101,26 @@ const Forum = () => {
       ? topic.content.substring(0, 150) + '...'
       : topic.content;
       
+    // Cast category to the specific type for the TopicCard component
+    const typedCategory = topic.category as "frontend" | "backend" | "fullstack";
+      
     return {
       id: Number(topic.id), // Convert string ID to number for the TopicCard component
       title: topic.title,
       preview: preview,
       author: topic.profile?.username || "Неизвестный пользователь",
-      authorRole: topic.category === "frontend" 
+      authorRole: typedCategory === "frontend" 
         ? "Frontend разработчик" 
-        : topic.category === "backend" 
+        : typedCategory === "backend" 
           ? "Backend разработчик" 
           : "Fullstack разработчик",
       authorAvatar: topic.profile?.avatar_url || "",
       repliesCount: topic.comments?.length || 0,
       likesCount: topic.likes || 0,
       viewsCount: topic.views || 0,
-      tags: [topic.category], // Добавляем базовый тег из категории
+      tags: [typedCategory], // Добавляем базовый тег из категории
       lastActivity: topic.updated_at || topic.created_at,
-      category: topic.category
+      category: typedCategory
     };
   };
   
