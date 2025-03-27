@@ -1,166 +1,102 @@
 
 import React, { useState } from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff, Mail, Lock, LogIn } from "lucide-react";
-
-// Схема проверки формы авторизации
-const formSchema = z.object({
-  email: z.string().email({
-    message: "Введите корректный email адрес",
-  }),
-  password: z.string().min(1, {
-    message: "Введите пароль",
-  }),
-  remember: z.boolean().default(false),
-});
 
 const Login = () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { signIn } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [showPassword, setShowPassword] = useState(false);
 
-  // Инициализация формы с использованием react-hook-form
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-      remember: false,
-    },
-  });
-
-  // Функция обработки отправки формы
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log("Форма входа отправлена:", values);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    // Имитация авторизации (без бэкенда)
-    setTimeout(() => {
+    if (!email || !password) {
       toast({
-        title: "Успешный вход!",
-        description: "Добро пожаловать в сообщество РусДев.",
+        title: "Ошибка валидации",
+        description: "Пожалуйста, заполните все поля",
+        variant: "destructive",
       });
+      return;
+    }
+    
+    setLoading(true);
+    
+    try {
+      const { error } = await signIn(email, password);
       
-      // Перенаправление на главную страницу
-      navigate("/");
-    }, 1500);
-  }
+      if (!error) {
+        navigate("/");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="max-w-md w-full">
-        <Card className="border-border/40 shadow-lg">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">Вход</CardTitle>
-            <CardDescription className="text-center">
-              Войдите в свой аккаунт РусДев
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <FormControl>
-                          <Input 
-                            placeholder="you@example.com" 
-                            type="email" 
-                            className="pl-10" 
-                            {...field} 
-                          />
-                        </FormControl>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Пароль</FormLabel>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <FormControl>
-                          <Input 
-                            placeholder="********" 
-                            type={showPassword ? "text" : "password"} 
-                            className="pl-10" 
-                            {...field} 
-                          />
-                        </FormControl>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7"
-                          onClick={() => setShowPassword(!showPassword)}
-                        >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </Button>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="flex items-center justify-between">
-                  <FormField
-                    control={form.control}
-                    name="remember"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center space-x-2 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <FormLabel className="text-sm font-normal cursor-pointer">
-                          Запомнить меня
-                        </FormLabel>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <NavLink to="/forgot-password" className="text-sm text-primary hover:underline">
-                    Забыли пароль?
-                  </NavLink>
-                </div>
-
-                <Button type="submit" className="w-full gap-2">
-                  Войти
-                  <LogIn size={16} />
+    <div className="container max-w-md mx-auto py-10">
+      <Card>
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold">Вход в аккаунт</CardTitle>
+          <CardDescription>
+            Войдите в свой аккаунт для доступа к форуму
+          </CardDescription>
+        </CardHeader>
+        
+        <form onSubmit={handleSubmit}>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="example@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Пароль</Label>
+                <Button variant="link" className="p-0 h-auto font-normal text-sm" type="button">
+                  Забыли пароль?
                 </Button>
-              </form>
-            </Form>
+              </div>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
           </CardContent>
-          <CardFooter className="flex flex-col space-y-2 border-t border-border/40 pt-4">
-            <div className="text-sm text-center text-muted-foreground">
+          
+          <CardFooter className="flex flex-col space-y-4">
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Загрузка..." : "Войти"}
+            </Button>
+            
+            <div className="text-center text-sm">
               Нет аккаунта?{" "}
               <NavLink to="/register" className="text-primary hover:underline">
                 Зарегистрироваться
               </NavLink>
             </div>
           </CardFooter>
-        </Card>
-      </div>
+        </form>
+      </Card>
     </div>
   );
 };

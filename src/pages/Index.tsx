@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +21,7 @@ const Index = () => {
           </Badge>
           
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 animate-slide-in">
-            <span className="text-gradient">РусДев</span> — Форум для разработчиков
+            <span className="text-gradient">DevTalk</span> — Форум для разработчиков
           </h1>
           
           <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mx-auto mb-8 animate-slide-in">
@@ -169,7 +168,7 @@ const Index = () => {
             </Badge>
             
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Стать частью РусДев сообщества
+              Стать частью DevTalk сообщества
             </h2>
             
             <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">

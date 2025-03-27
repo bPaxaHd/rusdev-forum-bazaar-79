@@ -13,7 +13,7 @@ const Logo = () => {
         <div className="absolute inset-0 bg-primary/20 blur-lg rounded-full -z-10"></div>
       </div>
       <span className="font-bold text-xl tracking-tight bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-        РусДев
+        DevTalk
       </span>
     </div>
   );
