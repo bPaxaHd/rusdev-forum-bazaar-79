@@ -145,6 +145,29 @@
   .dark .hero-gradient {
     background: linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(30,30,40,0.3) 50%, rgba(0,0,0,0) 100%);
   }
+  
+  /* Стили для форума */
+  .topic-card {
+    @apply rounded-lg transition-all duration-200 hover:translate-y-[-2px];
+  }
+  
+  .topic-tag {
+    @apply text-xs py-1 px-2 rounded-full;
+  }
+  
+  /* Кнопка создания темы с анимацией */
+  .create-button {
+    @apply relative overflow-hidden transition-all duration-300 bg-primary hover:bg-primary/90;
+  }
+  
+  .create-button::after {
+    content: '';
+    @apply absolute top-0 left-0 h-full w-0 bg-white/20 transition-all duration-300;
+  }
+  
+  .create-button:hover::after {
+    @apply w-full;
+  }
 }
 
 @layer utilities {
@@ -187,5 +210,22 @@
   
   .dark-card {
     @apply bg-black/40 backdrop-blur-xl border border-white/10;
+  }
+  
+  /* Анимации для интерактивности */
+  .hover-scale {
+    @apply transition-transform duration-200 hover:scale-105;
+  }
+  
+  .hover-lift {
+    @apply transition-transform duration-200 hover:-translate-y-1;
+  }
+  
+  .hover-glow {
+    @apply transition-all duration-300;
+  }
+  
+  .hover-glow:hover {
+    box-shadow: 0 0 15px theme('colors.primary.DEFAULT');
   }
 }

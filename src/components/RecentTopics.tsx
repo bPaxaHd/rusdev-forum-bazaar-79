@@ -1,58 +1,65 @@
 
 import React from "react";
 import TopicCard from "./TopicCard";
+import CreateTopicDialog from "./CreateTopicDialog";
 
 const recentTopics = [
   {
     id: 1,
-    title: "React или Vue: что выбрать для нового проекта в 2023?",
-    preview: "Планирую новый проект и хочу выбрать фреймворк между React и Vue. Какие плюсы и минусы у каждого в 2023 году?",
-    author: "Алексей К.",
-    authorRole: "Frontend разработчик",
+    title: "Стоит ли учить WebAssembly в 2023 году для frontend разработчика?",
+    preview: "Начинаю погружаться глубже во frontend и задумываюсь об изучении WebAssembly. Будет ли это полезным навыком или лучше сосредоточиться на чем-то другом?",
+    author: "Марк С.",
+    authorRole: "Junior Frontend разработчик",
     authorAvatar: "",
-    repliesCount: 24,
-    likesCount: 18,
-    viewsCount: 356,
-    tags: ["React", "Vue", "JavaScript", "Frontend"],
-    lastActivity: "2023-08-15T14:23:00",
+    repliesCount: 8,
+    likesCount: 12,
+    viewsCount: 245,
+    tags: ["WebAssembly", "Frontend", "JavaScript", "Карьера"],
+    lastActivity: "2023-09-18T14:23:00",
     category: "frontend" as const
   },
   {
     id: 2,
-    title: "Оптимизация SQL запросов в больших проектах на PostgreSQL",
-    preview: "Работаю с базой данных, где таблицы содержат миллионы записей. Какие есть практики оптимизации запросов?",
-    author: "Михаил В.",
-    authorRole: "Backend разработчик",
+    title: "Практики оптимизации MongoDB для высоконагруженных проектов",
+    preview: "Столкнулся с проблемой производительности на проекте с MongoDB при большом объеме данных. Какие есть проверенные стратегии оптимизации?",
+    author: "Алексей В.",
+    authorRole: "Senior Backend разработчик",
     authorAvatar: "",
-    repliesCount: 13,
-    likesCount: 21,
-    viewsCount: 274,
-    tags: ["SQL", "PostgreSQL", "Оптимизация"],
-    lastActivity: "2023-08-12T09:45:00",
+    repliesCount: 15,
+    likesCount: 23,
+    viewsCount: 340,
+    tags: ["MongoDB", "NoSQL", "Оптимизация", "Backend"],
+    lastActivity: "2023-09-15T10:45:00",
     category: "backend" as const
   },
   {
     id: 3,
-    title: "Микросервисная архитектура на Go: поделитесь опытом",
-    preview: "Собираюсь переписать большой монолит на микросервисы с использованием Go. Ищу советы и подводные камни.",
-    author: "Дмитрий С.",
-    authorRole: "Fullstack разработчик",
+    title: "Архитектура микрофронтендов: опыт и подводные камни",
+    preview: "Наша команда планирует миграцию от монолитного фронтенда к микрофронтендам. Интересен опыт тех, кто уже прошел через это. Какие инструменты использовали? С какими проблемами столкнулись?",
+    author: "Игорь М.",
+    authorRole: "Lead Fullstack разработчик",
     authorAvatar: "",
-    repliesCount: 29,
-    likesCount: 32,
-    viewsCount: 487,
-    tags: ["Go", "Микросервисы", "Архитектура"],
-    lastActivity: "2023-08-10T16:15:00",
+    repliesCount: 19,
+    likesCount: 31,
+    viewsCount: 420,
+    tags: ["Микрофронтенды", "Архитектура", "Fullstack", "Масштабирование"],
+    lastActivity: "2023-09-10T16:30:00",
     category: "fullstack" as const
   }
 ];
 
 const RecentTopics = () => {
   return (
-    <div className="space-y-4">
-      {recentTopics.map((topic) => (
-        <TopicCard key={topic.id} {...topic} />
-      ))}
+    <div>
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-xl font-medium">Недавние темы</h3>
+        <CreateTopicDialog />
+      </div>
+      <div className="space-y-4">
+        {recentTopics.map((topic) => (
+          <TopicCard key={topic.id} {...topic} />
+        ))}
+      </div>
     </div>
   );
 };

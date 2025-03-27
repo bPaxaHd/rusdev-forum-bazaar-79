@@ -4,121 +4,52 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import TopicCard from "@/components/TopicCard";
-import { MessageCircle, Search, Plus, Filter, Monitor, Database, Layers } from "lucide-react";
+import CreateTopicDialog from "@/components/CreateTopicDialog";
+import { MessageCircle, Search, Filter, Monitor, Database, Layers } from "lucide-react";
 
-// Пример данных форума
+// Пример данных форума, добавляем новые посты с одним на каждую категорию
 const forumTopics = [
   {
     id: 1,
-    title: "React или Vue: что выбрать для нового проекта в 2023?",
-    preview: "Планирую новый проект и хочу выбрать фреймворк между React и Vue. Какие плюсы и минусы у каждого в 2023 году?",
-    author: "Алексей К.",
-    authorRole: "Frontend разработчик",
+    title: "Стоит ли учить WebAssembly в 2023 году для frontend разработчика?",
+    preview: "Начинаю погружаться глубже во frontend и задумываюсь об изучении WebAssembly. Будет ли это полезным навыком или лучше сосредоточиться на чем-то другом?",
+    author: "Марк С.",
+    authorRole: "Junior Frontend разработчик",
     authorAvatar: "",
-    repliesCount: 24,
-    likesCount: 18,
-    viewsCount: 356,
-    tags: ["React", "Vue", "JavaScript", "Frontend"],
-    lastActivity: "2023-08-15T14:23:00",
+    repliesCount: 8,
+    likesCount: 12,
+    viewsCount: 245,
+    tags: ["WebAssembly", "Frontend", "JavaScript", "Карьера"],
+    lastActivity: "2023-09-18T14:23:00",
     category: "frontend" as const
   },
   {
     id: 2,
-    title: "Оптимизация SQL запросов в больших проектах на PostgreSQL",
-    preview: "Работаю с базой данных, где таблицы содержат миллионы записей. Какие есть практики оптимизации запросов?",
-    author: "Михаил В.",
-    authorRole: "Backend разработчик",
+    title: "Практики оптимизации MongoDB для высоконагруженных проектов",
+    preview: "Столкнулся с проблемой производительности на проекте с MongoDB при большом объеме данных. Какие есть проверенные стратегии оптимизации?",
+    author: "Алексей В.",
+    authorRole: "Senior Backend разработчик",
     authorAvatar: "",
-    repliesCount: 13,
-    likesCount: 21,
-    viewsCount: 274,
-    tags: ["SQL", "PostgreSQL", "Оптимизация"],
-    lastActivity: "2023-08-12T09:45:00",
+    repliesCount: 15,
+    likesCount: 23,
+    viewsCount: 340,
+    tags: ["MongoDB", "NoSQL", "Оптимизация", "Backend"],
+    lastActivity: "2023-09-15T10:45:00",
     category: "backend" as const
   },
   {
     id: 3,
-    title: "Микросервисная архитектура на Go: поделитесь опытом",
-    preview: "Собираюсь переписать большой монолит на микросервисы с использованием Go. Ищу советы и подводные камни.",
-    author: "Дмитрий С.",
-    authorRole: "Fullstack разработчик",
+    title: "Архитектура микрофронтендов: опыт и подводные камни",
+    preview: "Наша команда планирует миграцию от монолитного фронтенда к микрофронтендам. Интересен опыт тех, кто уже прошел через это. Какие инструменты использовали? С какими проблемами столкнулись?",
+    author: "Игорь М.",
+    authorRole: "Lead Fullstack разработчик",
     authorAvatar: "",
-    repliesCount: 29,
-    likesCount: 32,
-    viewsCount: 487,
-    tags: ["Go", "Микросервисы", "Архитектура"],
-    lastActivity: "2023-08-10T16:15:00",
+    repliesCount: 19,
+    likesCount: 31,
+    viewsCount: 420,
+    tags: ["Микрофронтенды", "Архитектура", "Fullstack", "Масштабирование"],
+    lastActivity: "2023-09-10T16:30:00",
     category: "fullstack" as const
-  },
-  {
-    id: 4,
-    title: "Настройка CI/CD пайплайна для React проекта с использованием GitHub Actions",
-    preview: "Ищу оптимальный способ настроить CI/CD для React приложения. Какие шаги включить в пайплайн для максимальной автоматизации?",
-    author: "Иван М.",
-    authorRole: "DevOps инженер",
-    authorAvatar: "",
-    repliesCount: 8,
-    likesCount: 15,
-    viewsCount: 203,
-    tags: ["CI/CD", "GitHub Actions", "DevOps", "React"],
-    lastActivity: "2023-08-05T11:30:00",
-    category: "frontend" as const
-  },
-  {
-    id: 5,
-    title: "Практики обработки ошибок в асинхронном JavaScript",
-    preview: "Какие паттерны и практики вы используете для обработки ошибок в асинхронном коде на JavaScript? Интересуют подходы в промышленной разработке.",
-    author: "Елена С.",
-    authorRole: "Senior JavaScript разработчик",
-    authorAvatar: "",
-    repliesCount: 17,
-    likesCount: 23,
-    viewsCount: 312,
-    tags: ["JavaScript", "Async/Await", "Error Handling"],
-    lastActivity: "2023-08-02T16:45:00",
-    category: "frontend" as const
-  },
-  {
-    id: 6,
-    title: "Оптимальный стек для построения высоконагруженного API",
-    preview: "Планируем API с высокой нагрузкой (~5к запросов в секунду). Какой стек технологий посоветуете для максимальной производительности?",
-    author: "Артем П.",
-    authorRole: "Fullstack разработчик",
-    authorAvatar: "",
-    repliesCount: 31,
-    likesCount: 28,
-    viewsCount: 542,
-    tags: ["API", "Performance", "Высокие нагрузки"],
-    lastActivity: "2023-07-28T09:15:00",
-    category: "backend" as const
-  },
-  {
-    id: 7,
-    title: "Опыт миграции с REST на GraphQL: стоит ли?",
-    preview: "Рассматриваем возможность перехода с REST на GraphQL. Кто уже прошел этот путь? Какие подводные камни и преимущества?",
-    author: "Павел К.",
-    authorRole: "Backend разработчик",
-    authorAvatar: "",
-    repliesCount: 22,
-    likesCount: 19,
-    viewsCount: 389,
-    tags: ["GraphQL", "REST", "API", "Миграция"],
-    lastActivity: "2023-07-25T14:20:00",
-    category: "backend" as const
-  },
-  {
-    id: 8,
-    title: "Стратегии кэширования для NextJS приложений",
-    preview: "Работаем над масштабированием NextJS приложения. Интересуют стратегии кэширования для улучшения производительности фронтенда.",
-    author: "Николай Т.",
-    authorRole: "Frontend разработчик",
-    authorAvatar: "",
-    repliesCount: 11,
-    likesCount: 17,
-    viewsCount: 256,
-    tags: ["NextJS", "Кэширование", "Performance", "React"],
-    lastActivity: "2023-07-20T10:35:00",
-    category: "frontend" as const
   }
 ];
 
@@ -154,10 +85,7 @@ const Forum = () => {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button className="gap-2">
-                <Plus size={18} />
-                Создать тему
-              </Button>
+              <CreateTopicDialog />
               
               <div className="relative flex-grow">
                 <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
@@ -274,10 +202,7 @@ const Forum = () => {
                     <p className="text-muted-foreground">
                       Попробуйте изменить критерии поиска или создайте новую тему
                     </p>
-                    <Button className="mt-4 gap-2">
-                      <Plus size={18} />
-                      Создать тему
-                    </Button>
+                    <CreateTopicDialog />
                   </div>
                 )}
               </div>

@@ -1,198 +1,127 @@
 
 import React, { useState, useEffect } from "react";
-import { NavLink, useLocation } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Link, useLocation } from "react-router-dom";
 import { 
-  Menu, 
-  X, 
-  Search, 
-  Bell, 
-  User,
-  Monitor, 
-  Database, 
-  Layers,
-  MessageCircle,
-  Code,
-  LogIn,
-  Moon,
-  Sun
-} from "lucide-react";
+  Sheet, 
+  SheetTrigger, 
+  SheetContent, 
+  SheetHeader
+} from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Menu, Monitor, Moon, Sun } from "lucide-react";
+import Logo from "./Logo";
 import { useTheme } from "@/hooks/useTheme";
 
 const Navbar = () => {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const { theme, toggleTheme } = useTheme();
 
+  // Эффект для обнаружения скролла
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 10) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
+      setIsScrolled(window.scrollY > 10);
     };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
-  useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [location]);
-
-  const navLinks = [
-    { path: "/", label: "Главная" },
-    { path: "/frontend", label: "Frontend", icon: <Monitor size={16} /> },
-    { path: "/backend", label: "Backend", icon: <Database size={16} /> },
-    { path: "/fullstack", label: "Fullstack", icon: <Layers size={16} /> },
-    { path: "/forum", label: "Форум", icon: <MessageCircle size={16} /> },
+  const navItems = [
+    { name: "Главная", path: "/" },
+    { name: "Frontend", path: "/frontend" },
+    { name: "Backend", path: "/backend" },
+    { name: "Fullstack", path: "/fullstack" },
+    { name: "Форум", path: "/forum" }
   ];
 
   return (
-    <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled
-          ? "bg-background/80 backdrop-blur-lg shadow-sm border-b border-border/50"
-          : "bg-transparent"
-      }`}
-    >
-      <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <NavLink
-            to="/"
-            className="flex items-center gap-2 font-semibold text-xl"
-          >
-            <Code className="text-primary" />
-            <span className="text-gradient">РусДев</span>
-          </NavLink>
-        </div>
+    <nav className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${
+      isScrolled ? 'bg-background/80 backdrop-blur-md shadow-md' : 'bg-transparent'
+    }`}>
+      <div className="container px-4 mx-auto">
+        <div className="flex items-center justify-between h-16">
+          {/* Логотип */}
+          <Link to="/" className="flex items-center hover:opacity-90 transition-opacity">
+            <Logo />
+          </Link>
 
-        {/* Desktop Nav */}
-        <nav className="hidden md:flex items-center space-x-8">
-          {navLinks.map((link) => (
-            <NavLink
-              key={link.path}
-              to={link.path}
-              className={({ isActive }) =>
-                `nav-link flex items-center gap-1 ${isActive ? "active" : ""}`
-              }
-            >
-              {link.icon && <span>{link.icon}</span>}
-              {link.label}
-            </NavLink>
-          ))}
-        </nav>
-
-        {/* Right Side Actions */}
-        <div className="hidden md:flex items-center gap-4">
-          <Button variant="ghost" size="icon" className="rounded-full">
-            <Search size={18} />
-          </Button>
-
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="rounded-full"
-            onClick={toggleTheme}
-            aria-label={theme === 'dark' ? "Включить светлую тему" : "Включить тёмную тему"}
-          >
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-          </Button>
-
-          {isLoggedIn ? (
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" className="rounded-full relative">
-                <Bell size={18} />
-                <span className="absolute top-0 right-0 w-2 h-2 rounded-full bg-primary"></span>
-              </Button>
-              <Avatar className="h-8 w-8 transition-transform duration-300 hover:scale-110">
-                <AvatarImage src="" />
-                <AvatarFallback className="bg-primary/10 text-primary font-medium">РД</AvatarFallback>
-              </Avatar>
-            </div>
-          ) : (
-            <NavLink to="/login">
-              <Button 
-                variant="ghost" 
-                className="gap-2 animate-fade-in"
+          {/* Навигация для десктопа */}
+          <div className="hidden md:flex space-x-1">
+            {navItems.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`nav-link ${
+                  location.pathname === item.path ? "active" : ""
+                }`}
               >
-                <LogIn size={16} />
-                Войти
-              </Button>
-            </NavLink>
-          )}
-        </div>
+                {item.name}
+              </Link>
+            ))}
+          </div>
 
-        {/* Mobile Menu Button */}
-        <div className="flex md:hidden items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full"
-            onClick={toggleTheme}
-            aria-label={theme === 'dark' ? "Включить светлую тему" : "Включить тёмную тему"}
-          >
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-          </Button>
-          
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            aria-label="Toggle menu"
-          >
-            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </Button>
+          {/* Действия для десктопа */}
+          <div className="hidden md:flex items-center space-x-2">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={toggleTheme} 
+              className="rounded-full" 
+              aria-label="Переключить тему"
+            >
+              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </Button>
+            <Button variant="default" size="sm">
+              Войти
+            </Button>
+          </div>
+
+          {/* Мобильное меню */}
+          <div className="flex items-center md:hidden space-x-2">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={toggleTheme} 
+              className="rounded-full" 
+              aria-label="Переключить тему"
+            >
+              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </Button>
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="Меню">
+                  <Menu />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right">
+                <SheetHeader className="mb-4">
+                  <Logo />
+                </SheetHeader>
+                <div className="flex flex-col space-y-3">
+                  {navItems.map((item) => (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      className={`py-2 px-4 rounded-md transition-colors ${
+                        location.pathname === item.path
+                          ? "bg-primary text-primary-foreground"
+                          : "hover:bg-secondary"
+                      }`}
+                    >
+                      {item.name}
+                    </Link>
+                  ))}
+                  <Button className="mt-4">Войти</Button>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       </div>
-
-      {/* Mobile Menu */}
-      {isMobileMenuOpen && (
-        <div className="fixed inset-0 bg-background z-40 pt-16 animate-fade-in">
-          <nav className="container mx-auto px-4 py-6 flex flex-col space-y-4">
-            {navLinks.map((link) => (
-              <NavLink
-                key={link.path}
-                to={link.path}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 py-3 px-4 rounded-lg transition-colors ${
-                    isActive ? "bg-primary/10 text-primary" : "text-foreground hover:bg-secondary"
-                  }`
-                }
-              >
-                {link.icon && <span>{link.icon}</span>}
-                <span className="font-medium">{link.label}</span>
-              </NavLink>
-            ))}
-            <div className="mt-4 pt-4 border-t">
-              {isLoggedIn ? (
-                <div className="flex items-center gap-3 p-4">
-                  <Avatar>
-                    <AvatarFallback className="bg-primary/10 text-primary">РД</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">Пользователь</p>
-                    <p className="text-sm text-muted-foreground">user@example.com</p>
-                  </div>
-                </div>
-              ) : (
-                <NavLink to="/login">
-                  <Button className="w-full gap-2">
-                    <LogIn size={16} />
-                    Войти в аккаунт
-                  </Button>
-                </NavLink>
-              )}
-            </div>
-          </nav>
-        </div>
-      )}
-    </header>
+    </nav>
   );
 };
 
