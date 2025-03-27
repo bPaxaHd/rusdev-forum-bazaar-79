@@ -14,14 +14,18 @@ import {
   Layers,
   MessageCircle,
   Code,
-  LogIn
+  LogIn,
+  Moon,
+  Sun
 } from "lucide-react";
+import { useTheme } from "@/hooks/useTheme";
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -52,7 +56,7 @@ const Navbar = () => {
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled
-          ? "bg-white/80 backdrop-blur-lg shadow-sm border-b border-border/50"
+          ? "bg-background/80 backdrop-blur-lg shadow-sm border-b border-border/50"
           : "bg-transparent"
       }`}
     >
@@ -89,6 +93,16 @@ const Navbar = () => {
             <Search size={18} />
           </Button>
 
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="rounded-full"
+            onClick={toggleTheme}
+            aria-label={theme === 'dark' ? "Включить светлую тему" : "Включить тёмную тему"}
+          >
+            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          </Button>
+
           {isLoggedIn ? (
             <div className="flex items-center gap-3">
               <Button variant="ghost" size="icon" className="rounded-full relative">
@@ -114,7 +128,17 @@ const Navbar = () => {
         </div>
 
         {/* Mobile Menu Button */}
-        <div className="flex md:hidden items-center">
+        <div className="flex md:hidden items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full"
+            onClick={toggleTheme}
+            aria-label={theme === 'dark' ? "Включить светлую тему" : "Включить тёмную тему"}
+          >
+            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          </Button>
+          
           <Button
             variant="ghost"
             size="icon"
@@ -129,7 +153,7 @@ const Navbar = () => {
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 bg-white z-40 pt-16 animate-fade-in">
+        <div className="fixed inset-0 bg-background z-40 pt-16 animate-fade-in">
           <nav className="container mx-auto px-4 py-6 flex flex-col space-y-4">
             {navLinks.map((link) => (
               <NavLink

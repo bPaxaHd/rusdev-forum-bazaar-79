@@ -2,7 +2,7 @@
 import type { Config } from "tailwindcss";
 
 export default {
-	darkMode: ["class"],
+	darkMode: ["class", '[data-theme="dark"]'],
 	content: [
 		"./pages/**/*.{ts,tsx}",
 		"./components/**/*.{ts,tsx}",
@@ -110,6 +110,16 @@ export default {
 					from: { filter: 'blur(0)', opacity: '1' },
 					to: { filter: 'blur(4px)', opacity: '0' }
 				},
+				'pulse-glow': {
+					'0%, 100%': { 
+						opacity: '1',
+						filter: 'brightness(1) drop-shadow(0 0 5px rgba(59, 130, 246, 0.5))'
+					},
+					'50%': { 
+						opacity: '0.8',
+						filter: 'brightness(1.2) drop-shadow(0 0 8px rgba(59, 130, 246, 0.8))'
+					}
+				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
@@ -122,6 +132,7 @@ export default {
 				'scale-out': 'scale-out 0.3s ease-out',
 				'blur-in': 'blur-in 0.4s ease-out',
 				'blur-out': 'blur-out 0.4s ease-out',
+				'pulse-glow': 'pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
 			}
 		}
 	},
