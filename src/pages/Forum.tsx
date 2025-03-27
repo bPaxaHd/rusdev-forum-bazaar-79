@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface TopicData {
-  id: number;
+  id: string; // Changed from number to string to match Supabase UUID format
   title: string;
   content: string;
   user_id: string;
@@ -102,7 +102,7 @@ const Forum = () => {
       : topic.content;
       
     return {
-      id: typeof topic.id === 'number' ? topic.id : Number(topic.id),
+      id: Number(topic.id), // Convert string ID to number for the TopicCard component
       title: topic.title,
       preview: preview,
       author: topic.profile?.username || "Неизвестный пользователь",
