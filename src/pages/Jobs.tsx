@@ -1,11 +1,22 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Briefcase, MapPin, Clock, Search } from "lucide-react";
+import { Briefcase, MapPin, Clock, Search, AlertCircle } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Link } from "react-router-dom";
 
 const Jobs = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [showPremiumDialog, setShowPremiumDialog] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
   const jobs = [
     {
       id: 1,
@@ -58,6 +69,51 @@ const Jobs = () => {
       logo: "https://via.placeholder.com/80"
     }
   ];
+
+  useEffect(() => {
+    if (user) {
+      fetchUserProfile();
+    }
+  }, [user]);
+
+  const fetchUserProfile = async () => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("subscription_type")
+        .eq("id", user?.id)
+        .single();
+      
+      if (error) throw error;
+      setUserProfile(data);
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePostJobClick = () => {
+    if (!user) {
+      toast({
+        title: "Необходима авторизация",
+        description: "Пожалуйста, войдите в систему, чтобы разместить вакансию",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (userProfile?.subscription_type === "business" || userProfile?.subscription_type === "sponsor") {
+      // Proceed to job posting form logic
+      toast({
+        title: "Вы можете разместить вакансию",
+        description: "Доступ открыт для аккаунтов с бизнес-подпиской",
+      });
+    } else {
+      setShowPremiumDialog(true);
+    }
+  };
 
   return (
     <div className="container mx-auto px-4 py-12 animate-fade-in">
@@ -126,9 +182,41 @@ const Jobs = () => {
           <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
             Опубликуйте вакансию на нашей платформе и найдите талантливых разработчиков для вашей команды.
           </p>
-          <Button size="lg">Разместить вакансию</Button>
+          <Button size="lg" onClick={handlePostJobClick}>Разместить вакансию</Button>
         </div>
       </div>
+
+      {/* Dialog for Premium Subscription Required */}
+      <Dialog open={showPremiumDialog} onOpenChange={setShowPremiumDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-center">Требуется бизнес-подписка</DialogTitle>
+            <DialogDescription className="text-center">
+              <div className="flex justify-center my-4">
+                <div className="p-3 bg-amber-100 dark:bg-amber-900 rounded-full">
+                  <AlertCircle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                </div>
+              </div>
+              <p>
+                Размещение вакансий доступно только пользователям с подпиской Бизнес (₽999/месяц) или выше. Повысьте свой аккаунт для доступа к этой функции.
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setShowPremiumDialog(false)} className="w-full sm:w-auto">
+              Отмена
+            </Button>
+            <Button 
+              className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-blue-600"
+              asChild
+            >
+              <Link to="/premium">
+                Перейти к подпискам
+              </Link>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
