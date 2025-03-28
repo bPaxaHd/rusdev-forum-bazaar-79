@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ShieldAlert, User, Shield, ChartBar, MessageSquare } from "lucide-react";
+import { User, Shield, ChartBar as StatsIcon, MessageSquare as MessageIcon, ShieldAlert as AdminIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { UserProfile } from "@/types/auth";
 import { useAuth } from "@/contexts/AuthContext";
@@ -27,7 +27,6 @@ import {
   Ban,
   Lock,
   UserX,
-  ShieldAlert,
   Tag,
   Users,
   Settings,
@@ -36,9 +35,7 @@ import {
   UserPlus,
   Crown,
   FileText,
-  ChartBar,
   BarChart,
-  MessageSquare,
   VolumeX,
   Snowflake,
   Send,
@@ -74,6 +71,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
   const [supportUsers, setSupportUsers] = useState<UserWithMessages[]>([]);
   const [loadingSupport, setLoadingSupport] = useState(false);
   const [supportSearchQuery, setSupportSearchQuery] = useState("");
+  const { toast } = useToast();
 
   useEffect(() => {
     if (open) {
@@ -262,7 +260,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <ShieldAlert className="h-5 w-5 text-purple-500" />
+            <AdminIcon className="h-5 w-5 text-purple-500" />
             <span>Панель администратора</span>
           </DialogTitle>
         </DialogHeader>
@@ -279,11 +277,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
                 <span>Настройки</span>
               </TabsTrigger>
               <TabsTrigger value="stats" className="flex items-center gap-1">
-                <ChartBar size={16} />
+                <StatsIcon size={16} />
                 <span>Статистика</span>
               </TabsTrigger>
               <TabsTrigger value="support" className="flex items-center gap-1">
-                <MessageSquare size={16} />
+                <MessageIcon size={16} />
                 <span>Поддержка</span>
                 {supportUsers.reduce((count, user) => count + user.unreadCount, 0) > 0 && (
                   <Badge variant="destructive" className="ml-1 px-1.5 py-0.5 text-xs">

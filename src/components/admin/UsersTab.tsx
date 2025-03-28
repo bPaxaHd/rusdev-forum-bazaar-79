@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Users, UserCog, Ban, VolumeX, Snowflake } from "lucide-react";
+import { Users, UserCog, Ban, VolumeX, Snowflake, User as UserIcon } from "lucide-react";
 import UserProfileEdit from "./UserProfileEdit";
 import { formatDate } from "./utils";
 import { User } from "./types";
@@ -176,7 +175,7 @@ const UsersTab: React.FC<UsersTabProps> = ({
               />
             ) : (
               <div className="flex flex-col items-center justify-center h-full">
-                <User size={48} className="text-muted-foreground/40" />
+                <UserIcon size={48} className="text-muted-foreground/40" />
                 <p className="text-muted-foreground mt-4">Выберите пользователя для управления</p>
               </div>
             )}

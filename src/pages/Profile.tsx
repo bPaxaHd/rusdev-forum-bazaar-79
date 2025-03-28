@@ -20,7 +20,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import AdminPanel from "@/components/AdminPanel";
+import { AdminPanel } from "@/components/admin";
 
 const userTopics = [
   {
@@ -603,7 +603,7 @@ const Profile = () => {
             <CardHeader>
               <CardTitle>Мои темы</CardTitle>
               <CardDescription>
-                Созданные вами темы и обсуждения
+                Созданные вам�� темы и обсуждения
               </CardDescription>
             </CardHeader>
             <CardContent>
