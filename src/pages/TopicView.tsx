@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, NavLink, useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -29,7 +28,7 @@ interface TopicData {
     username: string;
     avatar_url: string | null;
     subscription_type?: string | null;
-  }[];
+  };
 }
 
 interface CommentData {
@@ -42,7 +41,7 @@ interface CommentData {
     username: string;
     avatar_url: string | null;
     subscription_type?: string | null;
-  }[];
+  };
 }
 
 const TopicView = () => {
@@ -162,9 +161,9 @@ const TopicView = () => {
         console.log("Topic data:", topicData);
         console.log("Comments data:", commentsData);
         
-        setTopic(topicData);
+        setTopic(topicData as TopicData);
         setLikesCount(topicData.likes || 0);
-        setComments(commentsData || []);
+        setComments(commentsData as CommentData[] || []);
       } catch (error) {
         console.error("Ошибка при загрузке данных:", error);
         toast({
@@ -203,7 +202,7 @@ const TopicView = () => {
               .single();
               
             if (commentWithProfile) {
-              setComments(prev => [...prev, commentWithProfile]);
+              setComments(prev => [...prev, commentWithProfile as CommentData]);
             }
           };
           
@@ -476,7 +475,6 @@ const TopicView = () => {
     });
   };
 
-  // Function to navigate to user profile
   const navigateToUserProfile = (userId: string) => {
     navigate(`/profile/${userId}`);
   };

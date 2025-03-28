@@ -21,7 +21,7 @@ interface TopicData {
     username: string;
     avatar_url: string | null;
     subscription_type?: string | null;
-  }[];
+  };
   comments?: { id: string }[];
 }
 
@@ -107,7 +107,7 @@ const RecentTopics = () => {
     const typedCategory = topic.category as "frontend" | "backend" | "fullstack";
     
     // Get profile from the joined profiles data
-    const profile = topic.profiles && topic.profiles.length > 0 ? topic.profiles[0] : null;
+    const profile = topic.profiles || null;
     
     const isPremium = profile?.subscription_type && 
       ["premium", "business", "sponsor"].includes(profile.subscription_type);
