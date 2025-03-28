@@ -4,6 +4,7 @@ import TopicCard from "./TopicCard";
 import CreateTopicDialog from "./CreateTopicDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 interface TopicData {
   id: string; // String to match Supabase UUID format
@@ -29,11 +30,14 @@ interface TopicData {
 const RecentTopics = () => {
   const [topics, setTopics] = useState<TopicData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchTopics = async () => {
       try {
         setLoading(true);
+        setError(null);
         
         const { data, error } = await supabase
           .from("topics")
@@ -55,6 +59,13 @@ const RecentTopics = () => {
         
         if (error) {
           console.error("Ошибка при загрузке тем:", error);
+          setError("Не удалось загрузить темы");
+          return;
+        }
+        
+        // Проверяем, что данные не пустые
+        if (!data || data.length === 0) {
+          setTopics([]);
           return;
         }
         
@@ -71,6 +82,12 @@ const RecentTopics = () => {
         setTopics(formattedTopics as TopicData[]);
       } catch (error) {
         console.error("Ошибка при загрузке тем:", error);
+        setError("Произошла ошибка при загрузке тем");
+        toast({
+          title: "Ошибка",
+          description: "Не удалось загрузить последние темы",
+          variant: "destructive"
+        });
       } finally {
         setLoading(false);
       }
@@ -89,7 +106,7 @@ const RecentTopics = () => {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [toast]);
 
   // Функция для преобразования темы в формат для компонента TopicCard
   const mapTopicToCardProps = (topic: TopicData) => {
@@ -155,6 +172,11 @@ const RecentTopics = () => {
               </div>
             </div>
           ))}
+        </div>
+      ) : error ? (
+        <div className="text-center py-8 border rounded-lg">
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <CreateTopicDialog />
         </div>
       ) : topics.length > 0 ? (
         <div className="space-y-4">

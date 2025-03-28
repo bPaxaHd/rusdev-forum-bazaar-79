@@ -1,11 +1,52 @@
-import React from "react";
+
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import TechCategoryCard from "@/components/TechCategoryCard";
 import RecentTopics from "@/components/RecentTopics";
 import { Monitor, Database, Layers, MessageCircle, ArrowRight, ChevronRight } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+
 const Index = () => {
+  const [userCount, setUserCount] = useState<number>(0);
+  const [topicCount, setTopicCount] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        // Получение количества пользователей
+        const { count: userCount, error: userError } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true });
+        
+        if (userError) {
+          console.error("Ошибка при загрузке пользователей:", userError);
+        } else {
+          setUserCount(userCount || 0);
+        }
+        
+        // Получение количества тем
+        const { count: topicCount, error: topicError } = await supabase
+          .from('topics')
+          .select('*', { count: 'exact', head: true });
+        
+        if (topicError) {
+          console.error("Ошибка при загрузке тем:", topicError);
+        } else {
+          setTopicCount(topicCount || 0);
+        }
+      } catch (error) {
+        console.error("Ошибка при загрузке статистики:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchStats();
+  }, []);
+
   return <div className="animate-fade-in">
       {/* Hero Section */}
       <section className="relative pt-20 pb-16 md:pt-32 md:pb-24 overflow-hidden">
@@ -49,12 +90,16 @@ const Index = () => {
                 <div className="w-8 h-8 rounded-full bg-blue-500/20"></div>
                 <div className="w-8 h-8 rounded-full bg-green-500/20"></div>
               </div>
-              <span className="font-medium">12+ участников</span>
+              <span className="font-medium">
+                {loading ? "..." : `${userCount}+ участников`}
+              </span>
             </div>
             
             <div className="glass px-4 py-3 rounded-full flex items-center gap-2 animate-scale-in">
               <MessageCircle className="text-primary" size={18} />
-              <span className="font-medium">5+ обсуждений</span>
+              <span className="font-medium">
+                {loading ? "..." : `${topicCount}+ обсуждений`}
+              </span>
             </div>
             
             <div className="glass px-4 py-3 rounded-full flex items-center gap-2 animate-scale-in">

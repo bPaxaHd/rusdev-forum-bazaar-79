@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, NavLink, useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -56,6 +55,7 @@ const TopicView = () => {
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [likedComments, setLikedComments] = useState<Record<string, boolean>>({});
+  const [viewIncrementDone, setViewIncrementDone] = useState(false);
   
   // Check if user has already liked the topic
   useEffect(() => {
@@ -97,6 +97,7 @@ const TopicView = () => {
     }
   }, [user, comments]);
   
+  // Основной эффект для загрузки темы и комментариев
   useEffect(() => {
     const fetchTopic = async () => {
       if (!id) return;
@@ -104,12 +105,6 @@ const TopicView = () => {
       try {
         setLoading(true);
         
-        // Увеличиваем счетчик просмотров
-        await supabase
-          .from("topics")
-          .update({ views: topic?.views ? topic.views + 1 : 1 })
-          .eq("id", id);
-          
         // Получаем данные темы
         const { data: topicData, error: topicError } = await supabase
           .from("topics")
@@ -132,6 +127,16 @@ const TopicView = () => {
           console.error("Ошибка при загрузке темы:", topicError);
           navigate("/forum");
           return;
+        }
+        
+        // Увеличиваем счетчик просмотров только один раз
+        if (!viewIncrementDone && topicData) {
+          await supabase
+            .from("topics")
+            .update({ views: (topicData.views || 0) + 1 })
+            .eq("id", id);
+          
+          setViewIncrementDone(true);
         }
         
         // Получаем комментарии к теме
@@ -228,7 +233,7 @@ const TopicView = () => {
       commentsSubscription.unsubscribe();
       topicSubscription.unsubscribe();
     };
-  }, [id, navigate, topic?.views]);
+  }, [id, navigate, viewIncrementDone]);
 
   // Форматирование даты
   const formatDate = (dateString: string) => {
@@ -480,7 +485,7 @@ const TopicView = () => {
           </Badge>
         </div>
 
-        {/* Основной контент темы */}
+        {/* Основной конт��нт темы */}
         <Card className="mb-8 p-6">
           <div className="flex items-start gap-4">
             <Avatar className="h-10 w-10">
