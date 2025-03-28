@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import TopicCard from "./TopicCard";
 import CreateTopicDialog from "./CreateTopicDialog";
@@ -21,9 +22,7 @@ interface TopicData {
     avatar_url: string | null;
     subscription_type?: string | null;
   };
-  user_roles?: {
-    role: string;
-  }[];
+  user_roles?: { role: string }[] | null; // Updated to be optional and nullable
   comments?: { id: string }[];
 }
 
@@ -52,7 +51,7 @@ const RecentTopics = () => {
             likes, 
             views,
             profiles:profiles!topics_user_id_fkey(username, avatar_url, subscription_type),
-            user_roles:user_roles!inner(role),
+            user_roles:user_roles(role),
             comments:comments(id)
           `)
           .order('created_at', { ascending: false })
@@ -71,7 +70,14 @@ const RecentTopics = () => {
         }
         
         console.log("Fetched topics:", data);
-        setTopics(data as TopicData[]);
+        
+        // Process the data to ensure user_roles is properly formatted
+        const processedData = data.map(topic => ({
+          ...topic,
+          user_roles: Array.isArray(topic.user_roles) ? topic.user_roles : null
+        }));
+        
+        setTopics(processedData as TopicData[]);
       } catch (error) {
         console.error("Ошибка при загрузке тем:", error);
         setError("Произошла ошибка при загрузке тем");
