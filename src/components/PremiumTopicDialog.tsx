@@ -156,7 +156,7 @@ const PremiumTopicDialog: React.FC<PremiumTopicDialogProps> = ({ isPremium = tru
             </label>
             <Select 
               value={category} 
-              onValueChange={(value) => setCategory(value as "frontend" | "backend" | "fullstack")}
+              onValueChange={(value) => setCategory(value)}
             >
               <SelectTrigger className="border-amber-200 focus-visible:ring-amber-500">
                 <SelectValue placeholder="Выберите категорию" />

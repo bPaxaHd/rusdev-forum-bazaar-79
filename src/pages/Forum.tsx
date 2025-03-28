@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import TopicCard from "@/components/TopicCard";
 import CreateTopicDialog from "@/components/CreateTopicDialog";
+import PremiumTopicDialog from "@/components/PremiumTopicDialog";
 import { MessageCircle, Search, Filter, Monitor, Database, Layers, Sparkles, Crown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -48,7 +48,6 @@ const Forum = () => {
   const { user, userRoles } = useAuth();
   const { toast } = useToast();
   
-  // Инициализация БД при первой загрузке
   useEffect(() => {
     initDb().then(success => {
       console.log("DB initialization status:", success ? "success" : "failed");
@@ -90,7 +89,11 @@ const Forum = () => {
           return;
         }
         
-        // Преобразуем данные в формат, который ожидает TopicCard
+        if (!data) {
+          setTopics([]);
+          return;
+        }
+        
         const formattedTopics = data.map(topic => ({
           ...topic,
           profile: {
@@ -143,7 +146,11 @@ const Forum = () => {
           return;
         }
         
-        // Преобразуем данные в формат, который ожидает TopicCard
+        if (!data) {
+          setPremiumTopics([]);
+          return;
+        }
+        
         const formattedTopics = data.map(topic => ({
           ...topic,
           profile: {
@@ -165,7 +172,6 @@ const Forum = () => {
     fetchTopics();
     fetchPremiumTopics();
     
-    // Подписываемся на изменения в таблице topics
     const subscription = supabase
       .channel('public:topics')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'topics' }, (payload) => {
@@ -183,17 +189,15 @@ const Forum = () => {
     };
   }, [activeFilter]);
 
-  // Функция для преобразования темы в формат для компонента TopicCard
   const mapTopicToCardProps = (topic: TopicData) => {
     const preview = topic.content.length > 150 
       ? topic.content.substring(0, 150) + '...'
       : topic.content;
       
-    // Cast category to the specific type for the TopicCard component
     const typedCategory = topic.category as "frontend" | "backend" | "fullstack";
       
     return {
-      id: topic.id, // Use the UUID directly
+      id: topic.id,
       title: topic.title,
       preview: preview,
       author: topic.profile?.username || "Неизвестный пользователь",
@@ -206,15 +210,14 @@ const Forum = () => {
       repliesCount: topic.comments?.length || 0,
       likesCount: topic.likes || 0,
       viewsCount: topic.views || 0,
-      tags: [typedCategory, ...(topic.is_premium ? ["premium"] : [])], // Добавляем базовый тег из категории и premium если нужно
+      tags: [typedCategory, ...(topic.is_premium ? ["premium"] : [])],
       lastActivity: topic.updated_at || topic.created_at,
       category: typedCategory,
       isPremium: topic.is_premium,
       sponsorLevel: topic.profile?.subscription_type as 'premium' | 'business' | 'sponsor' | undefined
     };
   };
-  
-  // Фильтрация тем по поисковому запросу
+
   const filteredTopics = topics.filter(topic => {
     const matchesSearch = searchQuery
       ? topic.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -224,7 +227,6 @@ const Forum = () => {
     return matchesSearch;
   });
   
-  // Фильтрация премиум тем по поисковому запросу
   const filteredPremiumTopics = premiumTopics.filter(topic => {
     const matchesSearch = searchQuery
       ? topic.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -234,32 +236,10 @@ const Forum = () => {
     return matchesSearch;
   });
   
-  // Проверка, имеет ли пользователь премиум-подписку
-  const hasPremiumAccess = user && user.id ? true : false; // В реальном приложении проверяйте подписку
-  
-  const handleCreatePremiumTopic = () => {
-    if (!user) {
-      toast({
-        title: "Необходима авторизация",
-        description: "Для создания премиум тем необходимо войти в аккаунт",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (!hasPremiumAccess) {
-      toast({
-        title: "Недоступно",
-        description: "Создание премиум тем доступно только для пользователей с премиум подпиской",
-        variant: "destructive"
-      });
-      return;
-    }
-  };
+  const hasPremiumAccess = user ? true : false;
 
   return (
     <div className="animate-fade-in">
-      {/* Header Section - улучшенный дизайн с основной цветовой схемой */}
       <section className="bg-gradient-to-r from-blue-50 to-gray-50 dark:from-gray-900 dark:to-gray-800 py-16 md:py-20 relative overflow-hidden">
         <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
         <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-200 dark:bg-blue-900 rounded-full filter blur-3xl opacity-30"></div>
@@ -288,7 +268,7 @@ const Forum = () => {
               
               <TabsContent value="regular" className="mt-0">
                 <div className="flex flex-col sm:flex-row gap-4">
-                  <CreateTopicDialog isPremium={false} />
+                  <CreateTopicDialog />
                   
                   <div className="relative flex-grow">
                     <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
@@ -304,7 +284,7 @@ const Forum = () => {
               
               <TabsContent value="premium" className="mt-0">
                 <div className="flex flex-col sm:flex-row gap-4">
-                  <CreateTopicDialog isPremium={true} />
+                  <PremiumTopicDialog />
                   
                   <div className="relative flex-grow">
                     <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
@@ -332,11 +312,9 @@ const Forum = () => {
         </div>
       </section>
 
-      {/* Forum Content - улучшенный дизайн с основной цветовой схемой */}
       <section className="py-12 md:py-16 bg-gradient-to-b from-transparent to-gray-50 dark:to-gray-900">
         <div className="container px-4 mx-auto">
           <div className="flex flex-col md:flex-row gap-8">
-            {/* Left Sidebar - улучшенный дизайн с основной цветовой схемой */}
             <div className="w-full md:w-1/4">
               <div className="card-glass p-6 sticky top-24 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg border border-blue-100 dark:border-gray-700 shadow-sm">
                 <h3 className="font-medium mb-4 flex items-center gap-2 text-blue-700 dark:text-blue-300">
@@ -405,9 +383,7 @@ const Forum = () => {
               </div>
             </div>
             
-            {/* Main Content - улучшенный дизайн с основной цветовой схемой */}
             <div className="w-full md:w-3/4">
-              {/* Содержимое зависит от активной вкладки */}
               {activeTab === "regular" ? (
                 <>
                   <div className="mb-6 flex items-center justify-between bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm p-4 rounded-lg border border-blue-100 dark:border-gray-700">
@@ -463,7 +439,7 @@ const Forum = () => {
                   ) : (
                     <div className="text-center py-8 border rounded-lg border-blue-100 dark:border-gray-700 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm">
                       <p className="text-muted-foreground mb-4">Темы не найдены</p>
-                      <CreateTopicDialog isPremium={false} />
+                      <CreateTopicDialog />
                     </div>
                   )}
                 </>
@@ -518,7 +494,7 @@ const Forum = () => {
                     ) : (
                       <div className="text-center py-8 border rounded-lg border-amber-200 dark:border-amber-700 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm">
                         <p className="text-muted-foreground mb-4">Премиум темы не найдены</p>
-                        <CreateTopicDialog isPremium={true} />
+                        <PremiumTopicDialog />
                       </div>
                     )
                   ) : (

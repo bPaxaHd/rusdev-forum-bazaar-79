@@ -322,6 +322,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          is_premium: boolean | null
           likes: number | null
           title: string
           updated_at: string
@@ -333,6 +334,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          is_premium?: boolean | null
           likes?: number | null
           title: string
           updated_at?: string
@@ -344,6 +346,7 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          is_premium?: boolean | null
           likes?: number | null
           title?: string
           updated_at?: string
