@@ -55,6 +55,47 @@ const TopicView = () => {
   const [commentLoading, setCommentLoading] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
+  const [likedComments, setLikedComments] = useState<Record<string, boolean>>({});
+  
+  // Check if user has already liked the topic
+  useEffect(() => {
+    if (user && topic) {
+      const checkTopicLike = async () => {
+        const { data } = await supabase
+          .from('topic_likes')
+          .select('*')
+          .eq('topic_id', id)
+          .eq('user_id', user.id)
+          .single();
+          
+        setIsLiked(!!data);
+      };
+      
+      checkTopicLike();
+    }
+  }, [user, topic, id]);
+  
+  // Check which comments the user has already liked
+  useEffect(() => {
+    if (user && comments.length > 0) {
+      const checkCommentLikes = async () => {
+        const { data } = await supabase
+          .from('comment_likes')
+          .select('comment_id')
+          .eq('user_id', user.id);
+          
+        if (data) {
+          const likedCommentsMap: Record<string, boolean> = {};
+          data.forEach(like => {
+            likedCommentsMap[like.comment_id] = true;
+          });
+          setLikedComments(likedCommentsMap);
+        }
+      };
+      
+      checkCommentLikes();
+    }
+  }, [user, comments]);
   
   useEffect(() => {
     const fetchTopic = async () => {
@@ -132,15 +173,62 @@ const TopicView = () => {
         table: 'comments',
         filter: `topic_id=eq.${id}`
       }, (payload) => {
-        // Обновляем список комментариев при изменениях
-        fetchTopic();
+        // При добавлении нового комментария
+        if (payload.eventType === 'INSERT') {
+          // Получаем данные профиля автора комментария
+          const fetchCommentWithProfile = async () => {
+            const { data: commentWithProfile } = await supabase
+              .from("comments")
+              .select(`
+                id,
+                content,
+                user_id,
+                created_at,
+                likes,
+                profiles:user_id(username, avatar_url)
+              `)
+              .eq("id", payload.new.id)
+              .single();
+              
+            if (commentWithProfile) {
+              setComments(prev => [...prev, commentWithProfile]);
+            }
+          };
+          
+          fetchCommentWithProfile();
+        } else if (payload.eventType === 'UPDATE') {
+          // Обновляем лайки при обновлении комментария
+          setComments(prev => 
+            prev.map(comment => 
+              comment.id === payload.new.id 
+                ? { ...comment, likes: payload.new.likes } 
+                : comment
+            )
+          );
+        }
+      })
+      .subscribe();
+    
+    // Подписываемся на изменения в теме (обновления лайков)
+    const topicSubscription = supabase
+      .channel('topic_changes')
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'topics',
+        filter: `id=eq.${id}`
+      }, (payload) => {
+        if (payload.new && payload.new.likes !== undefined) {
+          setLikesCount(payload.new.likes);
+        }
       })
       .subscribe();
     
     return () => {
       commentsSubscription.unsubscribe();
+      topicSubscription.unsubscribe();
     };
-  }, [id, navigate]);
+  }, [id, navigate, topic?.views]);
 
   // Форматирование даты
   const formatDate = (dateString: string) => {
@@ -161,13 +249,14 @@ const TopicView = () => {
     try {
       setCommentLoading(true);
       
-      const { error } = await supabase
+      const { error, data } = await supabase
         .from("comments")
         .insert({
           topic_id: id,
           user_id: user.id,
           content: newComment
-        });
+        })
+        .select();
         
       if (error) {
         console.error("Ошибка при отправке комментария:", error);
@@ -202,27 +291,47 @@ const TopicView = () => {
       return;
     }
     
+    if (isLiked) {
+      toast({
+        title: "Вы уже оценили эту тему",
+        description: "Вы можете оценить тему только один раз.",
+      });
+      return;
+    }
+    
     try {
-      const newLikesCount = isLiked ? likesCount - 1 : likesCount + 1;
+      const newLikesCount = likesCount + 1;
       
-      const { error } = await supabase
+      // Обновляем счетчик лайков темы
+      const { error: updateError } = await supabase
         .from("topics")
         .update({ likes: newLikesCount })
         .eq("id", id);
         
-      if (error) {
-        console.error("Ошибка при лайке темы:", error);
+      if (updateError) {
+        console.error("Ошибка при лайке темы:", updateError);
         return;
       }
       
-      setIsLiked(!isLiked);
+      // Записываем лайк в таблицу topic_likes
+      const { error: insertError } = await supabase
+        .from("topic_likes")
+        .insert({
+          topic_id: id,
+          user_id: user.id
+        });
+        
+      if (insertError) {
+        console.error("Ошибка при записи лайка:", insertError);
+        return;
+      }
+      
+      setIsLiked(true);
       setLikesCount(newLikesCount);
       
       toast({
-        title: isLiked ? "Лайк отменен" : "Тема понравилась",
-        description: isLiked 
-          ? "Вы отменили свой лайк этой темы." 
-          : "Вы отметили эту тему как понравившуюся.",
+        title: "Тема понравилась",
+        description: "Вы отметили эту тему как понравившуюся.",
       });
     } catch (error) {
       console.error("Ошибка при лайке темы:", error);
@@ -240,16 +349,44 @@ const TopicView = () => {
       return;
     }
     
+    if (likedComments[commentId]) {
+      toast({
+        title: "Вы уже оценили этот комментарий",
+        description: "Вы можете оценить комментарий только один раз.",
+      });
+      return;
+    }
+    
     try {
-      const { error } = await supabase
+      // Обновляем счетчик лайков комментария
+      const { error: updateError } = await supabase
         .from("comments")
         .update({ likes: currentLikes + 1 })
         .eq("id", commentId);
         
-      if (error) {
-        console.error("Ошибка при лайке комментария:", error);
+      if (updateError) {
+        console.error("Ошибка при лайке комментария:", updateError);
         return;
       }
+      
+      // Записываем лайк в таблицу comment_likes
+      const { error: insertError } = await supabase
+        .from("comment_likes")
+        .insert({
+          comment_id: commentId,
+          user_id: user.id
+        });
+        
+      if (insertError) {
+        console.error("Ошибка при записи лайка:", insertError);
+        return;
+      }
+      
+      // Обновляем локальный список лайкнутых комментариев
+      setLikedComments(prev => ({
+        ...prev,
+        [commentId]: true
+      }));
       
       // Обновляем локальный список комментариев
       setComments(
@@ -347,8 +484,8 @@ const TopicView = () => {
         <Card className="mb-8 p-6">
           <div className="flex items-start gap-4">
             <Avatar className="h-10 w-10">
-              <AvatarImage src={topic.profile?.avatar_url || ""} />
-              <AvatarFallback>{topic.profile?.username?.charAt(0) || "U"}</AvatarFallback>
+              <AvatarImage src={topic.profile?.avatar_url || ""} alt={topic.profile?.username || "User"} />
+              <AvatarFallback>{(topic.profile?.username?.[0] || "U").toUpperCase()}</AvatarFallback>
             </Avatar>
             
             <div className="flex-1">
@@ -424,8 +561,8 @@ const TopicView = () => {
                 <Card key={comment.id} className="p-6">
                   <div className="flex items-start gap-4">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={comment.profile?.avatar_url || ""} />
-                      <AvatarFallback>{comment.profile?.username?.charAt(0) || "U"}</AvatarFallback>
+                      <AvatarImage src={comment.profile?.avatar_url || ""} alt={comment.profile?.username || "User"} />
+                      <AvatarFallback>{(comment.profile?.username?.[0] || "U").toUpperCase()}</AvatarFallback>
                     </Avatar>
                     
                     <div className="flex-1">
@@ -444,10 +581,10 @@ const TopicView = () => {
                         <Button 
                           variant="ghost" 
                           size="sm" 
-                          className="gap-2"
+                          className={`gap-2 ${likedComments[comment.id] ? 'text-primary' : ''}`}
                           onClick={() => handleLikeComment(comment.id, comment.likes)}
                         >
-                          <ThumbsUp size={14} />
+                          <ThumbsUp size={14} className={likedComments[comment.id] ? "fill-primary" : ""} />
                           <span>{comment.likes || 0}</span>
                         </Button>
                       </div>

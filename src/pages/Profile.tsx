@@ -28,7 +28,8 @@ import {
   MessageSquare,
   Code,
   Save,
-  Loader2
+  Loader2,
+  KeyRound
 } from "lucide-react";
 import AvatarUpload from "@/components/AvatarUpload";
 import { useToast } from "@/hooks/use-toast";
@@ -39,6 +40,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import AdminPanel from "@/components/AdminPanel";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 interface UserProfile {
   id: string;
@@ -63,8 +66,15 @@ const Profile = () => {
   const [activityExpanded, setActivityExpanded] = useState(false);
   const [specialty, setSpecialty] = useState<string | null>(null);
   const [savingSpecialty, setSavingSpecialty] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminPanelOpen, setAdminPanelOpen] = useState(false);
+  const [adminKeyInput, setAdminKeyInput] = useState('');
+  const [adminKeyDialogOpen, setAdminKeyDialogOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Секретный ключ для доступа к админке (в реальном приложении должен быть более сложным)
+  const adminSecretKey = 'DevTalkAdmin2024!';
 
   useEffect(() => {
     if (!loading && !user) {
@@ -90,6 +100,15 @@ const Profile = () => {
           setProfile(data);
           setAvatarUrl(data.avatar_url);
           setSpecialty(data.specialty);
+          
+          // Проверка на админа (в будущем можно добавить поле is_admin в таблицу profiles)
+          const { data: adminCheck } = await supabase
+            .from("admins")
+            .select("id")
+            .eq("user_id", user.id)
+            .single();
+            
+          setIsAdmin(!!adminCheck);
         }
       } catch (error) {
         console.error("Error in fetchProfile:", error);
@@ -179,6 +198,44 @@ const Profile = () => {
     }
   };
 
+  // Функция для обработки ввода секретного ключа админа
+  const handleAdminKeySubmit = () => {
+    if (adminKeyInput === adminSecretKey) {
+      setIsAdmin(true);
+      setAdminPanelOpen(true);
+      setAdminKeyDialogOpen(false);
+      // Запоминаем ключ админа в зашифрованном виде в localStorage
+      // В реальном приложении лучше использовать более надежный способ авторизации
+      const encryptedKey = btoa(adminSecretKey); // Простая "шифровка" base64
+      localStorage.setItem('dta_key', encryptedKey);
+      
+      toast({
+        title: "Успешно",
+        description: "Вы вошли в панель администратора",
+      });
+    } else {
+      toast({
+        title: "Ошибка",
+        description: "Неверный ключ администратора",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Функция для показа диалога ввода ключа
+  const handleSecretButtonClick = (e: React.MouseEvent) => {
+    // Подержим клик на "скрытую" кнопку админа - комбинация Alt+Shift+клик
+    if (e.altKey && e.shiftKey) {
+      // Если уже авторизован как админ, открываем панель
+      if (isAdmin) {
+        setAdminPanelOpen(true);
+      } else {
+        // Иначе открываем диалог ввода ключа
+        setAdminKeyDialogOpen(true);
+      }
+    }
+  };
+
   // Функция для получения инициалов
   const getInitials = (name: string): string => {
     if (!name) return "U";
@@ -208,6 +265,14 @@ const Profile = () => {
   const handleAvatarChange = (url: string) => {
     setAvatarUrl(url);
   };
+
+  // Проверяем сохраненный ключ админа при загрузке страницы
+  useEffect(() => {
+    const savedKey = localStorage.getItem('dta_key');
+    if (savedKey && atob(savedKey) === adminSecretKey) {
+      setIsAdmin(true);
+    }
+  }, []);
 
   if (loading || profileLoading) {
     return (
@@ -254,12 +319,22 @@ const Profile = () => {
             <TabsTrigger value="overview">Обзор</TabsTrigger>
             <TabsTrigger value="activity">Активность</TabsTrigger>
           </TabsList>
-          <Link to="/settings">
-            <Button variant="outline" size="sm" className="gap-2">
-              <Settings size={16} />
-              <span className="hidden sm:inline">Настройки</span>
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            {/* Скрытая кнопка для админа доступна через Alt+Shift+Click */}
+            <div 
+              className="w-6 h-6 cursor-default"
+              onClick={handleSecretButtonClick}
+              title={isAdmin ? "Открыть панель администратора" : ""}
+            >
+              {isAdmin && <KeyRound size={16} className="text-muted-foreground hover:text-primary cursor-pointer transition-colors" />}
+            </div>
+            <Link to="/settings">
+              <Button variant="outline" size="sm" className="gap-2">
+                <Settings size={16} />
+                <span className="hidden sm:inline">Настройки</span>
+              </Button>
+            </Link>
+          </div>
         </div>
         
         <TabsContent value="overview" className="space-y-6">
@@ -497,6 +572,41 @@ const Profile = () => {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {/* Диалог для ввода ключа администратора */}
+      <Dialog open={adminKeyDialogOpen} onOpenChange={setAdminKeyDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <KeyRound size={18} />
+              Вход в панель администратора
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Введите секретный ключ для доступа к панели администратора
+            </p>
+            <div className="flex">
+              <input
+                type="password"
+                value={adminKeyInput}
+                onChange={(e) => setAdminKeyInput(e.target.value)}
+                className="w-full px-3 py-2 border rounded-l-md focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Введите секретный ключ..."
+              />
+              <Button 
+                onClick={handleAdminKeySubmit} 
+                className="rounded-l-none"
+              >
+                Войти
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Компонент панели администратора */}
+      {isAdmin && (
+        <AdminPanel open={adminPanelOpen} onOpenChange={setAdminPanelOpen} />
+      )}
     </div>
   );
 };

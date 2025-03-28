@@ -8,6 +8,7 @@ import CreateTopicDialog from "@/components/CreateTopicDialog";
 import { MessageCircle, Search, Filter, Monitor, Database, Layers } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { initDb } from "@/utils/db-helpers";
 
 interface TopicData {
   id: string; // Changed from number to string to match Supabase UUID format
@@ -31,6 +32,13 @@ const Forum = () => {
   const [activeFilter, setActiveFilter] = useState<"all" | "frontend" | "backend" | "fullstack">("all");
   const [topics, setTopics] = useState<TopicData[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Инициализация БД при первой загрузке
+  useEffect(() => {
+    initDb().then(success => {
+      console.log("DB initialization status:", success ? "success" : "failed");
+    });
+  }, []);
   
   useEffect(() => {
     const fetchTopics = async () => {

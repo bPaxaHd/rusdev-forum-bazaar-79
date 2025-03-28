@@ -45,7 +45,7 @@ const Navbar = () => {
         <div className="flex w-full justify-between items-center">
           <Logo />
           
-          <nav className="hidden md:flex mx-auto gap-6">
+          <nav className="hidden md:flex mx-auto items-center justify-center gap-6">
             <Link to="/" className="nav-link">Главная</Link>
             <Link to="/frontend" className="nav-link">Frontend</Link>
             <Link to="/backend" className="nav-link">Backend</Link>
