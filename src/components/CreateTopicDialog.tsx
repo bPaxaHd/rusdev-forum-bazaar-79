@@ -9,7 +9,8 @@ import {
   DialogHeader, 
   DialogTitle, 
   DialogTrigger,
-  DialogFooter
+  DialogFooter,
+  DialogDescription
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -31,6 +32,8 @@ import {
 } from "@/components/ui/select";
 import { Plus } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 // Схема валидации формы
 const formSchema = z.object({
@@ -47,33 +50,11 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-// Функция для создания нового поста
-const onCreateTopic = (
-  values: FormValues, 
-  authorName: string = "Пользователь",
-  authorRole: string = "Разработчик",
-  reset: () => void,
-  setOpen: React.Dispatch<React.SetStateAction<boolean>>
-) => {
-  // В реальном приложении здесь будет запрос к API
-  console.log("Создан новый топик:", {
-    ...values,
-    author: authorName,
-    authorRole: authorRole,
-    repliesCount: 0,
-    likesCount: 0,
-    viewsCount: 0,
-    lastActivity: new Date().toISOString()
-  });
-  
-  // Сбросить форму и закрыть диалог
-  reset();
-  setOpen(false);
-};
-
 const CreateTopicDialog = () => {
   const [open, setOpen] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
   const { theme } = useTheme();
+  const { toast } = useToast();
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -85,8 +66,75 @@ const CreateTopicDialog = () => {
     }
   });
 
-  const onSubmit = (values: FormValues) => {
-    onCreateTopic(values, "Аноним", "Разработчик", form.reset, setOpen);
+  const onSubmit = async (values: FormValues) => {
+    try {
+      setLoading(true);
+      
+      // Получаем текущего пользователя
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast({
+          title: "Необходима авторизация",
+          description: "Пожалуйста, войдите в систему для создания тем",
+          variant: "destructive"
+        });
+        setOpen(false);
+        return;
+      }
+      
+      // Создаем новую тему в базе данных
+      const { data, error } = await supabase
+        .from("topics")
+        .insert({
+          title: values.title,
+          content: values.preview,
+          user_id: user.id,
+          category: values.category,
+          likes: 0,
+          views: 0
+        })
+        .select();
+      
+      if (error) {
+        console.error("Ошибка при создании темы:", error);
+        toast({
+          title: "Ошибка при создании темы",
+          description: error.message,
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Логируем результат для отладки
+      console.log("Создан новый топик:", {
+        ...values,
+        id: data[0].id,
+        user_id: user.id,
+        created_at: new Date().toISOString()
+      });
+      
+      // Показываем уведомление об успехе
+      toast({
+        title: "Тема создана",
+        description: "Ваша тема успешно опубликована",
+        variant: "default"
+      });
+      
+      // Сбросить форму и закрыть диалог
+      form.reset();
+      setOpen(false);
+      
+    } catch (error) {
+      console.error("Ошибка при создании темы:", error);
+      toast({
+        title: "Произошла ошибка",
+        description: "Не удалось создать тему. Пожалуйста, попробуйте снова.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -100,6 +148,9 @@ const CreateTopicDialog = () => {
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Создать новую тему</DialogTitle>
+          <DialogDescription>
+            Поделитесь своими знаниями и опытом с сообществом разработчиков
+          </DialogDescription>
         </DialogHeader>
         
         <Form {...form}>
@@ -185,7 +236,9 @@ const CreateTopicDialog = () => {
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 Отмена
               </Button>
-              <Button type="submit">Создать тему</Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? "Создание..." : "Создать тему"}
+              </Button>
             </DialogFooter>
           </form>
         </Form>
