@@ -134,6 +134,9 @@ export type Database = {
           experience_years: number | null
           github_url: string | null
           id: string
+          is_banned: boolean | null
+          is_frozen: boolean | null
+          is_muted: boolean | null
           location: string | null
           skills: string[] | null
           specialty: string | null
@@ -152,6 +155,9 @@ export type Database = {
           experience_years?: number | null
           github_url?: string | null
           id: string
+          is_banned?: boolean | null
+          is_frozen?: boolean | null
+          is_muted?: boolean | null
           location?: string | null
           skills?: string[] | null
           specialty?: string | null
@@ -170,6 +176,9 @@ export type Database = {
           experience_years?: number | null
           github_url?: string | null
           id?: string
+          is_banned?: boolean | null
+          is_frozen?: boolean | null
+          is_muted?: boolean | null
           location?: string | null
           skills?: string[] | null
           specialty?: string | null
