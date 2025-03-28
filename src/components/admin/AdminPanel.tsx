@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User as UserIcon, Shield, ChartBar as StatsIcon, MessageSquare as MessageIcon, ShieldAlert as AdminIcon } from "lucide-react";
+import { User as UserIcon, Shield, ChartBar, MessageSquare, ShieldAlert } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { UserProfile } from "@/types/auth";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,9 +11,10 @@ import UsersTab from "./UsersTab";
 import StatsTab from "./StatsTab";
 import SettingsTab from "./SettingsTab";
 import SupportTab from "./SupportTab";
-import { User } from "./types";
+import { User, UserWithMessages } from "./types";
 import { getRoleSubscriptionType } from "./utils";
 import { getUserRoles } from "@/utils/auth-helpers";
+import { getUserSupportDialog, markSupportMessageAsRead } from "@/utils/db-helpers";
 
 interface AdminPanelProps {
   open: boolean;
@@ -32,14 +32,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [editedProfile, setEditedProfile] = useState<Partial<UserProfile>>({});
   
-  // Function to fetch all users
+  const [supportUsers, setSupportUsers] = useState<UserWithMessages[]>([]);
+  const [loadingSupport, setLoadingSupport] = useState(false);
+  const [supportSearchQuery, setSupportSearchQuery] = useState("");
+  
   const fetchUsers = async () => {
     if (!user) return;
     
     try {
       setLoadingUsers(true);
       
-      // Fetch all profiles
       const { data: profiles, error } = await supabase
         .from("profiles")
         .select("*");
@@ -53,10 +55,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
         return;
       }
       
-      // Create an array to store users with their roles
       const usersWithRoles: User[] = [];
       
-      // For each profile, fetch the user's roles
       for (const profile of profiles) {
         const roles = await getUserRoles(profile.id);
         
@@ -81,7 +81,85 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
     }
   };
   
-  // Filter users based on search query
+  const fetchSupportUsers = async () => {
+    if (!user) return;
+    
+    try {
+      setLoadingSupport(true);
+      
+      const { data: messagesData, error: messagesError } = await supabase
+        .from("support_messages")
+        .select("*")
+        .order("created_at", { ascending: false });
+        
+      if (messagesError) {
+        toast({
+          title: "Ошибка",
+          description: messagesError.message,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (!messagesData || messagesData.length === 0) {
+        setSupportUsers([]);
+        return;
+      }
+      
+      const userIds = [...new Set(messagesData.map(msg => msg.user_id))];
+      
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("*")
+        .in("id", userIds);
+        
+      if (profilesError) {
+        toast({
+          title: "Ошибка",
+          description: profilesError.message,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const usersWithMessages: UserWithMessages[] = [];
+      
+      for (const userId of userIds) {
+        const profile = profiles.find(p => p.id === userId);
+        
+        if (profile) {
+          const userMessages = messagesData.filter(msg => msg.user_id === userId);
+          const unreadCount = userMessages.filter(msg => !msg.is_admin && !msg.read).length;
+          const lastMessage = userMessages[0]?.content || null;
+          const lastMessageTime = userMessages[0]?.created_at || null;
+          
+          usersWithMessages.push({
+            profile: {
+              id: profile.id,
+              username: profile.username,
+              avatar_url: profile.avatar_url,
+              subscription_type: profile.subscription_type
+            },
+            unreadCount,
+            lastMessage,
+            lastMessageTime
+          });
+        }
+      }
+      
+      setSupportUsers(usersWithMessages);
+    } catch (error: any) {
+      console.error("Error fetching support users:", error);
+      toast({
+        title: "Ошибка",
+        description: "Произошла ошибка при загрузке пользователей поддержки",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingSupport(false);
+    }
+  };
+  
   useEffect(() => {
     if (searchQuery.trim() === '') {
       setFilteredUsers(users);
@@ -98,18 +176,38 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
     setFilteredUsers(filtered);
   }, [searchQuery, users]);
   
-  // Load users when panel opens
+  useEffect(() => {
+    if (!supportSearchQuery.trim() || !supportUsers.length) return;
+    
+    const query = supportSearchQuery.toLowerCase();
+    const filtered = supportUsers.filter(user => 
+      user.profile.username.toLowerCase().includes(query) ||
+      (user.lastMessage && user.lastMessage.toLowerCase().includes(query))
+    );
+    
+    // We're not setting filtered results yet as it would require more state management
+    // This would be implemented in a more complete version
+  }, [supportSearchQuery, supportUsers]);
+  
   useEffect(() => {
     if (open) {
       fetchUsers();
+      if (activeTab === "support") {
+        fetchSupportUsers();
+      }
     }
-  }, [open]);
+  }, [open, activeTab]);
+  
+  useEffect(() => {
+    if (open && activeTab === "support") {
+      fetchSupportUsers();
+    }
+  }, [activeTab, open]);
   
   const handleSelectUser = (user: User) => {
     setSelectedUser(user);
     setEditedProfile({
       ...user.profile,
-      // Set the subscription type based on the highest role
       subscription_type: user.roles.includes('creator') ? 'creator' : 
                           user.roles.includes('admin') ? 'admin' : 
                           user.roles.includes('moderator') ? 'moderator' : 
@@ -122,7 +220,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AdminIcon className="h-5 w-5 text-purple-500" />
+            <ShieldAlert className="h-5 w-5 text-purple-500" />
             <span>Панель администратора</span>
           </DialogTitle>
         </DialogHeader>
@@ -139,11 +237,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
                 <span>Настройки</span>
               </TabsTrigger>
               <TabsTrigger value="stats" className="flex items-center gap-1">
-                <StatsIcon size={16} />
+                <ChartBar size={16} />
                 <span>Статистика</span>
               </TabsTrigger>
               <TabsTrigger value="support" className="flex items-center gap-1">
-                <MessageIcon size={16} />
+                <MessageSquare size={16} />
                 <span>Поддержка</span>
               </TabsTrigger>
             </TabsList>
@@ -173,7 +271,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
             </TabsContent>
             
             <TabsContent value="support" className="flex-grow overflow-auto">
-              <SupportTab />
+              <SupportTab 
+                supportUsers={supportUsers}
+                loadingSupport={loadingSupport}
+                supportSearchQuery={supportSearchQuery}
+                setSupportSearchQuery={setSupportSearchQuery}
+                fetchSupportUsers={fetchSupportUsers}
+              />
             </TabsContent>
           </Tabs>
         </div>

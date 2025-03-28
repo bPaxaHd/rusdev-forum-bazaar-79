@@ -14,3 +14,24 @@ export interface User {
   };
   roles: string[];
 }
+
+export interface SupportMessage {
+  id: string;
+  user_id: string;
+  content: string;
+  is_admin: boolean;
+  read: boolean;
+  created_at: string;
+}
+
+export interface UserWithMessages {
+  profile: {
+    id: string;
+    username: string;
+    avatar_url: string | null;
+    subscription_type: string | null;
+  };
+  unreadCount: number;
+  lastMessage: string | null;
+  lastMessageTime: string | null;
+}
