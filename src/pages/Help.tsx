@@ -1,126 +1,82 @@
 
 import React from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { HelpCircle, ChevronDown, Search, MessageCircle, Book, Video } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const Help = () => {
   const faqs = [
     {
-      id: 1,
-      question: "Как зарегистрироваться на форуме?",
-      answer: "Для регистрации на форуме нажмите кнопку 'Зарегистрироваться' в правом верхнем углу страницы. Заполните необходимые поля в форме регистрации, подтвердите свой email и следуйте инструкциям для завершения процесса регистрации."
+      question: "Как создать аккаунт на DevTalk?",
+      answer: "Для создания аккаунта нажмите кнопку 'Регистрация' в правом верхнем углу сайта. Заполните необходимые поля в форме регистрации, включая имя пользователя, электронную почту и пароль. После этого проверьте свою электронную почту и подтвердите регистрацию, перейдя по ссылке в письме."
     },
     {
-      id: 2,
-      question: "Как создать новую тему на форуме?",
-      answer: "Чтобы создать новую тему, перейдите в соответствующий раздел форума (Frontend, Backend или Fullstack). Нажмите кнопку 'Создать тему', заполните заголовок, содержание вашего вопроса или темы для обсуждения и нажмите 'Опубликовать'."
+      question: "Как задать вопрос на форуме?",
+      answer: "Чтобы задать вопрос на форуме, вам необходимо войти в свой аккаунт. Затем перейдите на страницу форума, нажмите кнопку 'Создать тему' и заполните форму, указав заголовок, категорию и текст вопроса. После этого нажмите 'Опубликовать', и ваш вопрос появится на форуме."
     },
     {
-      id: 3,
-      question: "Как отредактировать свой профиль?",
-      answer: "Для редактирования профиля нажмите на свой аватар в правом верхнем углу страницы и выберите 'Профиль'. На странице профиля вы найдете кнопку редактирования, которая позволит вам изменить вашу информацию, аватар и настройки."
+      question: "Как ответить на существующую тему на форуме?",
+      answer: "Чтобы ответить на существующую тему, откройте интересующую вас тему, прокрутите страницу до формы комментария внизу, введите свой ответ и нажмите кнопку 'Отправить'. Ваш ответ будет добавлен к обсуждению и станет виден всем участникам форума."
     },
     {
-      id: 4,
-      question: "Как загрузить аватар?",
-      answer: "Чтобы загрузить аватар, перейдите в свой профиль, нажав на иконку профиля в правом верхнем углу. Выберите 'Редактировать профиль', затем найдите раздел загрузки аватара и следуйте инструкциям для загрузки изображения."
+      question: "Как изменить настройки профиля?",
+      answer: "Для изменения настроек профиля войдите в свой аккаунт, нажмите на ваш аватар в правом верхнем углу страницы и выберите 'Настройки'. На странице настроек вы можете изменить личную информацию, загрузить новый аватар, обновить пароль и настроить другие параметры вашего профиля."
     },
     {
-      id: 5,
-      question: "Как подписаться на тему?",
-      answer: "Чтобы подписаться на тему и получать уведомления о новых ответах, откройте интересующую вас тему и нажмите кнопку 'Подписаться' или соответствующий значок колокольчика рядом с заголовком темы."
+      question: "Что делать, если я забыл пароль?",
+      answer: "Если вы забыли пароль, перейдите на страницу входа и нажмите на ссылку 'Забыли пароль?' под формой входа. Введите адрес электронной почты, связанный с вашим аккаунтом, и мы отправим вам инструкции по сбросу пароля."
     },
     {
-      id: 6,
-      question: "Как изменить настройки уведомлений?",
-      answer: "Для изменения настроек уведомлений перейдите в свой профиль, выберите раздел 'Настройки', затем 'Уведомления'. Здесь вы можете выбрать типы уведомлений, которые хотите получать, и способы их доставки."
+      question: "Как отметить ответ как решение проблемы?",
+      answer: "Если вы автор темы и получили ответ, который решил вашу проблему, вы можете отметить его как решение, нажав на кнопку 'Отметить как решение' рядом с этим ответом. Это поможет другим пользователям быстро найти решение аналогичной проблемы."
+    },
+    {
+      question: "Как следить за интересующими темами?",
+      answer: "Чтобы следить за темой, откройте ее и нажмите кнопку 'Подписаться' вверху страницы. После этого вы будете получать уведомления о новых ответах в этой теме. Вы также можете управлять подписками в настройках вашего профиля."
+    },
+    {
+      question: "Могу ли я удалить свой аккаунт?",
+      answer: "Да, вы можете удалить свой аккаунт. Для этого перейдите в настройки профиля, прокрутите страницу до раздела 'Опасная зона' и нажмите кнопку 'Удалить аккаунт'. Обратите внимание, что это действие необратимо и приведет к удалению всех ваших данных с платформы."
     }
   ];
 
   return (
     <div className="container mx-auto px-4 py-12 animate-fade-in">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-3xl mx-auto">
         <Badge variant="secondary" className="mb-3">
           Помощь
         </Badge>
-        <h1 className="text-4xl font-bold mb-6">Центр помощи DevTalk</h1>
+        <h1 className="text-4xl font-bold mb-6">Часто задаваемые вопросы</h1>
         <p className="text-muted-foreground mb-12 text-lg">
-          Здесь вы найдете ответы на распространенные вопросы и руководства по использованию платформы DevTalk.
+          Найдите ответы на часто задаваемые вопросы о платформе DevTalk.
         </p>
 
-        <div className="relative mb-12">
-          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={20} />
-          <input
-            type="text"
-            placeholder="Поиск по часто задаваемым вопросам..."
-            className="w-full pl-12 pr-4 py-3 border rounded-lg"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <div className="border rounded-lg p-6 text-center space-y-4 bg-muted/20">
-            <div className="mx-auto w-12 h-12 flex items-center justify-center rounded-full bg-primary/10">
-              <Book className="text-primary" size={24} />
-            </div>
-            <h3 className="text-xl font-semibold">Документация</h3>
-            <p className="text-muted-foreground">
-              Подробная документация по всем функциям и возможностям платформы DevTalk.
-            </p>
-            <Button variant="outline" className="w-full">Перейти к документации</Button>
-          </div>
-          
-          <div className="border rounded-lg p-6 text-center space-y-4 bg-muted/20">
-            <div className="mx-auto w-12 h-12 flex items-center justify-center rounded-full bg-primary/10">
-              <Video className="text-primary" size={24} />
-            </div>
-            <h3 className="text-xl font-semibold">Видеоуроки</h3>
-            <p className="text-muted-foreground">
-              Обучающие видео о том, как использовать различные функции DevTalk.
-            </p>
-            <Button variant="outline" className="w-full">Смотреть видеоуроки</Button>
-          </div>
-          
-          <div className="border rounded-lg p-6 text-center space-y-4 bg-muted/20">
-            <div className="mx-auto w-12 h-12 flex items-center justify-center rounded-full bg-primary/10">
-              <MessageCircle className="text-primary" size={24} />
-            </div>
-            <h3 className="text-xl font-semibold">Обратная связь</h3>
-            <p className="text-muted-foreground">
-              Не нашли ответ на свой вопрос? Свяжитесь с нашей службой поддержки.
-            </p>
-            <Button variant="outline" className="w-full">Связаться с поддержкой</Button>
-          </div>
-        </div>
-
-        <h2 className="text-2xl font-bold mb-6">Часто задаваемые вопросы</h2>
-        <div className="space-y-4 mb-12">
-          {faqs.map(faq => (
-            <div key={faq.id} className="border rounded-lg overflow-hidden">
-              <details className="group">
-                <summary className="flex justify-between items-center p-6 cursor-pointer">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
-                    <HelpCircle className="text-primary" size={20} />
-                    {faq.question}
-                  </h3>
-                  <ChevronDown className="transform group-open:rotate-180 transition-transform" />
-                </summary>
-                <div className="p-6 pt-0 border-t">
-                  <p className="text-muted-foreground">{faq.answer}</p>
-                </div>
-              </details>
-            </div>
+        <Accordion type="single" collapsible className="mb-12">
+          {faqs.map((faq, index) => (
+            <AccordionItem key={index} value={`item-${index}`}>
+              <AccordionTrigger className="text-left">
+                {faq.question}
+              </AccordionTrigger>
+              <AccordionContent>
+                {faq.answer}
+              </AccordionContent>
+            </AccordionItem>
           ))}
-        </div>
+        </Accordion>
 
-        <div className="bg-muted/30 rounded-lg p-8 text-center">
+        <div className="bg-muted/30 border rounded-lg p-8 text-center">
           <h2 className="text-2xl font-bold mb-4">Не нашли ответ на свой вопрос?</h2>
-          <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-            Если вы не нашли ответ на свой вопрос, наша команда поддержки готова помочь вам.
-            Свяжитесь с нами, и мы ответим вам в кратчайшие сроки.
+          <p className="text-muted-foreground mb-6 max-w-xl mx-auto">
+            Свяжитесь с нашей командой поддержки, и мы поможем вам решить любую проблему,
+            связанную с использованием платформы.
           </p>
-          <Button size="lg">Связаться с поддержкой</Button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Badge variant="outline" className="px-4 py-2 text-base font-normal">
+              support@devtalk.ru
+            </Badge>
+            <Badge variant="outline" className="px-4 py-2 text-base font-normal">
+              +7 (495) 123-45-67
+            </Badge>
+          </div>
         </div>
       </div>
     </div>

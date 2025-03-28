@@ -1,31 +1,34 @@
 
 import React from "react";
 import { Badge } from "@/components/ui/badge";
-import { Code, Users, MessageCircle, BookOpen, Lightbulb } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { Code, Users, Target, Heart } from "lucide-react";
 
 const AboutUs = () => {
   const teamMembers = [
     {
-      id: 1,
       name: "Алексей Петров",
-      role: "Основатель & CEO",
-      bio: "Более 15 лет опыта в разработке ПО. Основал DevTalk с целью создания качественного русскоязычного сообщества разработчиков.",
-      image: "https://via.placeholder.com/200"
+      role: "Основатель и CEO",
+      bio: "Опытный разработчик с 15-летним стажем в области веб-технологий. Основал DevTalk с целью создания сообщества для русскоязычных разработчиков.",
+      avatar: "https://via.placeholder.com/150"
     },
     {
-      id: 2,
       name: "Мария Иванова",
-      role: "CTO",
-      bio: "Эксперт в области backend-разработки и архитектуры. Руководит технической стороной платформы DevTalk.",
-      image: "https://via.placeholder.com/200"
+      role: "Технический директор",
+      bio: "Специалист по архитектуре программного обеспечения и лидер технической команды DevTalk. Отвечает за разработку и поддержку платформы.",
+      avatar: "https://via.placeholder.com/150"
     },
     {
-      id: 3,
       name: "Дмитрий Сидоров",
-      role: "Frontend Lead",
-      bio: "Опытный frontend-разработчик с глубоким пониманием современных технологий. Ответственен за пользовательский интерфейс DevTalk.",
-      image: "https://via.placeholder.com/200"
+      role: "Руководитель сообщества",
+      bio: "Координирует работу модераторов и развитие сообщества. Помогает поддерживать дружественную и профессиональную атмосферу на форуме.",
+      avatar: "https://via.placeholder.com/150"
+    },
+    {
+      name: "Елена Козлова",
+      role: "Редактор контента",
+      bio: "Отвечает за качество образовательных материалов и публикаций на платформе. Имеет опыт работы в области технической документации.",
+      avatar: "https://via.placeholder.com/150"
     }
   ];
 
@@ -36,120 +39,98 @@ const AboutUs = () => {
           О нас
         </Badge>
         <h1 className="text-4xl font-bold mb-6">О проекте DevTalk</h1>
+        <p className="text-muted-foreground mb-12 text-lg">
+          DevTalk — это сообщество русскоязычных разработчиков программного обеспечения, 
+          объединенных общими интересами и стремлением к профессиональному росту.
+        </p>
 
-        <div className="space-y-12">
-          <section className="space-y-4">
-            <p className="text-xl text-muted-foreground">
-              DevTalk — это сообщество русскоязычных разработчиков, созданное с целью обмена знаниями, опытом и 
-              поддержки профессионального роста в области разработки программного обеспечения.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-bold mb-6">Наша миссия</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="border rounded-lg p-6 space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full bg-primary/10">
-                    <MessageCircle className="text-primary" size={24} />
-                  </div>
-                  <h3 className="text-xl font-semibold">Коммуникация</h3>
-                </div>
-                <p className="text-muted-foreground">
-                  Создать пространство для общения, обмена идеями и совместного решения технических проблем.
-                </p>
+        <div className="mb-16">
+          <h2 className="text-3xl font-bold mb-8">Наша миссия</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="flex flex-col items-center p-6 border rounded-lg text-center">
+              <div className="bg-primary/10 p-4 rounded-full mb-4">
+                <Code className="h-8 w-8 text-primary" />
               </div>
-              
-              <div className="border rounded-lg p-6 space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full bg-primary/10">
-                    <BookOpen className="text-primary" size={24} />
-                  </div>
-                  <h3 className="text-xl font-semibold">Образование</h3>
-                </div>
-                <p className="text-muted-foreground">
-                  Делиться знаниями и ресурсами, которые помогают разработчикам осваивать новые технологии.
-                </p>
-              </div>
-              
-              <div className="border rounded-lg p-6 space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full bg-primary/10">
-                    <Users className="text-primary" size={24} />
-                  </div>
-                  <h3 className="text-xl font-semibold">Сообщество</h3>
-                </div>
-                <p className="text-muted-foreground">
-                  Сформировать дружественное и поддерживающее сообщество профессионалов и начинающих разработчиков.
-                </p>
-              </div>
-              
-              <div className="border rounded-lg p-6 space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full bg-primary/10">
-                    <Lightbulb className="text-primary" size={24} />
-                  </div>
-                  <h3 className="text-xl font-semibold">Инновации</h3>
-                </div>
-                <p className="text-muted-foreground">
-                  Поощрять новаторское мышление и разработку оригинальных решений в сфере программирования.
-                </p>
-              </div>
+              <h3 className="text-xl font-bold mb-2">Делиться знаниями</h3>
+              <p className="text-muted-foreground">
+                Мы создаем платформу, где разработчики могут делиться своими знаниями, 
+                опытом и лучшими практиками в области программирования.
+              </p>
             </div>
-          </section>
+            
+            <div className="flex flex-col items-center p-6 border rounded-lg text-center">
+              <div className="bg-primary/10 p-4 rounded-full mb-4">
+                <Users className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">Развивать сообщество</h3>
+              <p className="text-muted-foreground">
+                Мы стремимся создать дружественное и инклюзивное сообщество, 
+                где каждый разработчик может найти поддержку и единомышленников.
+              </p>
+            </div>
+            
+            <div className="flex flex-col items-center p-6 border rounded-lg text-center">
+              <div className="bg-primary/10 p-4 rounded-full mb-4">
+                <Target className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">Помогать в развитии</h3>
+              <p className="text-muted-foreground">
+                Мы помогаем разработчикам всех уровней развивать свои навыки, 
+                узнавать о новых технологиях и расти профессионально.
+              </p>
+            </div>
+            
+            <div className="flex flex-col items-center p-6 border rounded-lg text-center">
+              <div className="bg-primary/10 p-4 rounded-full mb-4">
+                <Heart className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">Вдохновлять на творчество</h3>
+              <p className="text-muted-foreground">
+                Мы вдохновляем разработчиков на создание инновационных проектов, 
+                экспериментирование с новыми идеями и технологиями.
+              </p>
+            </div>
+          </div>
+        </div>
 
-          <Separator />
+        <Separator className="my-16" />
 
-          <section>
-            <h2 className="text-2xl font-bold mb-6">Наша команда</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {teamMembers.map(member => (
-                <div key={member.id} className="text-center space-y-4">
-                  <div className="mx-auto w-32 h-32 rounded-full overflow-hidden">
-                    <img src={member.image} alt={member.name} className="w-full h-full object-cover" />
-                  </div>
+        <div className="mb-16">
+          <h2 className="text-3xl font-bold mb-8 text-center">Наша команда</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {teamMembers.map((member, index) => (
+              <div key={index} className="flex flex-col sm:flex-row gap-4 items-center sm:items-start border rounded-lg p-6">
+                <div className="shrink-0">
+                  <img src={member.avatar} alt={member.name} className="w-24 h-24 rounded-full object-cover" />
+                </div>
+                <div>
                   <h3 className="text-xl font-bold">{member.name}</h3>
-                  <p className="text-primary font-medium">{member.role}</p>
+                  <p className="text-primary mb-2">{member.role}</p>
                   <p className="text-muted-foreground">{member.bio}</p>
                 </div>
-              ))}
-            </div>
-          </section>
-
-          <Separator />
-
-          <section className="text-center space-y-6">
-            <h2 className="text-2xl font-bold">Присоединяйтесь к нашему сообществу</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              DevTalk — это не просто форум, это сообщество единомышленников, 
-              готовых поделиться знаниями и помочь в решении сложных задач.
-            </p>
-            <div className="flex justify-center">
-              <div className="flex flex-wrap justify-center gap-2">
-                <Badge variant="outline" className="px-3 py-1">
-                  Frontend
-                </Badge>
-                <Badge variant="outline" className="px-3 py-1">
-                  Backend
-                </Badge>
-                <Badge variant="outline" className="px-3 py-1">
-                  Fullstack
-                </Badge>
-                <Badge variant="outline" className="px-3 py-1">
-                  DevOps
-                </Badge>
-                <Badge variant="outline" className="px-3 py-1">
-                  Mobile
-                </Badge>
-                <Badge variant="outline" className="px-3 py-1">
-                  Data Science
-                </Badge>
-                <Badge variant="outline" className="px-3 py-1">
-                  Machine Learning
-                </Badge>
               </div>
-            </div>
-          </section>
+            ))}
+          </div>
+        </div>
+
+        <Separator className="my-16" />
+
+        <div>
+          <h2 className="text-3xl font-bold mb-8">История проекта</h2>
+          <div className="space-y-6 text-muted-foreground">
+            <p>
+              DevTalk был основан в 2022 году группой энтузиастов, которые хотели создать русскоязычную платформу для обмена опытом и знаниями в области разработки программного обеспечения.
+            </p>
+            <p>
+              Начав как небольшой форум для обсуждения вопросов программирования, проект быстро вырос в полноценную платформу, предлагающую разнообразные ресурсы для разработчиков: форум, блог, документацию, видеоуроки и многое другое.
+            </p>
+            <p>
+              Сегодня DevTalk — это активное сообщество тысяч разработчиков, которые ежедневно общаются, решают технические проблемы, делятся опытом и помогают друг другу развиваться в профессиональном плане.
+            </p>
+            <p>
+              Мы постоянно работаем над улучшением платформы, добавляем новые функции и разделы, чтобы сделать ваш опыт использования DevTalk еще более полезным и приятным.
+            </p>
+          </div>
         </div>
       </div>
     </div>
