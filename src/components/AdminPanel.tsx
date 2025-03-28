@@ -57,7 +57,8 @@ const subscriptionTypes: SubscriptionType[] = [
   { id: "sponsor", name: "Спонсор", badge: "SPONSOR", color: "bg-purple-600 text-white" }
 ];
 
-const ADMIN_PASSWORD = "^\ag,6DFu5BBF?A^–aXj<zC(]wJl:nhbWS+KSBM8OK6\\P[sdNir8?7/A+m%>2NB\\";
+// Временный пароль администратора для демонстрации
+const ADMIN_PASSWORD = "admin123";
 const MAX_LOGIN_ATTEMPTS = 3;
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
@@ -270,14 +271,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
     }
 
     try {
-      // Direct string comparison to avoid any string encoding issues
+      console.log("Введенный пароль:", password);
+      console.log("Ожидаемый пароль:", ADMIN_PASSWORD);
+      
+      // Простое прямое сравнение строк
       if (password === ADMIN_PASSWORD) {
+        console.log("Аутентификация успешна");
         setAuthenticated(true);
         setAuthError("");
         setAuthAttempts(0);
         fetchUsers();
         fetchFailedLoginAttempts();
       } else {
+        console.log("Неверный пароль");
         const newAttempts = authAttempts + 1;
         setAuthAttempts(newAttempts);
         
