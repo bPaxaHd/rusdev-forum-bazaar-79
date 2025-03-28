@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, NavLink, useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -942,4 +943,151 @@ const TopicView = () => {
                       >
                         <Avatar className={`h-8 w-8 ${getAvatarStyles(commentProfile?.subscription_type, roles)}`}>
                           <AvatarImage src={commentProfile?.avatar_url || ""} alt={commentProfile?.username || "User"} />
-                          <AvatarFallback className={getAvatarFallbackStyles
+                          <AvatarFallback className={getAvatarFallbackStyles(commentProfile?.subscription_type, roles)}>
+                            {(commentProfile?.username?.[0] || "U").toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      </div>
+                      
+                      <div className="flex-1">
+                        <div className="flex justify-between items-center mb-2">
+                          <div>
+                            <div 
+                              className="font-medium flex items-center cursor-pointer hover:underline" 
+                              onClick={() => navigateToUserProfile(comment.user_id)}
+                              title="Перейти к профилю пользователя"
+                            >
+                              {commentProfile?.username || "Пользователь"}
+                              {roles.includes('admin') && <Shield className="h-4 w-4 text-red-400 ml-2" />}
+                              {roles.includes('creator') && <Award className="h-4 w-4 text-purple-400 ml-2" />}
+                              {roles.includes('moderator') && <Hammer className="h-4 w-4 text-blue-400 ml-2" />}
+                              {commentProfile?.subscription_type === 'sponsor' && <Diamond className="h-4 w-4 text-amber-400 ml-2" />}
+                              {commentProfile?.subscription_type === 'business' && <Star className="h-4 w-4 text-purple-400 ml-2" />}
+                              {commentProfile?.subscription_type === 'premium' && <Crown className="h-4 w-4 text-blue-400 ml-2" />}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {formatDate(comment.created_at)}
+                            </div>
+                          </div>
+                          
+                          {canModifyComments[comment.id] && (
+                            <div className="flex gap-2">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="p-0 h-auto"
+                                onClick={() => setEditingCommentId(comment.id)}
+                              >
+                                <Pencil size={16} className="text-muted-foreground hover:text-foreground" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="p-0 h-auto"
+                                onClick={() => handleDeleteComment(comment.id)}
+                              >
+                                <Trash2 size={16} className="text-muted-foreground hover:text-red-500" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="mt-2 prose prose-sm dark:prose-invert max-w-none">
+                          {comment.content}
+                        </div>
+                        
+                        <div className="mt-4 flex items-center gap-4">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className={`gap-2 ${likedComments[comment.id] ? 'text-primary' : ''}`}
+                            onClick={() => handleLikeComment(comment.id, comment.likes)}
+                          >
+                            <ThumbsUp size={14} className={likedComments[comment.id] ? "fill-primary" : ""} />
+                            <span>{comment.likes}</span>
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center text-muted-foreground py-8">
+              Пока нет комментариев. Будьте первым, кто оставит комментарий!
+            </div>
+          )}
+          
+          {user ? (
+            <div className="mt-6">
+              <h3 className="text-lg font-medium mb-3">Добавить комментарий</h3>
+              <div className="flex flex-col gap-4">
+                <Textarea
+                  placeholder="Напишите ваш комментарий..."
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  className="min-h-[120px]"
+                />
+                <div className="flex justify-end">
+                  <Button 
+                    onClick={handleSubmitComment} 
+                    disabled={!newComment.trim() || commentLoading}
+                    className="gap-2"
+                  >
+                    {commentLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Отправка...
+                      </>
+                    ) : (
+                      <>
+                        <Send size={16} />
+                        Отправить комментарий
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-6 p-4 border rounded-md bg-muted/50 text-center">
+              <p className="mb-2">Войдите в систему, чтобы оставить комментарий</p>
+              <Button onClick={() => navigate("/login")}>Войти</Button>
+            </div>
+          )}
+        </div>
+        
+        {/* Edit Comment Dialog */}
+        {editingCommentId && (
+          <EditCommentDialog
+            commentId={editingCommentId}
+            userId={user?.id || ""}
+            initialContent={comments.find(c => c.id === editingCommentId)?.content || ""}
+            open={!!editingCommentId}
+            onOpenChange={() => setEditingCommentId(null)}
+            onCommentUpdated={refreshComments}
+          />
+        )}
+        
+        {/* Edit Topic Dialog */}
+        {topic && (
+          <EditTopicDialog
+            topicId={topic.id}
+            userId={user?.id || ""}
+            initialData={{
+              title: topic.title,
+              content: topic.content,
+              category: topic.category
+            }}
+            open={showEditTopicDialog}
+            onOpenChange={setShowEditTopicDialog}
+            onTopicUpdated={refreshTopic}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default TopicView;
