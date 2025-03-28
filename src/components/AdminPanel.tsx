@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -83,7 +82,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
         return;
       }
 
-      // Get all users
       const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
       
       if (authError) {
@@ -91,7 +89,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
         return;
       }
       
-      // Combine the data
       const combinedUsers = authData.users.map(authUser => {
         const profile = profiles.find(p => p.id === authUser.id) || {
           id: authUser.id,
@@ -162,7 +159,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
         description: "Данные пользователя успешно обновлены",
       });
       
-      // Update local state
       setUsers(prev => 
         prev.map(user => 
           user.id === selectedUser.id 
@@ -195,7 +191,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
     if (!selectedUser) return;
     
     try {
-      // Delete user from auth
       const { error: authError } = await supabase.auth.admin.deleteUser(
         selectedUser.id
       );
@@ -214,7 +209,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
         description: "Пользователь успешно удален из системы",
       });
       
-      // Update local state
       setUsers(prev => prev.filter(user => user.id !== selectedUser.id));
       setSelectedUser(null);
     } catch (error) {
@@ -570,7 +564,5 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
     </Dialog>
   );
 };
-
-import { Trash2 } from "lucide-react";
 
 export default AdminPanel;
