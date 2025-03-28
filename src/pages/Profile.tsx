@@ -108,8 +108,8 @@ const Profile = () => {
           data.skills = [];
         }
         
-        setProfile(data);
-        setEditedProfile(data);
+        setProfile(data as ProfileData);
+        setEditedProfile(data as ProfileData);
       } catch (error) {
         console.error("Ошибка при загрузке профиля:", error);
       } finally {
