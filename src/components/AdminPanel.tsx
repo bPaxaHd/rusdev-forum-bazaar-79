@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -13,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { 
   UserPlus, Users, Settings, ListChecks, Package, 
   UserCheck, ShieldAlert, Search, Loader2, RefreshCw, Award,
-  Lock, Key, Eye, EyeOff
+  Lock, Key, Eye, EyeOff, AlertTriangle
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -35,6 +34,14 @@ interface User {
   };
 }
 
+interface FailedLoginAttempt {
+  id: string;
+  ip_address: string;
+  timestamp: string;
+  attempts: number;
+  is_resolved: boolean;
+}
+
 interface SubscriptionType {
   id: string;
   name: string;
@@ -49,9 +56,8 @@ const subscriptionTypes: SubscriptionType[] = [
   { id: "sponsor", name: "Спонсор", badge: "SPONSOR", color: "bg-purple-600 text-white" }
 ];
 
-// Хешированный пароль для админ-панели (для демонстрации используем простое решение)
-// В реальном приложении следует использовать более безопасные методы
-const ADMIN_PASSWORD_HASH = "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918"; // sha256 hash для "admin"
+const ADMIN_PASSWORD_HASH = "34c7d4e37608fe49ebdb577cd15bbbe47a08c0a5517adfcce97bb4423fc3fad9";
+const MAX_LOGIN_ATTEMPTS = 3;
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
   const [users, setUsers] = useState<User[]>([]);
@@ -64,21 +70,54 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
   const [savingSubscription, setSavingSubscription] = useState(false);
   const { toast } = useToast();
   
-  // Состояния для аутентификации админа
   const [authenticated, setAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState("");
   const [authAttempts, setAuthAttempts] = useState(0);
   const [lockoutUntil, setLockoutUntil] = useState<Date | null>(null);
+  const [clientIp, setClientIp] = useState<string>("unknown");
+  const [permanentlyBlocked, setPermanentlyBlocked] = useState(false);
   
-  // Состояния для управления тегами пользователей
   const [editingUserTag, setEditingUserTag] = useState(false);
   const [userTag, setUserTag] = useState("");
   const [savingUserTag, setSavingUserTag] = useState(false);
+  
+  const [failedAttempts, setFailedAttempts] = useState<FailedLoginAttempt[]>([]);
+  const [loadingFailedAttempts, setLoadingFailedAttempts] = useState(false);
 
   useEffect(() => {
-    // Сбрасываем состояние аутентификации при закрытии панели
+    if (open) {
+      checkBlockedStatus();
+    }
+  }, [open]);
+
+  const checkBlockedStatus = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('admin_login_attempts')
+        .select('*')
+        .eq('ip_address', clientIp)
+        .eq('is_resolved', false)
+        .gte('attempts', MAX_LOGIN_ATTEMPTS)
+        .maybeSingle();
+      
+      if (error) {
+        console.error("Ошибка при проверке статуса блокировки:", error);
+        return;
+      }
+      
+      if (data) {
+        setPermanentlyBlocked(true);
+      } else {
+        setPermanentlyBlocked(false);
+      }
+    } catch (error) {
+      console.error("Ошибка при проверке статуса блокировки:", error);
+    }
+  };
+
+  useEffect(() => {
     if (!open) {
       setAuthenticated(false);
       setPassword("");
@@ -86,7 +125,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
     }
   }, [open]);
 
-  // Проверка блокировки
   useEffect(() => {
     if (lockoutUntil && new Date() > lockoutUntil) {
       setLockoutUntil(null);
@@ -94,7 +132,61 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
     }
   }, [lockoutUntil]);
 
-  // Хеширование пароля (для демонстрации)
+  const fetchFailedLoginAttempts = async () => {
+    try {
+      setLoadingFailedAttempts(true);
+      
+      const { data, error } = await supabase
+        .from('admin_login_attempts')
+        .select('*')
+        .order('timestamp', { ascending: false });
+        
+      if (error) {
+        console.error("Ошибка при загрузке списка неудачных попыток:", error);
+        return;
+      }
+      
+      setFailedAttempts(data || []);
+    } catch (error) {
+      console.error("Ошибка при загрузке списка неудачных попыток:", error);
+    } finally {
+      setLoadingFailedAttempts(false);
+    }
+  };
+
+  const handleResolveAttempt = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('admin_login_attempts')
+        .update({ is_resolved: true })
+        .eq('id', id);
+        
+      if (error) {
+        console.error("Ошибка при разблокировке пользователя:", error);
+        toast({
+          title: "Ошибка",
+          description: "Не уда��ось разблокировать пользователя",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      fetchFailedLoginAttempts();
+      
+      toast({
+        title: "Успешно",
+        description: "Пользователь разблокирован",
+      });
+    } catch (error) {
+      console.error("Ошибка при разблокировке пользователя:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось разблокировать пользователя",
+        variant: "destructive",
+      });
+    }
+  };
+
   const hashPassword = async (password: string): Promise<string> => {
     const encoder = new TextEncoder();
     const data = encoder.encode(password);
@@ -104,9 +196,56 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
     return hashHex;
   };
 
-  // Аутентификация админа
+  const recordFailedLoginAttempt = async () => {
+    try {
+      const { data: existingRecord, error: fetchError } = await supabase
+        .from('admin_login_attempts')
+        .select('*')
+        .eq('ip_address', clientIp)
+        .eq('is_resolved', false)
+        .maybeSingle();
+        
+      if (fetchError) {
+        console.error("Ошибка при проверке существующей записи:", fetchError);
+        return;
+      }
+      
+      if (existingRecord) {
+        const { error: updateError } = await supabase
+          .from('admin_login_attempts')
+          .update({ 
+            attempts: existingRecord.attempts + 1,
+            timestamp: new Date().toISOString()
+          })
+          .eq('id', existingRecord.id);
+          
+        if (updateError) {
+          console.error("Ошибка при обновлении записи:", updateError);
+        }
+      } else {
+        const { error: insertError } = await supabase
+          .from('admin_login_attempts')
+          .insert({
+            ip_address: clientIp,
+            attempts: 1,
+            is_resolved: false
+          });
+          
+        if (insertError) {
+          console.error("Ошибка при создании записи:", insertError);
+        }
+      }
+    } catch (error) {
+      console.error("Ошибка при записи неудачной попытки входа:", error);
+    }
+  };
+
   const authenticateAdmin = async () => {
-    // Проверка блокировки
+    if (permanentlyBlocked) {
+      setAuthError("Ваш аккаунт заблокирован. Обратитесь к администратору.");
+      return;
+    }
+    
     if (lockoutUntil && new Date() < lockoutUntil) {
       const timeLeft = Math.ceil((lockoutUntil.getTime() - new Date().getTime()) / 1000 / 60);
       setAuthError(`Слишком много попыток. Повторите через ${timeLeft} мин.`);
@@ -114,7 +253,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
     }
 
     try {
-      // Хешируем введенный пароль и сравниваем с сохраненным хешем
       const hashedPassword = await hashPassword(password);
       
       if (hashedPassword === ADMIN_PASSWORD_HASH) {
@@ -122,19 +260,21 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
         setAuthError("");
         setAuthAttempts(0);
         fetchUsers();
+        fetchFailedLoginAttempts();
       } else {
-        // Увеличиваем счетчик неудачных попыток
         const newAttempts = authAttempts + 1;
         setAuthAttempts(newAttempts);
         
-        // Если превышено количество попыток, блокируем на некоторое время
-        if (newAttempts >= 5) {
+        await recordFailedLoginAttempt();
+        
+        if (newAttempts >= MAX_LOGIN_ATTEMPTS) {
           const lockoutTime = new Date();
-          lockoutTime.setMinutes(lockoutTime.getMinutes() + 15); // Блокировка на 15 минут
+          lockoutTime.setMinutes(lockoutTime.getMinutes() + 15);
           setLockoutUntil(lockoutTime);
-          setAuthError(`Слишком много попыток. Повторите через 15 минут.`);
+          setAuthError(`Превышено количество попыток. Обратитесь к администратору системы.`);
+          setPermanentlyBlocked(true);
         } else {
-          setAuthError(`Неверный пароль. Осталось попыток: ${5 - newAttempts}`);
+          setAuthError(`Неверный пароль. Осталось попыток: ${MAX_LOGIN_ATTEMPTS - newAttempts}`);
         }
       }
     } catch (error) {
@@ -143,12 +283,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
     }
   };
 
-  // Загрузка пользователей
   const fetchUsers = async () => {
     try {
       setLoading(true);
       
-      // First fetch profiles
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select(`
@@ -165,11 +303,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
         return;
       }
       
-      // Now get auth users to get emails - need to use admin API for this in production
-      // For demo, we'll generate placeholder emails
       const formattedUsers = profiles.map(profile => ({
         id: profile.id,
-        email: `user-${profile.id.substring(0, 8)}@example.com`, // Generate placeholder email
+        email: `user-${profile.id.substring(0, 8)}@example.com`,
         created_at: profile.created_at,
         user_tag: profile.user_tag,
         profile: {
@@ -189,7 +325,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
     }
   };
 
-  // Фильтрация пользователей при изменении поискового запроса
   useEffect(() => {
     if (!searchQuery.trim() || !authenticated) {
       setFilteredUsers(users);
@@ -206,7 +341,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
     setFilteredUsers(filtered);
   }, [searchQuery, users, authenticated]);
 
-  // Функция для обновления типа подписки
   const updateSubscription = async () => {
     if (!selectedUser || !selectedSubscription) return;
     
@@ -228,7 +362,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
         return;
       }
       
-      // Обновляем локальные данные
       setUsers(prevUsers => 
         prevUsers.map(user => 
           user.id === selectedUser.id 
@@ -275,7 +408,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
     }
   };
 
-  // Функция для обновления тега пользователя
   const updateUserTag = async () => {
     if (!selectedUser) return;
     
@@ -297,7 +429,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
         return;
       }
       
-      // Обновляем локальные данные
       setUsers(prevUsers => 
         prevUsers.map(user => 
           user.id === selectedUser.id 
@@ -346,25 +477,21 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
     }
   };
 
-  // Получить имя подписки по ID
   const getSubscriptionName = (subscriptionId: string): string => {
     const subscription = subscriptionTypes.find(sub => sub.id === subscriptionId);
     return subscription ? subscription.name : "Неизвестно";
   };
 
-  // Получить цвет значка подписки
   const getSubscriptionBadgeClass = (subscriptionId: string): string => {
     const subscription = subscriptionTypes.find(sub => sub.id === subscriptionId);
     return subscription ? subscription.color : "bg-secondary text-secondary-foreground";
   };
 
-  // Получить текст значка подписки
   const getSubscriptionBadgeText = (subscriptionId: string): string => {
     const subscription = subscriptionTypes.find(sub => sub.id === subscriptionId);
     return subscription ? subscription.badge : "FREE";
   };
 
-  // Форматирование даты
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
     return new Intl.DateTimeFormat("ru-RU", {
@@ -387,7 +514,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
               </p>
             </div>
             
-            {authError && (
+            {permanentlyBlocked && (
+              <div className="bg-destructive/10 text-destructive p-4 rounded-md mb-4 text-center">
+                <AlertTriangle className="mx-auto h-10 w-10 mb-2" />
+                <h3 className="font-bold">Аккаунт заблокирован</h3>
+                <p>Превышено количество попыток входа в систему.</p>
+                <p className="text-sm mt-1">Обратитесь к администратору системы для разблокировки.</p>
+              </div>
+            )}
+            
+            {authError && !permanentlyBlocked && (
               <div className="bg-destructive/10 text-destructive p-3 rounded-md mb-4 text-center">
                 {authError}
               </div>
@@ -402,12 +538,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
                   onChange={(e) => setPassword(e.target.value)}
                   className="pr-10"
                   onKeyDown={(e) => e.key === "Enter" && authenticateAdmin()}
-                  disabled={!!(lockoutUntil && new Date() < lockoutUntil)}
+                  disabled={permanentlyBlocked || !!(lockoutUntil && new Date() < lockoutUntil)}
                 />
                 <button 
                   type="button"
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   onClick={() => setShowPassword(!showPassword)}
+                  disabled={permanentlyBlocked}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -416,7 +553,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
               <Button 
                 className="w-full" 
                 onClick={authenticateAdmin}
-                disabled={!password.trim() || !!(lockoutUntil && new Date() < lockoutUntil)}
+                disabled={!password.trim() || permanentlyBlocked || !!(lockoutUntil && new Date() < lockoutUntil)}
               >
                 <Lock className="mr-2 h-4 w-4" />
                 Войти в панель
@@ -449,6 +586,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
                 <TabsTrigger value="subscriptions" className="flex items-center gap-1.5">
                   <Award size={14} />
                   Подписки
+                </TabsTrigger>
+                <TabsTrigger value="security" className="flex items-center gap-1.5">
+                  <Lock size={14} />
+                  Безопасность
                 </TabsTrigger>
                 <TabsTrigger value="settings" className="flex items-center gap-1.5">
                   <Settings size={14} />
@@ -779,6 +920,115 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
                     </Card>
                   ))}
                 </div>
+              </TabsContent>
+              
+              <TabsContent value="security">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Lock size={18} />
+                      Журнал безопасности
+                    </CardTitle>
+                    <CardDescription>
+                      Неудачные попытки входа в панель администратора
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-medium">Заблокированные IP-адреса</h3>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={fetchFailedLoginAttempts}
+                          disabled={loadingFailedAttempts}
+                        >
+                          {loadingFailedAttempts ? (
+                            <Loader2 size={14} className="mr-2 animate-spin" />
+                          ) : (
+                            <RefreshCw size={14} className="mr-2" />
+                          )}
+                          Обновить
+                        </Button>
+                      </div>
+                      
+                      {loadingFailedAttempts ? (
+                        <div className="space-y-2">
+                          {Array(3).fill(0).map((_, index) => (
+                            <Card key={index} className="p-3">
+                              <div className="flex items-center justify-between">
+                                <div className="h-4 w-40 bg-muted animate-pulse rounded"></div>
+                                <div className="h-4 w-20 bg-muted animate-pulse rounded"></div>
+                              </div>
+                            </Card>
+                          ))}
+                        </div>
+                      ) : failedAttempts.length > 0 ? (
+                        <div className="space-y-2">
+                          {failedAttempts
+                            .filter(attempt => !attempt.is_resolved && attempt.attempts >= MAX_LOGIN_ATTEMPTS)
+                            .map(attempt => (
+                              <Card key={attempt.id} className="p-3">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <div className="font-medium">{attempt.ip_address}</div>
+                                    <div className="text-xs text-muted-foreground">
+                                      Попыток: {attempt.attempts} | 
+                                      Последняя попытка: {new Date(attempt.timestamp).toLocaleString()}
+                                    </div>
+                                  </div>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => handleResolveAttempt(attempt.id)}
+                                  >
+                                    Разблокировать
+                                  </Button>
+                                </div>
+                              </Card>
+                            ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-6 text-muted-foreground">
+                          <Lock className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                          <p>Нет заблокированных IP-адресов</p>
+                        </div>
+                      )}
+                      
+                      <Separator className="my-4" />
+                      
+                      <div>
+                        <h3 className="text-sm font-medium mb-3">История попыток входа</h3>
+                        <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+                          {failedAttempts.length > 0 ? (
+                            failedAttempts.map(attempt => (
+                              <div key={attempt.id} className="flex items-center justify-between border-b pb-2">
+                                <div>
+                                  <div className="font-medium">{attempt.ip_address}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {new Date(attempt.timestamp).toLocaleString()}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant={attempt.attempts >= MAX_LOGIN_ATTEMPTS ? "destructive" : "secondary"}>
+                                    {attempt.attempts} попыток
+                                  </Badge>
+                                  {attempt.is_resolved && (
+                                    <Badge variant="outline">Разрешено</Badge>
+                                  )}
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-center py-4 text-muted-foreground">
+                              <p>История пуста</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </TabsContent>
               
               <TabsContent value="settings">
