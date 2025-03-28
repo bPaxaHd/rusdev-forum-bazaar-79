@@ -30,6 +30,8 @@ export interface UserWithMessages {
     username: string;
     avatar_url: string | null;
     subscription_type: string | null;
+    created_at: string;
+    updated_at: string;
   };
   unreadCount: number;
   lastMessage: string | null;

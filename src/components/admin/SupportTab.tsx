@@ -136,44 +136,56 @@ const SupportTab: React.FC<SupportTabProps> = ({
                 </div>
               ) : supportUsers.length > 0 ? (
                 <div className="flex flex-col gap-2">
-                  {supportUsers.map((user) => (
-                    <div
-                      key={user.profile.id}
-                      className={`p-3 border rounded-md cursor-pointer hover:bg-accent transition-colors ${
-                        selectedSupportUser?.id === user.profile.id ? 'bg-accent' : ''
-                      }`}
-                      onClick={() => handleSelectSupportUser(user.profile)}
-                    >
-                      <div className="flex items-center mb-1">
-                        <Avatar className="h-8 w-8 mr-2">
-                          <AvatarImage src={user.profile.avatar_url || ""} />
-                          <AvatarFallback className="bg-gradient-to-br from-purple-400 to-blue-500 text-white">
-                            {user.profile.username.substring(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between">
-                            <p className="font-medium text-sm">{user.profile.username}</p>
-                            {user.unreadCount > 0 && (
-                              <Badge variant="destructive" className="ml-1 px-1.5 py-0.5 text-xs">
-                                {user.unreadCount}
-                              </Badge>
-                            )}
+                  {supportUsers.map((user) => {
+                    // Create a complete UserProfile object with all required properties
+                    const completeUserProfile: UserProfile = {
+                      id: user.profile.id,
+                      username: user.profile.username,
+                      avatar_url: user.profile.avatar_url,
+                      subscription_type: user.profile.subscription_type,
+                      created_at: user.profile.created_at,
+                      updated_at: user.profile.updated_at
+                    };
+                    
+                    return (
+                      <div
+                        key={user.profile.id}
+                        className={`p-3 border rounded-md cursor-pointer hover:bg-accent transition-colors ${
+                          selectedSupportUser?.id === user.profile.id ? 'bg-accent' : ''
+                        }`}
+                        onClick={() => handleSelectSupportUser(completeUserProfile)}
+                      >
+                        <div className="flex items-center mb-1">
+                          <Avatar className="h-8 w-8 mr-2">
+                            <AvatarImage src={user.profile.avatar_url || ""} />
+                            <AvatarFallback className="bg-gradient-to-br from-purple-400 to-blue-500 text-white">
+                              {user.profile.username.substring(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <p className="font-medium text-sm">{user.profile.username}</p>
+                              {user.unreadCount > 0 && (
+                                <Badge variant="destructive" className="ml-1 px-1.5 py-0.5 text-xs">
+                                  {user.unreadCount}
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                         </div>
+                        {user.lastMessage && (
+                          <p className="text-xs text-muted-foreground truncate">
+                            {user.lastMessage}
+                          </p>
+                        )}
+                        {user.lastMessageTime && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {formatDate(user.lastMessageTime)}
+                          </p>
+                        )}
                       </div>
-                      {user.lastMessage && (
-                        <p className="text-xs text-muted-foreground truncate">
-                          {user.lastMessage}
-                        </p>
-                      )}
-                      {user.lastMessageTime && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {formatDate(user.lastMessageTime)}
-                        </p>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-4">

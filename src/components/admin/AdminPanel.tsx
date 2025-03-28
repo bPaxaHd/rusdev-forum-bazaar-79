@@ -138,7 +138,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
               id: profile.id,
               username: profile.username,
               avatar_url: profile.avatar_url,
-              subscription_type: profile.subscription_type
+              subscription_type: profile.subscription_type,
+              created_at: profile.created_at,
+              updated_at: profile.updated_at
             },
             unreadCount,
             lastMessage,
