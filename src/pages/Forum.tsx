@@ -25,6 +25,10 @@ interface TopicData {
     avatar_url: string | null;
   };
   comments?: { id: string }[];
+  profiles?: {
+    username: string;
+    avatar_url: string | null;
+  };
 }
 
 const Forum = () => {
@@ -76,7 +80,10 @@ const Forum = () => {
         // Преобразуем данные в формат, который ожидает TopicCard
         const formattedTopics = data.map(topic => ({
           ...topic,
-          profile: topic.profiles,
+          profile: {
+            username: topic.profiles?.username || "Unknown",
+            avatar_url: topic.profiles?.avatar_url
+          },
           comments: topic.comments || []
         }));
         
