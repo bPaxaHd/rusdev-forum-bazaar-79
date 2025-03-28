@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -72,8 +73,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState("");
-  const [authAttempts, setAuthAttempts] = useState(0);
-  const [lockoutUntil, setLockoutUntil] = useState<Date | null>(null);
+  const [authAttempts, setAuthAttempts] = useState(() => {
+    // Load from localStorage to persist between panel openings
+    const savedAttempts = localStorage.getItem('adminAuthAttempts');
+    return savedAttempts ? parseInt(savedAttempts, 10) : 0;
+  });
+  const [lockoutUntil, setLockoutUntil] = useState<Date | null>(() => {
+    // Load lockout time from localStorage
+    const savedLockout = localStorage.getItem('adminLockoutUntil');
+    return savedLockout ? new Date(savedLockout) : null;
+  });
   const [clientIp, setClientIp] = useState<string>("unknown");
   const [permanentlyBlocked, setPermanentlyBlocked] = useState(false);
   const [editingUserTag, setEditingUserTag] = useState(false);
@@ -82,6 +91,20 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
   const [failedAttempts, setFailedAttempts] = useState<FailedLoginAttempt[]>([]);
   const [loadingFailedAttempts, setLoadingFailedAttempts] = useState(false);
   const { toast } = useToast();
+
+  // Save auth attempts to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('adminAuthAttempts', authAttempts.toString());
+  }, [authAttempts]);
+
+  // Save lockout time to localStorage whenever it changes
+  useEffect(() => {
+    if (lockoutUntil) {
+      localStorage.setItem('adminLockoutUntil', lockoutUntil.toISOString());
+    } else {
+      localStorage.removeItem('adminLockoutUntil');
+    }
+  }, [lockoutUntil]);
 
   useEffect(() => {
     if (open) {
@@ -119,6 +142,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
       setAuthenticated(false);
       setPassword("");
       setAuthError("");
+      // We no longer reset authAttempts here to persist between panel openings
     }
   }, [open]);
 
@@ -128,6 +152,55 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
       setAuthAttempts(0);
     }
   }, [lockoutUntil]);
+
+  const recordFailedLoginAttempt = async () => {
+    try {
+      // First check if there's an existing record for this IP
+      const { data: existingAttempt, error: fetchError } = await supabase
+        .from('admin_login_attempts')
+        .select('*')
+        .eq('ip_address', clientIp)
+        .eq('is_resolved', false)
+        .maybeSingle();
+        
+      if (fetchError) {
+        console.error("Error checking for existing login attempts:", fetchError);
+        return;
+      }
+      
+      if (existingAttempt) {
+        // Update existing record
+        const newAttempts = existingAttempt.attempts + 1;
+        const { error: updateError } = await supabase
+          .from('admin_login_attempts')
+          .update({ 
+            attempts: newAttempts,
+            timestamp: new Date().toISOString()
+          })
+          .eq('id', existingAttempt.id);
+          
+        if (updateError) {
+          console.error("Error updating login attempts:", updateError);
+        }
+      } else {
+        // Create new record
+        const { error: insertError } = await supabase
+          .from('admin_login_attempts')
+          .insert({
+            ip_address: clientIp,
+            attempts: 1,
+            timestamp: new Date().toISOString(),
+            is_resolved: false
+          });
+          
+        if (insertError) {
+          console.error("Error recording login attempt:", insertError);
+        }
+      }
+    } catch (error) {
+      console.error("Error recording failed login attempt:", error);
+    }
+  };
 
   const fetchFailedLoginAttempts = async () => {
     try {
@@ -162,7 +235,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
         console.error("Ошибка при разблокировке пользователя:", error);
         toast({
           title: "Ошибка",
-          description: "Не уда��ось разблокировать пользователя",
+          description: "Не удалось разблокировать пользователя",
           variant: "destructive",
         });
         return;
@@ -197,6 +270,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
     }
 
     try {
+      // Direct string comparison to avoid any string encoding issues
       if (password === ADMIN_PASSWORD) {
         setAuthenticated(true);
         setAuthError("");
