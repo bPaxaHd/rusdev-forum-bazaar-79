@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -42,6 +43,7 @@ import {
 } from "lucide-react";
 import "../styles/admin.css";
 import { useAuth } from "@/contexts/AuthContext";
+import RoleCheckbox from "./RoleCheckbox";
 
 interface AdminPanelProps {
   open: boolean;
@@ -847,3 +849,235 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
                                   onCheckedChange={(checked) => setEditedProfile(prev => ({ ...prev, is_muted: checked }))}
                                   className={editedProfile.is_muted ? "bg-orange-500" : ""}
                                 />
+                              </div>
+                              
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Snowflake size={18} className="text-blue-500" />
+                                  <div>
+                                    <Label htmlFor="freeze-switch">Заморозить аккаунт</Label>
+                                    <p className="text-sm text-muted-foreground">Пользователь не сможет выполнять никакие действия</p>
+                                  </div>
+                                </div>
+                                <Switch 
+                                  id="freeze-switch" 
+                                  checked={editedProfile.is_frozen || false}
+                                  onCheckedChange={(checked) => setEditedProfile(prev => ({ ...prev, is_frozen: checked }))}
+                                  className={editedProfile.is_frozen ? "bg-blue-500" : ""}
+                                />
+                              </div>
+                            </div>
+                            
+                            <div className="flex justify-between mt-6">
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="destructive" className="flex items-center gap-1">
+                                    <Trash2 size={16} />
+                                    <span>Удалить пользователя</span>
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Это действие нельзя отменить. Пользователь будет полностью удален из системы
+                                      вместе со всеми его данными.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Отмена</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleDeleteUser} className="bg-red-500 hover:bg-red-600">
+                                      Удалить
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                              
+                              <Button onClick={handleUpdateProfile}>Сохранить</Button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center h-full">
+                          <User size={48} className="text-muted-foreground/40" />
+                          <p className="text-muted-foreground mt-4">Выберите пользователя для управления</p>
+                        </div>
+                      )}
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="settings">
+              <div className="p-4">
+                <h3 className="text-xl font-semibold mb-4">Настройки администратора</h3>
+                <p className="text-muted-foreground mb-6">
+                  Эта страница находится в разработке. Здесь будут доступны общие настройки сайта.
+                </p>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="stats">
+              <div className="p-4">
+                <h3 className="text-xl font-semibold mb-4">Статистика использования</h3>
+                <p className="text-muted-foreground mb-6">
+                  Эта страница находится в разработке. Здесь будет отображаться статистика использования сайта.
+                </p>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="support" className="h-[70vh] flex flex-col">
+              <div className="flex justify-between items-center mb-4">
+                <Input 
+                  placeholder="Поиск обращений..." 
+                  value={supportSearchQuery}
+                  onChange={(e) => setSupportSearchQuery(e.target.value)}
+                  className="max-w-sm"
+                />
+                <Button variant="outline" onClick={fetchSupportUsers}>Обновить</Button>
+              </div>
+              
+              <div className="flex gap-4 flex-grow overflow-hidden">
+                <Card className="w-1/3 overflow-hidden flex flex-col">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <MessageSquare size={16} className="text-purple-500" />
+                      <span>Обращения в поддержку</span>
+                    </CardTitle>
+                  </CardHeader>
+                  
+                  <CardContent className="p-0 flex-grow overflow-hidden">
+                    <ScrollArea className="h-[calc(70vh-130px)] p-4">
+                      {loadingSupport ? (
+                        <div className="flex flex-col gap-2">
+                          {[1, 2, 3].map((i) => (
+                            <div key={i} className="p-3 border rounded-md animate-pulse">
+                              <div className="flex items-center mb-2">
+                                <div className="bg-muted rounded-full h-8 w-8 mr-2" />
+                                <div className="space-y-2 flex-1">
+                                  <div className="h-4 bg-muted rounded w-1/2" />
+                                </div>
+                              </div>
+                              <div className="h-3 bg-muted rounded w-full mb-1" />
+                              <div className="h-3 bg-muted rounded w-2/3" />
+                            </div>
+                          ))}
+                        </div>
+                      ) : filteredSupportUsers.length > 0 ? (
+                        <div className="flex flex-col gap-2">
+                          {filteredSupportUsers.map((user) => (
+                            <div
+                              key={user.profile.id}
+                              className={`p-3 border rounded-md cursor-pointer hover:bg-accent transition-colors ${
+                                selectedSupportUser?.id === user.profile.id ? 'bg-accent' : ''
+                              }`}
+                              onClick={() => handleSelectSupportUser(user.profile)}
+                            >
+                              <div className="flex items-center mb-1">
+                                <Avatar className="h-8 w-8 mr-2">
+                                  <AvatarImage src={user.profile.avatar_url || ""} />
+                                  <AvatarFallback className="bg-gradient-to-br from-purple-400 to-blue-500 text-white">
+                                    {user.profile.username.substring(0, 2).toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1">
+                                  <div className="flex items-center justify-between">
+                                    <p className="font-medium text-sm">{user.profile.username}</p>
+                                    {user.unreadCount > 0 && (
+                                      <Badge variant="destructive" className="ml-1 px-1.5 py-0.5 text-xs">
+                                        {user.unreadCount}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              {user.lastMessage && (
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {user.lastMessage}
+                                </p>
+                              )}
+                              {user.lastMessageTime && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {formatDate(user.lastMessageTime)}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-4">
+                          <p className="text-muted-foreground">Обращений не найдено</p>
+                        </div>
+                      )}
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+                
+                <Card className="w-2/3 overflow-hidden flex flex-col">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <MessageSquare size={16} className="text-purple-500" />
+                      <span>Диалог с пользователем</span>
+                      {selectedSupportUser && (
+                        <span className="ml-2">- {selectedSupportUser.username}</span>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  
+                  <CardContent className="p-0 flex-grow overflow-hidden flex flex-col">
+                    {selectedSupportUser ? (
+                      <>
+                        <ScrollArea className="flex-grow p-4">
+                          <div className="flex flex-col gap-3">
+                            {userMessages.map((message) => (
+                              <div
+                                key={message.id}
+                                className={`p-3 rounded-lg max-w-[80%] ${
+                                  message.is_admin
+                                    ? 'bg-primary text-primary-foreground ml-auto'
+                                    : 'bg-muted'
+                                }`}
+                              >
+                                <p className="text-sm mb-1">{message.content}</p>
+                                <p className="text-xs opacity-70">
+                                  {formatDate(message.created_at)}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                        
+                        <div className="p-4 border-t">
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="Напишите сообщение..."
+                              value={replyMessage}
+                              onChange={(e) => setReplyMessage(e.target.value)}
+                              onKeyDown={(e) => e.key === 'Enter' && sendReply()}
+                            />
+                            <Button onClick={sendReply} disabled={!replyMessage.trim()}>
+                              <Send size={16} className="mr-2" />
+                              Отправить
+                            </Button>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full p-4">
+                        <MessageSquare size={48} className="text-muted-foreground/40" />
+                        <p className="text-muted-foreground mt-4">Выберите обращение для просмотра диалога</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default AdminPanel;
