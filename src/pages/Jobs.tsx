@@ -9,88 +9,54 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Link } from "react-router-dom";
+import CreateJobDialog from "@/components/CreateJobDialog";
+import JobCard from "@/components/JobCard";
+import { Input } from "@/components/ui/input";
 
 const Jobs = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showPremiumDialog, setShowPremiumDialog] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [jobs, setJobs] = useState<any[]>([]);
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [showJobDetails, setShowJobDetails] = useState(false);
-
-  const jobs = [
-    {
-      id: 1,
-      title: "Senior Frontend Developer (React)",
-      company: "ТехноСофт",
-      location: "Москва",
-      type: "Полная занятость",
-      salary: "180 000 - 250 000 ₽",
-      posted: "3 дня назад",
-      logo: "https://via.placeholder.com/80",
-      description: "Мы ищем опытного Frontend-разработчика со знанием React для работы над нашими продуктами. От вас требуется опыт работы с современными технологиями и готовность к решению сложных задач в дружной команде.",
-      requirements: ["Опыт работы с React от 3 лет", "Знание TypeScript", "Опыт работы с Redux", "Знание CSS-in-JS библиотек", "Навыки оптимизации производительности"]
-    },
-    {
-      id: 2,
-      title: "Backend Developer (Node.js)",
-      company: "ДигиТал",
-      location: "Санкт-Петербург",
-      type: "Полная занятость",
-      salary: "150 000 - 200 000 ₽",
-      posted: "1 неделя назад",
-      logo: "https://via.placeholder.com/80",
-      description: "Требуется разработчик Node.js для работы над высоконагруженным API. Вы будете частью команды, ответственной за разработку и поддержку серверной части наших приложений.",
-      requirements: ["Опыт работы с Node.js от 2 лет", "Опыт работы с Express/Nest.js", "Знание MongoDB и PostgreSQL", "Понимание принципов RESTful API"]
-    },
-    {
-      id: 3,
-      title: "Fullstack Developer (React, Django)",
-      company: "КодПрофи",
-      location: "Удаленно",
-      type: "Полная занятость",
-      salary: "180 000 - 230 000 ₽",
-      posted: "2 дня назад",
-      logo: "https://via.placeholder.com/80",
-      description: "Мы ищем Full-stack разработчика для создания веб-приложений с использованием React на фронтенде и Django на бэкенде. Работа предполагает полный цикл разработки от проектирования до внедрения.",
-      requirements: ["Опыт работы с React", "Опыт работы с Django", "Знание HTML, CSS, JavaScript", "Опыт работы с БД (PostgreSQL)"]
-    },
-    {
-      id: 4,
-      title: "Frontend Developer (Vue.js)",
-      company: "ВебТек",
-      location: "Казань",
-      type: "Полная занятость",
-      salary: "120 000 - 160 000 ₽",
-      posted: "4 дня назад",
-      logo: "https://via.placeholder.com/80",
-      description: "Ищем разработчика с опытом работы с Vue.js для работы над UI нашего основного продукта. Вы будете работать в тесном сотрудничестве с командой дизайнеров и бэкенд-разработчиков.",
-      requirements: ["Опыт работы с Vue.js от 1 года", "Знание JavaScript и TypeScript", "Опыт работы с Vuex", "Базовые знания HTML и CSS"]
-    },
-    {
-      id: 5,
-      title: "DevOps Engineer",
-      company: "СистемПро",
-      location: "Москва",
-      type: "Полная занятость",
-      salary: "200 000 - 250 000 ₽",
-      posted: "5 дней назад",
-      logo: "https://via.placeholder.com/80",
-      description: "Требуется DevOps инженер для настройки и поддержки CI/CD, оптимизации инфраструктуры и автоматизации процессов развертывания. Вы будете работать над улучшением наших внутренних процессов и инфраструктуры.",
-      requirements: ["Опыт работы с Docker и Kubernetes", "Знание AWS/GCP", "Опыт работы с CI/CD инструментами", "Знание Linux", "Опыт автоматизации процессов"]
-    }
-  ];
-
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  
   useEffect(() => {
+    fetchJobs();
     if (user) {
       fetchUserProfile();
     }
   }, [user]);
 
-  const fetchUserProfile = async () => {
+  const fetchJobs = async () => {
     try {
       setIsLoading(true);
+      const { data, error } = await supabase
+        .from("job_listings")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      
+      setJobs(data || []);
+    } catch (error: any) {
+      console.error("Error fetching jobs:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить список вакансий",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchUserProfile = async () => {
+    try {
       const { data, error } = await supabase
         .from("profiles")
         .select("subscription_type")
@@ -101,8 +67,6 @@ const Jobs = () => {
       setUserProfile(data);
     } catch (error) {
       console.error("Error fetching user profile:", error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -125,11 +89,8 @@ const Jobs = () => {
     }
 
     if (canPostJobs()) {
-      // Proceed to job posting form logic
-      toast({
-        title: "Вы можете разместить вакансию",
-        description: "Доступ открыт для вашего типа аккаунта",
-      });
+      // Open job creation dialog
+      setShowCreateDialog(true);
     } else {
       setShowPremiumDialog(true);
     }
@@ -139,6 +100,19 @@ const Jobs = () => {
     setSelectedJob(job);
     setShowJobDetails(true);
   };
+
+  // Filter jobs based on search query
+  const filteredJobs = searchQuery.trim() === "" 
+    ? jobs 
+    : jobs.filter(job => 
+        job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        job.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        job.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        job.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        job.requirements.some((req: string) => 
+          req.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      );
 
   return (
     <div className="container mx-auto px-4 py-12 animate-fade-in">
@@ -154,57 +128,62 @@ const Jobs = () => {
         <div className="relative mb-8">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={20} />
-            <input
+            <Input
               type="text"
               placeholder="Поиск вакансий по названию, компании или навыкам"
-              className="w-full pl-10 pr-4 py-3 border rounded-lg"
+              className="w-full pl-10 pr-4 py-6"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
         </div>
 
         <div className="space-y-6 mb-12">
-          {jobs.map(job => (
-            <div 
-              key={job.id} 
-              className="border rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => handleJobClick(job)}
-            >
-              <div className="flex flex-col md:flex-row gap-6">
-                <div className="shrink-0">
-                  <div className="w-16 h-16 bg-muted/50 rounded-md flex items-center justify-center">
-                    <img src={job.logo} alt={job.company} className="max-w-full max-h-full" />
+          {isLoading ? (
+            // Loading skeleton
+            Array.from({ length: 3 }).map((_, index) => (
+              <div key={index} className="border rounded-lg p-6 animate-pulse">
+                <div className="flex flex-col md:flex-row gap-6">
+                  <div className="shrink-0">
+                    <div className="w-16 h-16 bg-muted rounded-md"></div>
                   </div>
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold mb-2">{job.title}</h3>
-                  <p className="text-lg mb-3">{job.company}</p>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground mb-4">
-                    <div className="flex items-center gap-1">
-                      <MapPin size={14} />
-                      <span>{job.location}</span>
+                  <div className="flex-1">
+                    <div className="h-6 bg-muted rounded w-3/4 mb-2"></div>
+                    <div className="h-5 bg-muted rounded w-1/3 mb-4"></div>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <div className="h-4 bg-muted rounded w-20"></div>
+                      <div className="h-4 bg-muted rounded w-32"></div>
+                      <div className="h-4 bg-muted rounded w-24"></div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Briefcase size={14} />
-                      <span>{job.type}</span>
+                    <div className="flex items-center justify-between">
+                      <div className="h-5 bg-muted rounded w-28"></div>
+                      <div className="h-9 bg-muted rounded w-28"></div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Clock size={14} />
-                      <span>Опубликовано {job.posted}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-lg">{job.salary}</span>
-                    <Button variant="outline">Подробнее</Button>
                   </div>
                 </div>
               </div>
+            ))
+          ) : filteredJobs.length > 0 ? (
+            filteredJobs.map(job => (
+              <JobCard key={job.id} job={job} onClick={() => handleJobClick(job)} />
+            ))
+          ) : (
+            <div className="text-center p-10 border rounded-lg bg-muted/10">
+              <h3 className="text-xl font-medium mb-2">Вакансии не найдены</h3>
+              <p className="text-muted-foreground">
+                {searchQuery.trim() !== "" 
+                  ? "По вашему запросу не найдено вакансий. Попробуйте изменить параметры поиска."
+                  : "В настоящее время нет опубликованных вакансий."}
+              </p>
             </div>
-          ))}
+          )}
         </div>
 
-        <div className="flex justify-center">
-          <Button variant="outline">Загрузить больше вакансий</Button>
-        </div>
+        {jobs.length > 10 && (
+          <div className="flex justify-center">
+            <Button variant="outline">Загрузить больше вакансий</Button>
+          </div>
+        )}
 
         <div className="mt-16 border rounded-lg p-8 text-center bg-muted/30">
           <h2 className="text-2xl font-bold mb-4">Вы работодатель?</h2>
@@ -253,7 +232,7 @@ const Jobs = () => {
           <DialogHeader>
             <DialogTitle className="text-2xl">{selectedJob?.title}</DialogTitle>
             <DialogDescription className="flex items-center gap-2 text-base font-medium mt-2">
-              {selectedJob?.company} · {selectedJob?.location}
+              {selectedJob?.company_name} · {selectedJob?.location}
             </DialogDescription>
           </DialogHeader>
           
@@ -264,20 +243,22 @@ const Jobs = () => {
                   <Briefcase className="h-3.5 w-3.5 mr-1.5" />
                   {selectedJob?.type}
                 </Badge>
-                <span className="font-medium">{selectedJob?.salary}</span>
-                <span className="text-sm text-muted-foreground">Опубликовано {selectedJob?.posted}</span>
+                {selectedJob?.salary && <span className="font-medium">{selectedJob?.salary}</span>}
+                <span className="text-sm text-muted-foreground">
+                  Опубликовано {new Date(selectedJob?.created_at).toLocaleDateString("ru-RU")}
+                </span>
               </div>
               
               <div className="space-y-4">
                 <div>
                   <h3 className="font-semibold mb-2">Описание вакансии</h3>
-                  <p className="text-muted-foreground">{selectedJob?.description}</p>
+                  <p className="text-muted-foreground whitespace-pre-line">{selectedJob?.description}</p>
                 </div>
                 
                 <div>
                   <h3 className="font-semibold mb-2">Требования</h3>
                   <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
-                    {selectedJob?.requirements.map((req: string, index: number) => (
+                    {selectedJob?.requirements?.map((req: string, index: number) => (
                       <li key={index}>{req}</li>
                     ))}
                   </ul>
@@ -291,6 +272,13 @@ const Jobs = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Create Job Dialog */}
+      <CreateJobDialog 
+        open={showCreateDialog} 
+        onOpenChange={setShowCreateDialog}
+        onJobCreated={fetchJobs}
+      />
     </div>
   );
 };

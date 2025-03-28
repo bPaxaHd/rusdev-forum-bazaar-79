@@ -125,6 +125,54 @@ export type Database = {
           },
         ]
       }
+      job_listings: {
+        Row: {
+          company_name: string
+          created_at: string
+          description: string
+          id: string
+          is_active: boolean | null
+          location: string
+          logo_url: string | null
+          requirements: string[] | null
+          salary: string | null
+          title: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_name: string
+          created_at?: string
+          description: string
+          id?: string
+          is_active?: boolean | null
+          location: string
+          logo_url?: string | null
+          requirements?: string[] | null
+          salary?: string | null
+          title: string
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_name?: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_active?: boolean | null
+          location?: string
+          logo_url?: string | null
+          requirements?: string[] | null
+          salary?: string | null
+          title?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
