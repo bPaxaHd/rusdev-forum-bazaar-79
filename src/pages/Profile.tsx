@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +8,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { User, Mail, Calendar, Briefcase, MapPin, Edit2, Save, X, Github, Twitter, Globe, LinkIcon } from "lucide-react";
+import { User, Mail, Calendar, Briefcase, MapPin, Edit2, Save, X, Github, Twitter, Globe, LinkIcon, ShieldAlert } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -21,8 +20,8 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import AdminPanel from "@/components/AdminPanel";
 
-// Mock data for user activity
 const userTopics = [
   {
     id: 1,
@@ -50,10 +49,8 @@ const userTopics = [
   }
 ];
 
-// Mock data for skills
 const userSkills = ["JavaScript", "React", "TypeScript", "Node.js", "Express", "MongoDB", "REST API", "GraphQL", "Git", "CSS", "HTML", "Tailwind CSS"];
 
-// Определение формата данных профиля
 interface ProfileData {
   id: string;
   username: string;
@@ -82,6 +79,8 @@ const Profile = () => {
   const [activeLetter, setActiveLetter] = useState<string | null>(null);
   const alphabet = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ".split("");
   
+  const [adminPanelOpen, setAdminPanelOpen] = useState(false);
+  
   useEffect(() => {
     if (!user) {
       navigate("/login");
@@ -103,7 +102,6 @@ const Profile = () => {
           return;
         }
         
-        // Если навыки не заданы, устанавливаем пустой массив
         if (!data.skills) {
           data.skills = [];
         }
@@ -178,10 +176,8 @@ const Profile = () => {
     setProfile(prev => ({ ...prev, avatar_url: url } as ProfileData));
   };
   
-  // Функция обработки клика на букву алфавита
   const handleLetterClick = (e: React.MouseEvent<HTMLDivElement>, letter: string) => {
     setActiveLetter(letter);
-    // Здесь можно добавить логику фильтрации пользователей по первой букве имени
     console.log(`Выбрана буква: ${letter}`);
   };
   
@@ -253,20 +249,32 @@ const Profile = () => {
   return (
     <div className="container mx-auto py-10 px-4">
       <Tabs defaultValue="profile" className="w-full max-w-4xl mx-auto">
-        <TabsList className="mb-6">
-          <TabsTrigger value="profile" className="flex items-center gap-1">
-            <User size={14} />
-            <span>Профиль</span>
-          </TabsTrigger>
-          <TabsTrigger value="topics" className="flex items-center gap-1">
-            <MessageSquare size={14} />
-            <span>Темы</span>
-          </TabsTrigger>
-          <TabsTrigger value="community" className="flex items-center gap-1">
-            <Users size={14} />
-            <span>Сообщество</span>
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex justify-between items-center mb-6">
+          <TabsList>
+            <TabsTrigger value="profile" className="flex items-center gap-1">
+              <User size={14} />
+              <span>Профиль</span>
+            </TabsTrigger>
+            <TabsTrigger value="topics" className="flex items-center gap-1">
+              <MessageSquare size={14} />
+              <span>Темы</span>
+            </TabsTrigger>
+            <TabsTrigger value="community" className="flex items-center gap-1">
+              <Users size={14} />
+              <span>Сообщество</span>
+            </TabsTrigger>
+          </TabsList>
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setAdminPanelOpen(true)} 
+            className="flex items-center gap-1"
+          >
+            <ShieldAlert size={16} />
+            <span>Админ-панель</span>
+          </Button>
+        </div>
         
         <TabsContent value="profile">
           <Card>
@@ -663,11 +671,15 @@ const Profile = () => {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      <AdminPanel 
+        open={adminPanelOpen}
+        onOpenChange={setAdminPanelOpen}
+      />
     </div>
   );
 };
 
-// Import these components at the top of the file
 import { MessageSquare, Heart, Users, Search, Filter } from "lucide-react";
 
 export default Profile;
