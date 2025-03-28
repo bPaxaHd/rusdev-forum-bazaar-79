@@ -95,8 +95,9 @@ const RecentTopics = () => {
     
     // Подписываемся на изменения в таблице topics
     const subscription = supabase
-      .channel('public:topics')
+      .channel('topics_changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'topics' }, (payload) => {
+        console.log('Received realtime update:', payload);
         fetchTopics();
       })
       .subscribe();
@@ -144,7 +145,8 @@ const RecentTopics = () => {
       isAdmin: isAdmin,
       isCreator: isCreator,
       isModerator: isModerator,
-      sponsorLevel: sponsorLevel
+      sponsorLevel: sponsorLevel,
+      userId: topic.user_id // Добавляем ID пользователя-создателя темы
     };
   };
 

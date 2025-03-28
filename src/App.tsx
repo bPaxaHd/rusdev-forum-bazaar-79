@@ -25,6 +25,7 @@ import ForumRules from "./pages/ForumRules";
 import Contacts from "./pages/Contacts";
 import Help from "./pages/Help";
 import Premium from "./pages/Premium";
+import PremiumHelp from "./pages/PremiumHelp";
 import { AuthProvider } from "./contexts/AuthContext";
 import { Toaster } from "@/components/ui/toaster";
 import { useIsMobile } from "./hooks/use-mobile";
@@ -62,6 +63,7 @@ const App = () => {
               <Route path="/contacts" element={<Contacts />} />
               <Route path="/help" element={<Help />} />
               <Route path="/premium" element={<Premium />} />
+              <Route path="/premium-help" element={<PremiumHelp />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>

@@ -2,9 +2,12 @@
 import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MessageCircle, Heart, Eye, Crown, Star, Diamond, Shield, Hammer, Award } from "lucide-react";
+import { MessageCircle, Heart, Eye, Crown, Star, Diamond, Shield, Hammer, Award, Trash } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface TopicCardProps {
   id: number | string;
@@ -24,6 +27,7 @@ interface TopicCardProps {
   isModerator?: boolean;
   isAdmin?: boolean;
   sponsorLevel?: 'premium' | 'business' | 'sponsor';
+  userId?: string; // ID пользователя-создателя темы
 }
 
 const categoryColors = {
@@ -49,9 +53,12 @@ const TopicCard: React.FC<TopicCardProps> = ({
   isCreator,
   isModerator,
   isAdmin,
-  sponsorLevel
+  sponsorLevel,
+  userId
 }) => {
   const fallbackInitial = author.charAt(0).toUpperCase();
+  const { user } = useAuth();
+  const { toast } = useToast();
   
   // Определим стили для разных типов пользователей
   let cardStyles = "card-glass p-4 md:p-6 hover:translate-y-[-2px] transition-all duration-300";
@@ -155,6 +162,70 @@ const TopicCard: React.FC<TopicCardProps> = ({
     return `только что`;
   };
 
+  // Проверка, может ли текущий пользователь удалить тему
+  const canDeleteTopic = () => {
+    if (!user) return false;
+    return userId === user.id || isAdmin || isModerator;
+  };
+
+  // Обработчик удаления темы
+  const handleDeleteTopic = async (e: React.MouseEvent) => {
+    e.preventDefault(); // Предотвращаем переход по ссылке
+    e.stopPropagation();
+    
+    if (!user) {
+      toast({
+        title: "Необходима авторизация",
+        description: "Пожалуйста, войдите в аккаунт для удаления темы",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!canDeleteTopic()) {
+      toast({
+        title: "Недостаточно прав",
+        description: "У вас нет прав на удаление этой темы",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!confirm("Вы уверены, что хотите удалить эту тему?")) {
+      return;
+    }
+    
+    try {
+      const { data, error } = await supabase
+        .from("topics")
+        .delete()
+        .eq("id", id);
+        
+      if (error) {
+        console.error("Ошибка при удалении темы:", error);
+        toast({
+          title: "Ошибка",
+          description: "Не удалось удалить тему",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      toast({
+        title: "Тема удалена",
+        description: "Тема была успешно удалена",
+        variant: "default"
+      });
+    } catch (error) {
+      console.error("Ошибка при удалении темы:", error);
+      toast({
+        title: "Ошибка",
+        description: "Произошла ошибка при удалении темы",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <Link to={`/topic/${id}`}>
       <Card className={cardStyles}>
@@ -203,6 +274,15 @@ const TopicCard: React.FC<TopicCardProps> = ({
             </div>
             
             <div className="flex items-center gap-4 text-muted-foreground">
+              {canDeleteTopic() && (
+                <button 
+                  onClick={handleDeleteTopic} 
+                  className="text-red-500 hover:text-red-700 transition-colors"
+                  aria-label="Удалить тему"
+                >
+                  <Trash size={15} />
+                </button>
+              )}
               <div className="flex items-center gap-1">
                 <MessageCircle size={15} />
                 <span className="text-xs">{repliesCount}</span>

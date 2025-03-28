@@ -1,7 +1,7 @@
 
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { Crown } from "lucide-react";
+import { Crown, HelpCircle } from "lucide-react";
 
 interface NavbarLinksProps {
   isMobile?: boolean;
@@ -62,6 +62,19 @@ const NavbarLinks: React.FC<NavbarLinksProps> = ({ isMobile = false }) => {
       >
         <Crown className="h-4 w-4" />
         Premium
+      </NavLink>
+      <NavLink
+        to="/premium-help"
+        className={({ isActive }) =>
+          `${
+            isActive 
+              ? "font-medium text-blue-500" 
+              : "text-muted-foreground"
+          } hover:text-blue-500 transition-colors flex items-center gap-1`
+        }
+      >
+        <HelpCircle className="h-4 w-4" />
+        Премиум помощь
       </NavLink>
     </div>
   );

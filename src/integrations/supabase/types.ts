@@ -394,6 +394,13 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      can_delete_topic: {
+        Args: {
+          topic_id: string
+          user_id: string
+        }
+        Returns: boolean
+      }
       can_modify_content: {
         Args: {
           content_user_id: string
