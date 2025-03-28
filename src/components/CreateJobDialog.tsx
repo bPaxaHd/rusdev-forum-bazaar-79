@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { X, Plus, Briefcase, Building, MapPin, Clock, CurrencyRuble } from "lucide-react";
+import { X, Plus, Briefcase, Building, MapPin, Clock, DollarSign } from "lucide-react";
 
 const CreateJobDialog = ({ open, onOpenChange, onJobCreated }: { 
   open: boolean; 
@@ -212,7 +212,7 @@ const CreateJobDialog = ({ open, onOpenChange, onJobCreated }: {
             
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <CurrencyRuble className="h-4 w-4 text-muted-foreground" />
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
                 <Label htmlFor="salary">Зарплата</Label>
               </div>
               <Input
