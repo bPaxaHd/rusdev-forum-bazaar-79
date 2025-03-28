@@ -23,14 +23,9 @@ import {
 import { UserProfile, LoginAttempt, SubscriptionLevel } from "@/types/auth";
 import CryptoJS from 'crypto-js';
 
-// Зашифрованный пароль администратора (8033343213943354088566815767659607503141163134002992749244944048)
 const ENCRYPTED_ADMIN_PASSWORD = "U2FsdGVkX1+ZnXmm8h6h+hUbw4WEQdIFAf2RU+RsGZhUfxEPbPyV3LWyFnAxKgAkfnXf3lxJlt97vp67bT6KEMXCYyM1pFsNZQXgSCqcwR81gd6EGyfSC5+qYLRXeflV";
-
-// Константы для шифрования
 const ENCRYPTION_SECRET = "admin_secure_key_2024";
-
-// Интервал обновления статистики в миллисекундах
-const STATS_REFRESH_INTERVAL = 30000; // 30 секунд
+const STATS_REFRESH_INTERVAL = 30000;
 
 interface AdminPanelProps {
   open: boolean;
@@ -72,7 +67,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
   
   const { toast } = useToast();
   
-  // Эффект для автоматического обновления статистики
   useEffect(() => {
     if (authenticated) {
       fetchUsers();
@@ -80,7 +74,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
       fetchStats();
       fetchContentStats();
       
-      // Установка интервала обновления статистики
       const statsInterval = setInterval(() => {
         fetchStats();
         fetchContentStats();
@@ -90,12 +83,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
     }
   }, [authenticated]);
   
-  // Эффект для фильтрации пользователей при изменении поиска или фильтра
   useEffect(() => {
     if (users.length > 0) {
       let result = [...users];
       
-      // Применяем поиск
       if (userSearch) {
         const searchLower = userSearch.toLowerCase();
         result = result.filter(user => 
@@ -106,7 +97,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
         );
       }
       
-      // Применяем фильтр подписки
       if (userFilter !== 'all') {
         result = result.filter(user => 
           userFilter === 'free' 
@@ -125,7 +115,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
     try {
       setLoading(true);
       
-      // Расшифровываем пароль для проверки
       const decryptedPassword = CryptoJS.AES.decrypt(
         ENCRYPTED_ADMIN_PASSWORD, 
         ENCRYPTION_SECRET
@@ -144,7 +133,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
           variant: "destructive",
         });
         
-        // Логируем неудачную попытку входа
         logLoginAttempt();
       }
     } catch (error) {
@@ -161,10 +149,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
   
   const logLoginAttempt = async () => {
     try {
-      // Получаем IP-адрес (в демо используем заглушку)
       const ipAddress = "127.0.0.1";
       
-      // Проверяем, были ли уже попытки входа с этого IP
       const { data, error } = await supabase
         .from("admin_login_attempts")
         .select("*")
@@ -177,7 +163,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
       }
       
       if (data && data.length > 0) {
-        // Увеличиваем счетчик попыток
         const { error: updateError } = await supabase
           .from("admin_login_attempts")
           .update({ attempts: data[0].attempts + 1 })
@@ -187,7 +172,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
           console.error("Error updating login attempts:", updateError);
         }
       } else {
-        // Создаем новую запись
         const { error: insertError } = await supabase
           .from("admin_login_attempts")
           .insert([{ ip_address: ipAddress }]);
@@ -242,7 +226,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
       
       setLoginAttempts(data || []);
       
-      // Выделяем заблокированные IP (более 5 попыток)
       const blocked = data
         .filter(attempt => attempt.attempts >= 5 && !attempt.is_resolved)
         .map(attempt => attempt.ip_address);
@@ -255,10 +238,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
   
   const fetchStats = async () => {
     try {
-      // В реальном приложении здесь был бы запрос к API для получения статистики
-      // для демо используем моковые данные на основе имеющихся пользователей
-      
-      // Получаем количество тем и комментариев из базы данных
       const { data: topicsData } = await supabase
         .from("topics")
         .select("count")
@@ -269,7 +248,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
         .select("count")
         .single();
       
-      // Расчет новых пользователей за последнюю неделю
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
       
@@ -287,7 +265,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
         topicsCount: topicsData?.count || Math.floor(Math.random() * 100),
         commentsCount: commentsData?.count || Math.floor(Math.random() * 500),
         newUsersThisWeek: newUsers,
-        averageSessionTime: Math.floor(Math.random() * 30) + 10 // 10-40 минут
+        averageSessionTime: Math.floor(Math.random() * 30) + 10
       });
     } catch (error) {
       console.error("Error fetching stats:", error);
@@ -296,10 +274,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
   
   const fetchContentStats = async () => {
     try {
-      // В реальном приложении здесь был бы запрос к API
-      // для демо используем моковые данные
-      
-      // Получаем данные по категориям
       const { data: frontendTopics } = await supabase
         .from("topics")
         .select("count")
@@ -372,15 +346,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
   
   const deleteUser = async (userId: string) => {
     try {
-      // Запрашиваем подтверждение
       if (!window.confirm("Вы уверены, что хотите удалить этого пользователя? Это действие нельзя отменить.")) {
         return;
       }
       
       setLoading(true);
       
-      // В реальном приложении здесь был бы запрос к API для удаления пользователя
-      // Удаляем профиль пользователя
       const { error: profileError } = await supabase
         .from("profiles")
         .delete()
@@ -390,7 +361,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
         throw profileError;
       }
       
-      // Удаляем из состояния
       setUsers(users.filter(user => user.id !== userId));
       
       toast({
@@ -422,7 +392,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
         throw error;
       }
       
-      // Обновляем пользователя в состоянии
       setUsers(users.map(user => 
         user.id === userId 
           ? { ...user, subscription_type: subscriptionType } 
@@ -458,7 +427,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
         throw error;
       }
       
-      // Обновляем пользователя в состоянии
       setUsers(users.map(user => 
         user.id === userId 
           ? { ...user, specialty } 
@@ -481,7 +449,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
     }
   };
   
-  // Функция для сортировки пользователей
   const sortUsers = (field: keyof UserProfile) => {
     const sorted = [...filteredUsers].sort((a, b) => {
       if (field === 'created_at') {
@@ -536,7 +503,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
     if (!authenticated) {
       onOpenChange(false);
     } else {
-      // Если пользователь аутентифицирован, спрашиваем подтверждение
       if (window.confirm("Вы уверены, что хотите выйти из панели администратора?")) {
         setAuthenticated(false);
         setPassword("");
@@ -885,3 +851,46 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
                                   Разрешено
                                 </Badge>
                               ) : (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-xs"
+                                  onClick={() => resolveLoginAttempt(attempt.id)}
+                                >
+                                  <Check size={12} className="mr-1" />
+                                  Разрешить
+                                </Button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="users" className="h-full overflow-auto p-4">
+                  {/* User management content */}
+                </TabsContent>
+                
+                <TabsContent value="content" className="h-full overflow-auto p-4">
+                  {/* Content management */}
+                </TabsContent>
+                
+                <TabsContent value="security" className="h-full overflow-auto p-4">
+                  {/* Security settings */}
+                </TabsContent>
+                
+                <TabsContent value="settings" className="h-full overflow-auto p-4">
+                  {/* System settings */}
+                </TabsContent>
+              </div>
+            </Tabs>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default AdminPanel;
