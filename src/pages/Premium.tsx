@@ -10,25 +10,15 @@ import PremiumFeatures from "@/components/PremiumFeatures";
 import SupportChat from "@/components/SupportChat";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Premium = () => {
   const [showChat, setShowChat] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile();
   const { user } = useAuth();
-
-  // Определяем, является ли устройство мобильным
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -90,18 +80,18 @@ const Premium = () => {
       </h1>
       
       {isPremiumUser && (
-        <div className="mb-8 p-6 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-gray-800 dark:to-gray-700 rounded-lg border border-purple-100 dark:border-gray-600 flex flex-col md:flex-row justify-between items-center shadow-md animate-fade-in">
+        <div className="mb-8 p-4 md:p-6 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-gray-800 dark:to-gray-700 rounded-lg border border-purple-100 dark:border-gray-600 flex flex-col md:flex-row justify-between items-center shadow-md animate-fade-in">
           <div>
-            <h2 className="text-xl font-semibold text-purple-700 dark:text-purple-300">
+            <h2 className="text-lg md:text-xl font-semibold text-purple-700 dark:text-purple-300">
               У вас активна подписка: {userProfile?.subscription_type}
             </h2>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-sm md:text-base text-muted-foreground mt-1">
               Спасибо за поддержку нашего проекта! Если у вас возникли вопросы, используйте чат поддержки.
             </p>
           </div>
           <Button 
             onClick={handleChatClick}
-            className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white mt-4 md:mt-0 transform transition-transform duration-300 hover:scale-105"
+            className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white mt-4 md:mt-0 transform transition-transform duration-300 hover:scale-105 w-full md:w-auto"
           >
             <MessageCircle className="mr-2 h-4 w-4" />
             Чат поддержки
@@ -123,7 +113,7 @@ const Premium = () => {
       {/* Для мобильных устройств используем Sheet */}
       {isMobile ? (
         <Sheet open={showChat} onOpenChange={setShowChat}>
-          <SheetContent side="bottom" className="p-0 h-[90vh]">
+          <SheetContent side="bottom" className="p-0 h-[80vh] max-h-[90vh] overflow-hidden rounded-t-xl">
             {userProfile && (
               <SupportChat 
                 userId={userProfile.id} 

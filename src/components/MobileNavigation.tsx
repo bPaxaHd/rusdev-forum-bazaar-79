@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { Home, MessageSquare, Bookmark, User, Menu } from 'lucide-react';
+import { Home, MessageSquare, Bookmark, User, Crown } from 'lucide-react';
 
 const MobileNavigation: React.FC = () => {
   const location = useLocation();
@@ -29,7 +29,7 @@ const MobileNavigation: React.FC = () => {
         <span>Профиль</span>
       </Link>
       <Link to="/premium" className={`mobile-nav-item ${location.pathname.includes('/premium') ? 'text-primary' : ''}`}>
-        <Menu className="mobile-nav-icon" />
+        <Crown className="mobile-nav-icon" />
         <span>Премиум</span>
       </Link>
     </nav>
