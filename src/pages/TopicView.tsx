@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, NavLink, useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -24,11 +25,11 @@ interface TopicData {
   updated_at: string;
   likes: number;
   views: number;
-  profile?: {
+  profiles?: {
     username: string;
     avatar_url: string | null;
     subscription_type?: string | null;
-  };
+  }[];
 }
 
 interface CommentData {
@@ -37,11 +38,11 @@ interface CommentData {
   user_id: string;
   created_at: string;
   likes: number;
-  profile?: {
+  profiles?: {
     username: string;
     avatar_url: string | null;
     subscription_type?: string | null;
-  };
+  }[];
 }
 
 const TopicView = () => {
@@ -116,7 +117,7 @@ const TopicView = () => {
             updated_at, 
             likes, 
             views,
-            profile:profiles(username, avatar_url, subscription_type)
+            profiles:profiles!topics_user_id_fkey(username, avatar_url, subscription_type)
           `)
           .eq("id", id)
           .single();
@@ -132,15 +133,10 @@ const TopicView = () => {
           return;
         }
         
-        const formattedTopicData = {
-          ...topicData,
-          profile: topicData.profile[0]
-        };
-        
-        if (!viewIncrementDone && formattedTopicData) {
+        if (!viewIncrementDone && topicData) {
           await supabase
             .from("topics")
-            .update({ views: (formattedTopicData.views || 0) + 1 })
+            .update({ views: (topicData.views || 0) + 1 })
             .eq("id", id);
           
           setViewIncrementDone(true);
@@ -154,7 +150,7 @@ const TopicView = () => {
             user_id,
             created_at,
             likes,
-            profile:profiles(username, avatar_url, subscription_type)
+            profiles:profiles!comments_user_id_fkey(username, avatar_url, subscription_type)
           `)
           .eq("topic_id", id)
           .order("created_at", { ascending: true });
@@ -163,17 +159,12 @@ const TopicView = () => {
           console.error("Ошибка при загрузке комментариев:", commentsError);
         }
         
-        const formattedComments = commentsData ? commentsData.map(comment => ({
-          ...comment,
-          profile: comment.profile[0]
-        })) : [];
+        console.log("Topic data:", topicData);
+        console.log("Comments data:", commentsData);
         
-        console.log("Topic data:", formattedTopicData);
-        console.log("Comments data:", formattedComments);
-        
-        setTopic(formattedTopicData);
-        setLikesCount(formattedTopicData.likes || 0);
-        setComments(formattedComments || []);
+        setTopic(topicData);
+        setLikesCount(topicData.likes || 0);
+        setComments(commentsData || []);
       } catch (error) {
         console.error("Ошибка при загрузке данных:", error);
         toast({
@@ -206,17 +197,13 @@ const TopicView = () => {
                 user_id,
                 created_at,
                 likes,
-                profile:profiles(username, avatar_url, subscription_type)
+                profiles:profiles!comments_user_id_fkey(username, avatar_url, subscription_type)
               `)
               .eq("id", payload.new.id)
               .single();
               
             if (commentWithProfile) {
-              const formattedComment = {
-                ...commentWithProfile,
-                profile: commentWithProfile.profile[0]
-              };
-              setComments(prev => [...prev, formattedComment]);
+              setComments(prev => [...prev, commentWithProfile]);
             }
           };
           
@@ -489,6 +476,11 @@ const TopicView = () => {
     });
   };
 
+  // Function to navigate to user profile
+  const navigateToUserProfile = (userId: string) => {
+    navigate(`/profile/${userId}`);
+  };
+
   if (loading) {
     return (
       <div className="container max-w-4xl mx-auto py-20 flex justify-center items-center">
@@ -514,8 +506,9 @@ const TopicView = () => {
     );
   }
 
-  const isPremiumUser = topic.profile?.subscription_type && 
-    ["premium", "business", "sponsor"].includes(topic.profile.subscription_type);
+  const topicProfile = topic.profiles && topic.profiles.length > 0 ? topic.profiles[0] : null;
+  const isPremiumUser = topicProfile?.subscription_type && 
+    ["premium", "business", "sponsor"].includes(topicProfile.subscription_type);
 
   return (
     <div className="animate-fade-in py-8 md:py-12">
@@ -547,29 +540,39 @@ const TopicView = () => {
                   ? "Backend" 
                   : "Fullstack"}
             </Badge>
-            {getSubscriptionBadge(topic.profile?.subscription_type)}
+            {topicProfile && getSubscriptionBadge(topicProfile.subscription_type)}
           </div>
         </div>
 
         <Card className={`mb-8 p-6 ${isPremiumUser ? 'border-amber-300 dark:border-amber-700' : ''}`}>
           <div className="flex items-start gap-4">
-            <Avatar className={`h-10 w-10 ${getAvatarStyles(topic.profile?.subscription_type)}`}>
-              <AvatarImage src={topic.profile?.avatar_url || ""} alt={topic.profile?.username || "User"} />
-              <AvatarFallback className={getAvatarFallbackStyles(topic.profile?.subscription_type)}>
-                {(topic.profile?.username?.[0] || "U").toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <div 
+              onClick={() => navigateToUserProfile(topic.user_id)} 
+              className="cursor-pointer"
+              title="Перейти к профилю пользователя"
+            >
+              <Avatar className={`h-10 w-10 ${getAvatarStyles(topicProfile?.subscription_type)}`}>
+                <AvatarImage src={topicProfile?.avatar_url || ""} alt={topicProfile?.username || "User"} />
+                <AvatarFallback className={getAvatarFallbackStyles(topicProfile?.subscription_type)}>
+                  {(topicProfile?.username?.[0] || "U").toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            </div>
             
             <div className="flex-1">
               <div className="flex justify-between items-center mb-2">
                 <div>
-                  <div className="font-medium flex items-center">
-                    {topic.profile?.username || "Пользователь"}
+                  <div 
+                    className="font-medium flex items-center cursor-pointer hover:underline" 
+                    onClick={() => navigateToUserProfile(topic.user_id)}
+                    title="Перейти к профилю пользователя"
+                  >
+                    {topicProfile?.username || "Пользователь"}
                     {isPremiumUser && (
                       <span className="ml-2">
-                        {topic.profile?.subscription_type === 'premium' && <Crown className="h-4 w-4 text-amber-400" />}
-                        {topic.profile?.subscription_type === 'business' && <Star className="h-4 w-4 text-purple-400" />}
-                        {topic.profile?.subscription_type === 'sponsor' && <Diamond className="h-4 w-4 text-blue-400" />}
+                        {topicProfile?.subscription_type === 'premium' && <Crown className="h-4 w-4 text-amber-400" />}
+                        {topicProfile?.subscription_type === 'business' && <Star className="h-4 w-4 text-purple-400" />}
+                        {topicProfile?.subscription_type === 'sponsor' && <Diamond className="h-4 w-4 text-blue-400" />}
                       </span>
                     )}
                   </div>
@@ -638,24 +641,37 @@ const TopicView = () => {
           {comments.length > 0 ? (
             <div className="space-y-4">
               {comments.map((comment) => {
-                const isCommentPremium = comment.profile?.subscription_type && 
-                  ["premium", "business", "sponsor"].includes(comment.profile.subscription_type);
+                const commentProfile = comment.profiles && comment.profiles.length > 0 ? comment.profiles[0] : null;
+                const isCommentPremium = commentProfile?.subscription_type && 
+                  ["premium", "business", "sponsor"].includes(commentProfile.subscription_type);
                   
                 return (
                   <Card key={comment.id} className={`p-6 ${isCommentPremium ? 'border-amber-200 dark:border-amber-800' : ''}`}>
                     <div className="flex items-start gap-4">
-                      <Avatar className={`h-8 w-8 ${getAvatarStyles(comment.profile?.subscription_type)}`}>
-                        <AvatarImage src={comment.profile?.avatar_url || ""} alt={comment.profile?.username || "User"} />
-                        <AvatarFallback className={getAvatarFallbackStyles(comment.profile?.subscription_type)}>
-                          {(comment.profile?.username?.[0] || "U").toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                      <div 
+                        onClick={() => navigateToUserProfile(comment.user_id)}
+                        className="cursor-pointer"
+                        title="Перейти к профилю пользователя"
+                      >
+                        <Avatar className={`h-8 w-8 ${getAvatarStyles(commentProfile?.subscription_type)}`}>
+                          <AvatarImage src={commentProfile?.avatar_url || ""} alt={commentProfile?.username || "User"} />
+                          <AvatarFallback className={getAvatarFallbackStyles(commentProfile?.subscription_type)}>
+                            {(commentProfile?.username?.[0] || "U").toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      </div>
                       
                       <div className="flex-1">
                         <div className="flex justify-between items-center mb-2">
                           <div className="flex items-center">
-                            <div className="font-medium">{comment.profile?.username || "Пользователь"}</div>
-                            {getSubscriptionBadge(comment.profile?.subscription_type)}
+                            <div 
+                              className="font-medium cursor-pointer hover:underline"
+                              onClick={() => navigateToUserProfile(comment.user_id)}
+                              title="Перейти к профилю пользователя"
+                            >
+                              {commentProfile?.username || "Пользователь"}
+                            </div>
+                            {commentProfile && getSubscriptionBadge(commentProfile.subscription_type)}
                           </div>
                           <div className="text-sm text-muted-foreground">
                             {formatDate(comment.created_at)}

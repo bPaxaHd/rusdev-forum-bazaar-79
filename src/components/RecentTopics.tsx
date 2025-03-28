@@ -17,17 +17,12 @@ interface TopicData {
   updated_at: string;
   likes: number;
   views: number;
-  profile?: {
-    username: string;
-    avatar_url: string | null;
-    subscription_type?: string | null;
-  };
-  comments?: { id: string }[];
   profiles?: {
     username: string;
     avatar_url: string | null;
     subscription_type?: string | null;
-  };
+  }[];
+  comments?: { id: string }[];
 }
 
 const RecentTopics = () => {
@@ -54,7 +49,7 @@ const RecentTopics = () => {
             updated_at, 
             likes, 
             views,
-            profiles:user_id(username, avatar_url, subscription_type),
+            profiles:profiles!topics_user_id_fkey(username, avatar_url, subscription_type),
             comments:comments(id)
           `)
           .order('created_at', { ascending: false })
@@ -72,18 +67,8 @@ const RecentTopics = () => {
           return;
         }
         
-        // Преобразуем данные в формат, который ожидает TopicCard
-        const formattedTopics = data.map(topic => ({
-          ...topic,
-          profile: {
-            username: topic.profiles?.username || "Unknown",
-            avatar_url: topic.profiles?.avatar_url,
-            subscription_type: topic.profiles?.subscription_type || "free"
-          },
-          comments: topic.comments || []
-        }));
-        
-        setTopics(formattedTopics as TopicData[]);
+        console.log("Fetched topics:", data);
+        setTopics(data as TopicData[]);
       } catch (error) {
         console.error("Ошибка при загрузке тем:", error);
         setError("Произошла ошибка при загрузке тем");
@@ -121,20 +106,23 @@ const RecentTopics = () => {
     // Cast category to the specific type for the TopicCard component
     const typedCategory = topic.category as "frontend" | "backend" | "fullstack";
     
-    const isPremium = topic.profile?.subscription_type && 
-      ["premium", "business", "sponsor"].includes(topic.profile.subscription_type);
+    // Get profile from the joined profiles data
+    const profile = topic.profiles && topic.profiles.length > 0 ? topic.profiles[0] : null;
+    
+    const isPremium = profile?.subscription_type && 
+      ["premium", "business", "sponsor"].includes(profile.subscription_type);
       
     return {
       id: topic.id, // Use the UUID directly instead of converting to number
       title: topic.title,
       preview: preview,
-      author: topic.profile?.username || "Неизвестный пользователь",
+      author: profile?.username || "Неизвестный пользователь",
       authorRole: typedCategory === "frontend" 
         ? "Frontend разработчик" 
         : typedCategory === "backend" 
           ? "Backend разработчик" 
           : "Fullstack разработчик",
-      authorAvatar: topic.profile?.avatar_url || "",
+      authorAvatar: profile?.avatar_url || "",
       repliesCount: topic.comments?.length || 0,
       likesCount: topic.likes || 0,
       viewsCount: topic.views || 0,
