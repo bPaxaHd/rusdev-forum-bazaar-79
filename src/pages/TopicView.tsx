@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, NavLink, useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -50,6 +49,11 @@ interface CommentData {
   };
 }
 
+// Interface to store comment user roles mapping
+interface CommentUserRolesMap {
+  [commentId: string]: string[];
+}
+
 const TopicView = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -69,6 +73,8 @@ const TopicView = () => {
   const [canModifyTopic, setCanModifyTopic] = useState(false);
   const [canModifyComments, setCanModifyComments] = useState<Record<string, boolean>>({});
   const [userRoles, setUserRoles] = useState<string[]>([]);
+  // Store comment user roles in a single state instead of creating state for each comment
+  const [commentUserRoles, setCommentUserRoles] = useState<CommentUserRolesMap>({});
 
   useEffect(() => {
     if (user && topic) {
@@ -131,6 +137,44 @@ const TopicView = () => {
       checkCommentPermissions();
     }
   }, [user, comments]);
+  
+  // Fetch all comment user roles at once
+  useEffect(() => {
+    const fetchAllCommentUserRoles = async () => {
+      if (comments.length === 0) return;
+      
+      const userIds = comments.map(comment => comment.user_id);
+      const uniqueUserIds = [...new Set(userIds)];
+      
+      try {
+        const roles: CommentUserRolesMap = {};
+        
+        for (const userId of uniqueUserIds) {
+          const { data, error } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', userId);
+            
+          if (data && !error) {
+            const userRoles = data.map(r => r.role);
+            
+            // Assign these roles to all comments by this user
+            comments.forEach(comment => {
+              if (comment.user_id === userId) {
+                roles[comment.id] = userRoles;
+              }
+            });
+          }
+        }
+        
+        setCommentUserRoles(roles);
+      } catch (err) {
+        console.error('Error fetching comment user roles:', err);
+      }
+    };
+    
+    fetchAllCommentUserRoles();
+  }, [comments]);
   
   useEffect(() => {
     const fetchTopic = async () => {
@@ -273,6 +317,27 @@ const TopicView = () => {
       topicSubscription.unsubscribe();
     };
   }, [id, navigate, viewIncrementDone, toast]);
+
+  useEffect(() => {
+    const fetchUserRoles = async () => {
+      if (topic?.user_id) {
+        try {
+          const { data, error } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', topic.user_id);
+            
+          if (data && !error) {
+            setUserRoles(data.map(r => r.role));
+          }
+        } catch (err) {
+          console.error('Error fetching user roles:', err);
+        }
+      }
+    };
+    
+    fetchUserRoles();
+  }, [topic?.user_id]);
 
   const getSubscriptionBadge = (type?: string | null, roles?: string[]) => {
     if (roles && roles.includes('admin')) {
@@ -441,7 +506,7 @@ const TopicView = () => {
       setNewComment("");
       toast({
         title: "Комментарий отправлен",
-        description: "Ваш комментарий ус��ешно добавлен в обсуждение.",
+        description: "Ваш комментарий успешно добавлен в обсуждение.",
       });
     } catch (error) {
       console.error("Ошибка при отправке комментария:", error);
@@ -724,27 +789,6 @@ const TopicView = () => {
 
   const topicProfile = topic.profiles || null;
 
-  useEffect(() => {
-    const fetchUserRoles = async () => {
-      if (topic.user_id) {
-        try {
-          const { data, error } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', topic.user_id);
-            
-          if (data && !error) {
-            setUserRoles(data.map(r => r.role));
-          }
-        } catch (err) {
-          console.error('Error fetching user roles:', err);
-        }
-      }
-    };
-    
-    fetchUserRoles();
-  }, [topic.user_id]);
-
   return (
     <div className="animate-fade-in py-8 md:py-12">
       <div className="container px-4 mx-auto">
@@ -886,196 +930,16 @@ const TopicView = () => {
             <div className="space-y-4">
               {comments.map((comment) => {
                 const commentProfile = comment.profiles || null;
-                const [commentUserRoles, setCommentUserRoles] = useState<string[]>([]);
-                
-                useEffect(() => {
-                  const fetchCommentUserRoles = async () => {
-                    if (comment.user_id) {
-                      try {
-                        const { data, error } = await supabase
-                          .from('user_roles')
-                          .select('role')
-                          .eq('user_id', comment.user_id);
-                          
-                        if (data && !error) {
-                          setCommentUserRoles(data.map(r => r.role));
-                        }
-                      } catch (err) {
-                        console.error('Error fetching comment user roles:', err);
-                      }
-                    }
-                  };
-                  
-                  fetchCommentUserRoles();
-                }, [comment.user_id]);
+                const roles = commentUserRoles[comment.id] || [];
                 
                 return (
-                  <Card key={comment.id} className={`p-6 ${getCardStyles(commentProfile?.subscription_type, commentUserRoles)}`}>
+                  <Card key={comment.id} className={`p-6 ${getCardStyles(commentProfile?.subscription_type, roles)}`}>
                     <div className="flex items-start gap-4">
                       <div 
                         onClick={() => navigateToUserProfile(comment.user_id)}
                         className="cursor-pointer"
                         title="Перейти к профилю пользователя"
                       >
-                        <Avatar className={`h-8 w-8 ${getAvatarStyles(commentProfile?.subscription_type, commentUserRoles)}`}>
+                        <Avatar className={`h-8 w-8 ${getAvatarStyles(commentProfile?.subscription_type, roles)}`}>
                           <AvatarImage src={commentProfile?.avatar_url || ""} alt={commentProfile?.username || "User"} />
-                          <AvatarFallback className={getAvatarFallbackStyles(commentProfile?.subscription_type, commentUserRoles)}>
-                            {(commentProfile?.username?.[0] || "U").toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                      </div>
-                      
-                      <div className="flex-1">
-                        <div className="flex justify-between items-center mb-2">
-                          <div className="flex items-center">
-                            <div 
-                              className="font-medium cursor-pointer hover:underline"
-                              onClick={() => navigateToUserProfile(comment.user_id)}
-                              title="Перейти к профилю пользователя"
-                            >
-                              {commentProfile?.username || "Пользователь"}
-                            </div>
-                            {commentProfile && getSubscriptionBadge(commentProfile.subscription_type, commentUserRoles)}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {formatDate(comment.created_at)}
-                          </div>
-                        </div>
-                        
-                        <div className={`mt-2 ${
-                          commentUserRoles.includes('admin') 
-                            ? 'text-gray-800 dark:text-gray-100' 
-                            : commentUserRoles.includes('creator')
-                              ? 'text-gray-800 dark:text-gray-100'
-                              : commentUserRoles.includes('moderator')
-                                ? 'text-gray-800 dark:text-gray-100'
-                                : commentProfile?.subscription_type === 'sponsor'
-                                  ? 'text-gray-800 dark:text-gray-100'
-                                  : ''
-                        }`}>
-                          {comment.content}
-                        </div>
-                        
-                        <div className="mt-4 flex items-center justify-between">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className={`gap-2 ${likedComments[comment.id] ? 'text-primary' : ''}`}
-                            onClick={() => handleLikeComment(comment.id, comment.likes)}
-                          >
-                            <ThumbsUp size={14} className={likedComments[comment.id] ? "fill-primary" : ""} />
-                            <span>{comment.likes || 0}</span>
-                          </Button>
-
-                          {canModifyComments[comment.id] && (
-                            <div className="flex gap-2">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => setEditingCommentId(comment.id)}
-                                className="flex items-center gap-1"
-                              >
-                                <Pencil size={14} />
-                                <span>Изменить</span>
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => handleDeleteComment(comment.id)}
-                                className="flex items-center gap-1 text-destructive hover:text-destructive"
-                              >
-                                <Trash2 size={14} />
-                                <span>Удалить</span>
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-8 bg-secondary/30 rounded-lg">
-              <MessageCircle className="mx-auto mb-2 text-muted-foreground" size={24} />
-              <p className="text-muted-foreground">Ещё нет комментариев в этой теме. Будьте первым!</p>
-            </div>
-          )}
-        </div>
-
-        <Card className="p-6">
-          <h3 className="text-lg font-medium mb-4">Ваш комментарий</h3>
-          {user ? (
-            <>
-              <Textarea 
-                className="min-h-[120px] mb-4" 
-                placeholder="Напишите ваш комментарий здесь..."
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-              />
-              <div className="flex justify-end">
-                <Button 
-                  onClick={handleSubmitComment}
-                  disabled={!newComment.trim() || commentLoading}
-                  className="gap-2"
-                >
-                  {commentLoading ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" />
-                      Отправка...
-                    </>
-                  ) : (
-                    <>
-                      Отправить
-                      <Send size={16} />
-                    </>
-                  )}
-                </Button>
-              </div>
-            </>
-          ) : (
-            <div className="text-center py-4 bg-muted/30 rounded-md">
-              <p className="text-muted-foreground mb-2">Войдите в систему, чтобы оставить комментарий</p>
-              <NavLink to="/login">
-                <Button variant="outline" size="sm">
-                  Войти
-                </Button>
-              </NavLink>
-            </div>
-          )}
-        </Card>
-      </div>
-
-      {editingCommentId && user && (
-        <EditCommentDialog
-          commentId={editingCommentId}
-          userId={user.id}
-          initialContent={comments.find(c => c.id === editingCommentId)?.content || ""}
-          open={!!editingCommentId}
-          onOpenChange={(open) => {
-            if (!open) setEditingCommentId(null);
-          }}
-          onCommentUpdated={refreshComments}
-        />
-      )}
-
-      {topic && user && (
-        <EditTopicDialog
-          topicId={topic.id}
-          userId={user.id}
-          initialData={{
-            title: topic.title,
-            content: topic.content,
-            category: topic.category
-          }}
-          open={showEditTopicDialog}
-          onOpenChange={setShowEditTopicDialog}
-          onTopicUpdated={refreshTopic}
-        />
-      )}
-    </div>
-  );
-};
-
-export default TopicView;
+                          <AvatarFallback className={getAvatarFallbackStyles
