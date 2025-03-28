@@ -56,7 +56,7 @@ const subscriptionTypes: SubscriptionType[] = [
   { id: "sponsor", name: "Спонсор", badge: "SPONSOR", color: "bg-purple-600 text-white" }
 ];
 
-const ADMIN_PASSWORD_HASH = "34c7d4e37608fe49ebdb577cd15bbbe47a08c0a5517adfcce97bb4423fc3fad9";
+const ADMIN_PASSWORD_HASH = "f3c6699aca7c998d59cfa3de01b1bf4d7ba4b4f2d20a68b4fc9d2a7ce50e9c31";
 const MAX_LOGIN_ATTEMPTS = 3;
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
@@ -220,7 +220,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
           .eq('id', existingRecord.id);
           
         if (updateError) {
-          console.error("Ошибка при обновлении записи:", updateError);
+          console.error("Ошибка при обновлении запи��и:", updateError);
         }
       } else {
         const { error: insertError } = await supabase
