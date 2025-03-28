@@ -3,6 +3,7 @@ import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import MobileNavigation from "./components/MobileNavigation";
 import Index from "./pages/Index";
 import Frontend from "./pages/Frontend";
 import Backend from "./pages/Backend";
@@ -23,16 +24,20 @@ import AboutUs from "./pages/AboutUs";
 import ForumRules from "./pages/ForumRules";
 import Contacts from "./pages/Contacts";
 import Help from "./pages/Help";
+import Premium from "./pages/Premium";
 import { AuthProvider } from "./contexts/AuthContext";
 import { Toaster } from "@/components/ui/toaster";
+import { useIsMobile } from "./hooks/use-mobile";
 
 const App = () => {
+  const isMobile = useIsMobile();
+
   return (
     <AuthProvider>
       <BrowserRouter>
         <div className="flex flex-col min-h-screen">
           <Navbar />
-          <main className="flex-grow">
+          <main className="flex-grow pb-16 md:pb-0">
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/frontend" element={<Frontend />} />
@@ -53,10 +58,12 @@ const App = () => {
               <Route path="/forum-rules" element={<ForumRules />} />
               <Route path="/contacts" element={<Contacts />} />
               <Route path="/help" element={<Help />} />
+              <Route path="/premium" element={<Premium />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>
-          <Footer />
+          {isMobile && <MobileNavigation />}
+          <Footer className={isMobile ? "pb-16" : ""} />
           <Toaster />
         </div>
       </BrowserRouter>

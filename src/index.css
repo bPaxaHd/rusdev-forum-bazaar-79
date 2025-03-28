@@ -92,6 +92,7 @@
 
   body {
     @apply bg-background text-foreground antialiased font-sans;
+    -webkit-tap-highlight-color: transparent;
   }
 
   /* Стилизация скроллбара */
@@ -109,6 +110,17 @@
   
   .dark ::-webkit-scrollbar-thumb {
     @apply bg-primary/30 hover:bg-primary/40;
+  }
+
+  /* Улучшения для мобильных устройств */
+  @media (max-width: 640px) {
+    :root {
+      --radius: 0.5rem;
+    }
+    
+    input, select, textarea {
+      font-size: 16px !important; /* Предотвращает масштабирование на iOS */
+    }
   }
 }
 
@@ -164,7 +176,11 @@
   
   /* Стили для форума */
   .topic-card {
-    @apply rounded-lg transition-all duration-200 hover:translate-y-[-2px];
+    @apply rounded-lg transition-all duration-200 hover:translate-y-[-2px] mobile-focus-visible;
+  }
+  
+  .mobile-focus-visible:focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2;
   }
   
   .topic-tag {
@@ -183,6 +199,32 @@
   
   .create-button:hover::after {
     @apply w-full;
+  }
+
+  /* Улучшения для мобильных устройств */
+  .mobile-container {
+    @apply px-4 w-full mx-auto;
+  }
+  
+  .mobile-nav {
+    @apply fixed bottom-0 left-0 right-0 bg-background border-t border-border flex justify-around py-2 px-4 z-50 md:hidden;
+  }
+  
+  .mobile-nav-item {
+    @apply flex flex-col items-center justify-center text-xs px-2 py-1 text-muted-foreground hover:text-foreground;
+  }
+  
+  .mobile-nav-icon {
+    @apply size-5 mb-1;
+  }
+  
+  /* Адаптивные карточки */
+  .responsive-grid {
+    @apply grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+  }
+  
+  .responsive-card {
+    @apply w-full h-full transition-all duration-200 hover:shadow-md;
   }
 }
 
@@ -257,5 +299,27 @@
   
   .hover-glow:hover {
     box-shadow: 0 0 15px theme('colors.primary.DEFAULT');
+  }
+  
+  /* Мобильные улучшения */
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 1rem);
+  }
+  
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 1rem);
+  }
+  
+  .touch-action-none {
+    touch-action: none;
+  }
+  
+  .touch-action-pan-y {
+    touch-action: pan-y;
+  }
+  
+  .text-balance-mobile {
+    @apply md:text-balance;
+    text-wrap: balance;
   }
 }
