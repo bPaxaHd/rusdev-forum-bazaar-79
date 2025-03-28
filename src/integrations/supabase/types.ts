@@ -116,6 +116,7 @@ export type Database = {
           subscription_type: string | null
           twitter_url: string | null
           updated_at: string
+          user_tag: string | null
           username: string
           website_url: string | null
         }
@@ -133,6 +134,7 @@ export type Database = {
           subscription_type?: string | null
           twitter_url?: string | null
           updated_at?: string
+          user_tag?: string | null
           username: string
           website_url?: string | null
         }
@@ -150,6 +152,7 @@ export type Database = {
           subscription_type?: string | null
           twitter_url?: string | null
           updated_at?: string
+          user_tag?: string | null
           username?: string
           website_url?: string | null
         }
@@ -234,6 +237,10 @@ export type Database = {
     }
     Functions: {
       add_subscription_type_to_profiles: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      add_user_tag_to_profiles: {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
