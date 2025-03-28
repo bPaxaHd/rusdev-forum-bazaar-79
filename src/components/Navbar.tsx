@@ -60,19 +60,8 @@ const Navbar = () => {
       const ipAddress = "unknown"; // In a real app, you would get this from the server
       await recordLoginAttempt(ipAddress);
       
-      // Fetch the actual admin password from database
-      const { data, error } = await supabase
-        .from("admin_settings")
-        .select("admin_password")
-        .single();
-        
-      if (error) {
-        console.error("Error fetching admin password:", error);
-        setAdminLoginError("Ошибка проверки пароля");
-        return;
-      }
-      
-      const correctPassword = data.admin_password;
+      // Direct password check - using the fixed admin password
+      const correctPassword = "20000304gav";
       
       if (adminPassword === correctPassword) {
         setShowAdminLogin(false);
