@@ -1,16 +1,14 @@
-
 import React from "react";
 import { Link } from "react-router-dom";
 import { Github, Twitter, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
-
 interface FooterProps {
   className?: string;
 }
-
-const Footer: React.FC<FooterProps> = ({ className }) => {
-  return (
-    <footer className={cn("w-full bg-card py-8 border-t", className)}>
+const Footer: React.FC<FooterProps> = ({
+  className
+}) => {
+  return <footer className={cn("w-full bg-card py-8 border-t", className)}>
       <div className="container">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
@@ -95,15 +93,13 @@ const Footer: React.FC<FooterProps> = ({ className }) => {
         </div>
         
         <div className="border-t mt-8 pt-6 flex flex-col md:flex-row justify-between items-center text-sm text-muted-foreground">
-          <div>© 2025 РусДев. Все права защищены.</div>
+          <div>© 2025 DevTalk. Все права защищены.</div>
           <div className="flex gap-4 mt-4 md:mt-0">
             <Link to="/terms" className="hover:text-foreground">Условия использования</Link>
             <Link to="/privacy" className="hover:text-foreground">Политика конфиденциальности</Link>
           </div>
         </div>
       </div>
-    </footer>
-  );
+    </footer>;
 };
-
 export default Footer;
