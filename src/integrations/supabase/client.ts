@@ -20,3 +20,4 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 // - company (TEXT NULL)
 // - skills (TEXT[] NULL)
 // - experience_years (INTEGER NULL)
+// - user_tag (TEXT NULL) - Added for user tagging and subscription management

@@ -8,7 +8,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { User, Mail, Calendar, Briefcase, MapPin, Edit2, Save, X, Github, Twitter, Globe, LinkIcon, ShieldAlert } from "lucide-react";
+import { User, Mail, Calendar, Briefcase, MapPin, Edit2, Save, X, Github, Twitter, Globe, LinkIcon, ShieldAlert, Tag } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -64,6 +64,8 @@ interface ProfileData {
   company: string | null;
   skills: string[] | null;
   experience_years: number | null;
+  user_tag: string | null;
+  subscription_type: string | null;
 }
 
 const Profile = () => {
@@ -306,31 +308,54 @@ const Profile = () => {
               <div className="flex flex-col md:flex-row gap-8">
                 <div className="md:w-1/3 flex flex-col items-center">
                   <AvatarUpload 
-                    userId={profile.id}
-                    url={profile.avatar_url || ""}
+                    userId={profile?.id || ""}
+                    url={profile?.avatar_url || ""}
                     onAvatarChange={handleAvatarChange}
                     size="lg"
-                    username={profile.username}
+                    username={profile?.username || ""}
                   />
                   
                   {!editing ? (
                     <div className="text-center mt-4">
-                      <h2 className="text-2xl font-bold">{profile.username}</h2>
-                      <p className="text-muted-foreground">
-                        {profile.specialty === "frontend" ? "Frontend разработчик" : 
-                         profile.specialty === "backend" ? "Backend разработчик" : 
-                         profile.specialty === "fullstack" ? "Fullstack разработчик" : 
-                         "Разработчик"}
-                      </p>
+                      <div className="flex flex-col items-center">
+                        <h2 className="text-2xl font-bold">{profile?.username}</h2>
+                        
+                        {profile?.user_tag && (
+                          <Badge variant="outline" className="mt-1 flex items-center gap-1">
+                            <Tag size={12} />
+                            {profile.user_tag}
+                          </Badge>
+                        )}
+                        
+                        <p className="text-muted-foreground mt-1">
+                          {profile?.specialty === "frontend" ? "Frontend разработчик" : 
+                           profile?.specialty === "backend" ? "Backend разработчик" : 
+                           profile?.specialty === "fullstack" ? "Fullstack разработчик" : 
+                           "Разработчик"}
+                        </p>
+                      </div>
                       
-                      {profile.company && (
+                      {profile?.subscription_type && profile?.subscription_type !== "free" && (
+                        <Badge 
+                          className={
+                            profile.subscription_type === "premium" ? "bg-yellow-500 text-black mt-2" : 
+                            profile.subscription_type === "business" ? "bg-blue-600 text-white mt-2" : 
+                            profile.subscription_type === "sponsor" ? "bg-purple-600 text-white mt-2" : 
+                            "mt-2"
+                          }
+                        >
+                          {profile.subscription_type.toUpperCase()}
+                        </Badge>
+                      )}
+                      
+                      {profile?.company && (
                         <div className="flex items-center justify-center mt-2 text-sm text-muted-foreground">
                           <Briefcase size={14} className="mr-1" />
                           <span>{profile.company}</span>
                         </div>
                       )}
                       
-                      {profile.location && (
+                      {profile?.location && (
                         <div className="flex items-center justify-center mt-1 text-sm text-muted-foreground">
                           <MapPin size={14} className="mr-1" />
                           <span>{profile.location}</span>
