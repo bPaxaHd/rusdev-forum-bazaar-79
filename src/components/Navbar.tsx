@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,13 +10,15 @@ import NavbarLinks from "./NavbarLinks";
 import Logo from "./Logo";
 import { useTheme } from "@/hooks/useTheme";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { canAccessAdminPanel } from "@/utils/auth-helpers";
+import { supabase } from "@/integrations/supabase/client";
+import { recordLoginAttempt } from "@/utils/db-helpers";
 import AdminPanel from "./AdminPanel";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 const Navbar = () => {
   const {
-    user
+    user,
+    canAccessAdmin
   } = useAuth();
   const {
     theme,
@@ -28,7 +29,6 @@ const Navbar = () => {
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
-  const [canAccessAdmin, setCanAccessAdmin] = useState(false);
   const [adminLoginError, setAdminLoginError] = useState("");
   const navigate = useNavigate();
   
@@ -43,21 +43,6 @@ const Navbar = () => {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
-  useEffect(() => {
-    if (user) {
-      checkAdminAccess();
-    } else {
-      setCanAccessAdmin(false);
-    }
-  }, [user]);
-
-  const checkAdminAccess = async () => {
-    if (!user) return;
-    
-    const hasAccess = await canAccessAdminPanel(user.id);
-    setCanAccessAdmin(hasAccess);
-  };
   
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,17 +53,37 @@ const Navbar = () => {
     }
   };
 
-  const handleAdminLogin = () => {
-    // Simple hardcoded password check - in production you should use a more secure method
-    const correctPassword = "admin1234"; // Better to store this securely or integrate with auth system
-    
-    if (adminPassword === correctPassword) {
-      setShowAdminLogin(false);
-      setShowAdminPanel(true);
-      setAdminPassword("");
-      setAdminLoginError("");
-    } else {
-      setAdminLoginError("Неверный пароль");
+  const handleAdminLogin = async () => {
+    try {
+      // Record login attempt (for security monitoring)
+      const ipAddress = "unknown"; // In a real app, you would get this from the server
+      await recordLoginAttempt(ipAddress);
+      
+      // Fetch the actual admin password from database
+      const { data, error } = await supabase
+        .from("admin_settings")
+        .select("admin_password")
+        .single();
+        
+      if (error) {
+        console.error("Error fetching admin password:", error);
+        setAdminLoginError("Ошибка проверки пароля");
+        return;
+      }
+      
+      const correctPassword = data.admin_password;
+      
+      if (adminPassword === correctPassword) {
+        setShowAdminLogin(false);
+        setShowAdminPanel(true);
+        setAdminPassword("");
+        setAdminLoginError("");
+      } else {
+        setAdminLoginError("Неверный пароль");
+      }
+    } catch (error) {
+      console.error("Error during admin login:", error);
+      setAdminLoginError("Произошла ошибка при входе");
     }
   };
 
@@ -187,4 +192,5 @@ const Navbar = () => {
       <AdminPanel open={showAdminPanel} onOpenChange={setShowAdminPanel} />
     </header>;
 };
+
 export default Navbar;
