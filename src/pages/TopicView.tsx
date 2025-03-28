@@ -116,21 +116,31 @@ const TopicView = () => {
             updated_at, 
             likes, 
             views,
-            profiles:user_id(username, avatar_url, subscription_type)
+            profile:profiles(username, avatar_url, subscription_type)
           `)
           .eq("id", id)
           .single();
         
         if (topicError) {
           console.error("Ошибка при загрузке темы:", topicError);
+          toast({
+            title: "Ошибка",
+            description: "Не удалось загрузить тему. Пожалуйста, попробуйте позже.",
+            variant: "destructive",
+          });
           navigate("/forum");
           return;
         }
         
-        if (!viewIncrementDone && topicData) {
+        const formattedTopicData = {
+          ...topicData,
+          profile: topicData.profile[0]
+        };
+        
+        if (!viewIncrementDone && formattedTopicData) {
           await supabase
             .from("topics")
-            .update({ views: (topicData.views || 0) + 1 })
+            .update({ views: (formattedTopicData.views || 0) + 1 })
             .eq("id", id);
           
           setViewIncrementDone(true);
@@ -144,7 +154,7 @@ const TopicView = () => {
             user_id,
             created_at,
             likes,
-            profiles:user_id(username, avatar_url, subscription_type)
+            profile:profiles(username, avatar_url, subscription_type)
           `)
           .eq("topic_id", id)
           .order("created_at", { ascending: true });
@@ -153,11 +163,24 @@ const TopicView = () => {
           console.error("Ошибка при загрузке комментариев:", commentsError);
         }
         
-        setTopic(topicData);
-        setLikesCount(topicData.likes || 0);
-        setComments(commentsData || []);
+        const formattedComments = commentsData ? commentsData.map(comment => ({
+          ...comment,
+          profile: comment.profile[0]
+        })) : [];
+        
+        console.log("Topic data:", formattedTopicData);
+        console.log("Comments data:", formattedComments);
+        
+        setTopic(formattedTopicData);
+        setLikesCount(formattedTopicData.likes || 0);
+        setComments(formattedComments || []);
       } catch (error) {
         console.error("Ошибка при загрузке данных:", error);
+        toast({
+          title: "Ошибка",
+          description: "Произошла ошибка при загрузке данных.",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
@@ -183,13 +206,17 @@ const TopicView = () => {
                 user_id,
                 created_at,
                 likes,
-                profiles:user_id(username, avatar_url, subscription_type)
+                profile:profiles(username, avatar_url, subscription_type)
               `)
               .eq("id", payload.new.id)
               .single();
               
             if (commentWithProfile) {
-              setComments(prev => [...prev, commentWithProfile]);
+              const formattedComment = {
+                ...commentWithProfile,
+                profile: commentWithProfile.profile[0]
+              };
+              setComments(prev => [...prev, formattedComment]);
             }
           };
           
@@ -224,7 +251,7 @@ const TopicView = () => {
       commentsSubscription.unsubscribe();
       topicSubscription.unsubscribe();
     };
-  }, [id, navigate, viewIncrementDone]);
+  }, [id, navigate, viewIncrementDone, toast]);
 
   const getSubscriptionBadge = (type?: string | null) => {
     if (!type || type === 'free') return null;
@@ -300,14 +327,13 @@ const TopicView = () => {
     try {
       setCommentLoading(true);
       
-      const { error, data } = await supabase
+      const { error } = await supabase
         .from("comments")
         .insert({
           topic_id: id,
           user_id: user.id,
           content: newComment
-        })
-        .select();
+        });
         
       if (error) {
         console.error("Ошибка при отправке комментария:", error);
