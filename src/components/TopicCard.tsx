@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 
 interface TopicCardProps {
-  id: number;
+  id: number | string;
   title: string;
   preview: string;
   author: string;
@@ -78,7 +78,7 @@ const TopicCard: React.FC<TopicCardProps> = ({
   };
 
   return (
-    <Link to={`/topic/${category}/${id}`}>
+    <Link to={`/topic/${id}`}>
       <Card className="card-glass p-4 md:p-6 hover:translate-y-[-2px] transition-all duration-300">
         <div className="flex flex-col gap-4">
           <div className="flex justify-between items-start">

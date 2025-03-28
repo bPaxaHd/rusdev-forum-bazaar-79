@@ -105,7 +105,7 @@ const Forum = () => {
     const typedCategory = topic.category as "frontend" | "backend" | "fullstack";
       
     return {
-      id: Number(topic.id), // Convert string ID to number for the TopicCard component
+      id: topic.id, // Use the UUID directly
       title: topic.title,
       preview: preview,
       author: topic.profile?.username || "Неизвестный пользователь",

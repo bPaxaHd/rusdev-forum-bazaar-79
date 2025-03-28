@@ -14,10 +14,15 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
 
 const NavbarUserMenu = () => {
   const { user, signOut, loading } = useAuth();
-  const [profile, setProfile] = useState<{ username: string; avatar_url: string | null } | null>(null);
+  const [profile, setProfile] = useState<{ 
+    username: string; 
+    avatar_url: string | null;
+    specialty?: string | null;
+  } | null>(null);
   const [fetchingProfile, setFetchingProfile] = useState(false);
 
   useEffect(() => {
@@ -29,7 +34,7 @@ const NavbarUserMenu = () => {
         
         const { data, error } = await supabase
           .from("profiles")
-          .select("username, avatar_url")
+          .select("username, avatar_url, specialty")
           .eq("id", user.id)
           .single();
           
@@ -95,6 +100,22 @@ const NavbarUserMenu = () => {
   const avatarUrl = profile?.avatar_url || user.user_metadata?.avatar_url;
   const username = profile?.username || user.user_metadata?.username || user.email;
 
+  // Получить отображаемое название специальности
+  const getSpecialtyDisplayName = (specialty: string | null | undefined) => {
+    switch (specialty) {
+      case "frontend":
+        return "Frontend разработчик";
+      case "backend":
+        return "Backend разработчик";
+      case "fullstack":
+        return "Fullstack разработчик";
+      default:
+        return null;
+    }
+  };
+  
+  const specialtyName = getSpecialtyDisplayName(profile?.specialty);
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -114,6 +135,11 @@ const NavbarUserMenu = () => {
           <p className="text-xs leading-none text-muted-foreground">
             {user.email}
           </p>
+          {specialtyName && (
+            <Badge variant="outline" className="mt-2 w-fit">
+              {specialtyName}
+            </Badge>
+          )}
         </div>
         <DropdownMenuSeparator />
         <Link to="/profile">

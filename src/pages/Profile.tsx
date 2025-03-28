@@ -25,16 +25,27 @@ import {
   Calendar, 
   Clock, 
   Shield, 
-  MessageSquare 
+  MessageSquare,
+  Code,
+  Save,
+  Loader2
 } from "lucide-react";
 import AvatarUpload from "@/components/AvatarUpload";
 import { useToast } from "@/hooks/use-toast";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface UserProfile {
   id: string;
   username: string;
   avatar_url: string | null;
   created_at: string;
+  specialty?: string | null;
 }
 
 interface UserStats {
@@ -50,6 +61,8 @@ const Profile = () => {
   const [profileLoading, setProfileLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
   const [activityExpanded, setActivityExpanded] = useState(false);
+  const [specialty, setSpecialty] = useState<string | null>(null);
+  const [savingSpecialty, setSavingSpecialty] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -76,6 +89,7 @@ const Profile = () => {
         } else {
           setProfile(data);
           setAvatarUrl(data.avatar_url);
+          setSpecialty(data.specialty);
         }
       } catch (error) {
         console.error("Error in fetchProfile:", error);
@@ -123,6 +137,47 @@ const Profile = () => {
 
     fetchUserStats();
   }, [user]);
+
+  // Обработчик сохранения специальности
+  const handleSaveSpecialty = async () => {
+    if (!user) return;
+    
+    try {
+      setSavingSpecialty(true);
+      
+      const { error } = await supabase
+        .from("profiles")
+        .update({ specialty })
+        .eq("id", user.id);
+        
+      if (error) {
+        console.error("Error updating specialty:", error);
+        toast({
+          title: "Ошибка",
+          description: "Не удалось обновить вашу специальность",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      toast({
+        title: "Специальность обновлена",
+        description: "Ваша специальность успешно обновлена",
+      });
+      
+      // Обновляем профиль в состоянии
+      if (profile) {
+        setProfile({
+          ...profile,
+          specialty
+        });
+      }
+    } catch (error) {
+      console.error("Error updating specialty:", error);
+    } finally {
+      setSavingSpecialty(false);
+    }
+  };
 
   // Функция для получения инициалов
   const getInitials = (name: string): string => {
@@ -177,6 +232,20 @@ const Profile = () => {
     );
   }
 
+  // Получить отображаемое название специальности
+  const getSpecialtyDisplayName = (specialty: string | null) => {
+    switch (specialty) {
+      case "frontend":
+        return "Frontend разработчик";
+      case "backend":
+        return "Backend разработчик";
+      case "fullstack":
+        return "Fullstack разработчик";
+      default:
+        return "Не указана";
+    }
+  };
+
   return (
     <div className="container max-w-4xl mx-auto py-10">
       <Tabs defaultValue="overview" className="space-y-6">
@@ -222,6 +291,50 @@ const Profile = () => {
                       <Mail size={14} />
                       <p className="text-sm">{user?.email}</p>
                     </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-medium flex items-center gap-2">
+                      <Code size={16} />
+                      Ваша специальность
+                    </h4>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Select
+                        value={specialty || ""}
+                        onValueChange={(value) => setSpecialty(value)}
+                      >
+                        <SelectTrigger className="w-full sm:w-[220px]">
+                          <SelectValue placeholder="Выберите специальность" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="frontend">Frontend разработчик</SelectItem>
+                          <SelectItem value="backend">Backend разработчик</SelectItem>
+                          <SelectItem value="fullstack">Fullstack разработчик</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button 
+                        variant="outline" 
+                        size="default" 
+                        onClick={handleSaveSpecialty} 
+                        disabled={savingSpecialty}
+                        className="gap-2"
+                      >
+                        {savingSpecialty ? (
+                          <>
+                            <Loader2 size={16} className="animate-spin" />
+                            Сохранение...
+                          </>
+                        ) : (
+                          <>
+                            <Save size={16} />
+                            Сохранить
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Текущая специальность: <Badge variant="outline">{getSpecialtyDisplayName(profile?.specialty)}</Badge>
+                    </p>
                   </div>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
