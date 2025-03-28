@@ -1,1197 +1,416 @@
-import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+import React, { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { 
-  X, Check, User, Shield, AlertTriangle, Settings, Users, Bell, BarChart, 
-  UserX, PieChart, CreditCard, FileText, Calendar, Activity, Zap, 
-  RefreshCw, Search, Filter, ArrowUpDown, Eye, EyeOff, Clock,
-  MessageSquare, Pencil, Trash2, Info
-} from 'lucide-react';
-import { UserProfile, LoginAttempt, SubscriptionLevel } from "@/types/auth";
-import CryptoJS from 'crypto-js';
-
-const ADMIN_PASSWORD = "8033343213943354088566815767659607503141163134002992749244944048";
-const STATS_REFRESH_INTERVAL = 30000;
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import "../styles/admin.css";
 
 interface AdminPanelProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+interface User {
+  id: string;
+  email: string;
+  created_at: string;
+  profile: {
+    id: string;
+    username: string;
+    avatar_url: string | null;
+    subscription_type: string | null;
+    user_tag: string | null;
+  };
+}
+
 const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
-  const [password, setPassword] = useState("");
-  const [authenticated, setAuthenticated] = useState(false);
-  const [activeTab, setActiveTab] = useState("dashboard");
-  const [loading, setLoading] = useState(false);
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<UserProfile[]>([]);
-  const [userSearch, setUserSearch] = useState("");
-  const [userFilter, setUserFilter] = useState("all");
-  const [loginAttempts, setLoginAttempts] = useState<LoginAttempt[]>([]);
-  const [blockedIPs, setBlockedIPs] = useState<string[]>([]);
-  const [showPassword, setShowPassword] = useState(false);
-  const [stats, setStats] = useState({
-    totalUsers: 0,
-    premiumUsers: 0,
-    postsToday: 0,
-    activeUsers: 0,
-    topicsCount: 0,
-    commentsCount: 0,
-    newUsersThisWeek: 0,
-    averageSessionTime: 0
-  });
-  const [contentStats, setContentStats] = useState({
-    totalTopics: 0,
-    totalComments: 0, 
-    pendingReports: 0,
-    topCategories: [
-      { name: 'Frontend', count: 0 },
-      { name: 'Backend', count: 0 },
-      { name: 'Fullstack', count: 0 }
-    ]
-  });
-  
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [editedProfile, setEditedProfile] = useState<{
+    username?: string;
+    subscription_type?: string;
+    user_tag?: string;
+  }>({});
   const { toast } = useToast();
-  
+
   useEffect(() => {
-    if (authenticated) {
+    if (open) {
       fetchUsers();
-      fetchLoginAttempts();
-      fetchStats();
-      fetchContentStats();
-      
-      const statsInterval = setInterval(() => {
-        fetchStats();
-        fetchContentStats();
-      }, STATS_REFRESH_INTERVAL);
-      
-      return () => clearInterval(statsInterval);
     }
-  }, [authenticated]);
-  
-  useEffect(() => {
-    if (users.length > 0) {
-      let result = [...users];
-      
-      if (userSearch) {
-        const searchLower = userSearch.toLowerCase();
-        result = result.filter(user => 
-          user.username.toLowerCase().includes(searchLower) || 
-          user.user_tag?.toLowerCase().includes(searchLower) ||
-          user.location?.toLowerCase().includes(searchLower) ||
-          user.specialty?.toLowerCase().includes(searchLower)
-        );
-      }
-      
-      if (userFilter !== 'all') {
-        result = result.filter(user => 
-          userFilter === 'free' 
-            ? !user.subscription_type || user.subscription_type === 'free'
-            : user.subscription_type === userFilter
-        );
-      }
-      
-      setFilteredUsers(result);
-    } else {
-      setFilteredUsers([]);
-    }
-  }, [users, userSearch, userFilter]);
-  
-  const checkPassword = () => {
-    try {
-      setLoading(true);
-      
-      if (password === ADMIN_PASSWORD) {
-        setAuthenticated(true);
-        toast({
-          title: "Успешная аутентификация",
-          description: "Вы вошли в панель администратора",
-        });
-      } else {
-        toast({
-          title: "Ошибка аутентификации",
-          description: "Неверный пароль администратора",
-          variant: "destructive",
-        });
-        
-        logLoginAttempt();
-      }
-    } catch (error) {
-      console.error("Ошибка при проверке пароля:", error);
-      toast({
-        title: "Ошибка аутентификации",
-        description: "Произошла ошибка при проверке пароля",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const logLoginAttempt = async () => {
-    try {
-      const ipAddress = "127.0.0.1";
-      
-      const { data, error } = await supabase
-        .from("admin_login_attempts")
-        .select("*")
-        .eq("ip_address", ipAddress)
-        .eq("is_resolved", false);
-      
-      if (error) {
-        console.error("Error checking for existing login attempts:", error);
-        return;
-      }
-      
-      if (data && data.length > 0) {
-        const { error: updateError } = await supabase
-          .from("admin_login_attempts")
-          .update({ attempts: data[0].attempts + 1 })
-          .eq("id", data[0].id);
-          
-        if (updateError) {
-          console.error("Error updating login attempts:", updateError);
-        }
-      } else {
-        const { error: insertError } = await supabase
-          .from("admin_login_attempts")
-          .insert([{ ip_address: ipAddress }]);
-          
-        if (insertError) {
-          console.error("Error inserting login attempt:", insertError);
-        }
-      }
-    } catch (error) {
-      console.error("Error logging login attempt:", error);
-    }
-  };
-  
+  }, [open]);
+
   const fetchUsers = async () => {
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const { data: authUsers, error: authError } = await supabase
+        .from("users")
+        .select(`
+          id,
+          email,
+          created_at,
+          profile:profiles(
+            id,
+            username,
+            avatar_url,
+            subscription_type,
+            user_tag
+          )
+        `);
       
-      if (error) {
-        throw error;
-      }
-      
-      setUsers(data || []);
-      setFilteredUsers(data || []);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-      toast({
-        title: "Ошибка загрузки",
-        description: "Не удалось загрузить список пользователей",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const fetchLoginAttempts = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("admin_login_attempts")
-        .select("*")
-        .order("timestamp", { ascending: false })
-        .limit(10);
-      
-      if (error) {
-        throw error;
-      }
-      
-      setLoginAttempts(data || []);
-      
-      const blocked = data
-        .filter(attempt => attempt.attempts >= 5 && !attempt.is_resolved)
-        .map(attempt => attempt.ip_address);
-      
-      setBlockedIPs(blocked);
-    } catch (error) {
-      console.error("Error fetching login attempts:", error);
-    }
-  };
-  
-  const fetchStats = async () => {
-    try {
-      const { data: topicsData } = await supabase
-        .from("topics")
-        .select("count")
-        .single();
-        
-      const { data: commentsData } = await supabase
-        .from("comments")
-        .select("count")
-        .single();
-      
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      
-      const newUsers = users.filter(user => 
-        new Date(user.created_at) > weekAgo
-      ).length;
-      
-      setStats({
-        totalUsers: users.length,
-        premiumUsers: users.filter(user => 
-          user.subscription_type && user.subscription_type !== 'free'
-        ).length,
-        postsToday: Math.floor(Math.random() * 20),
-        activeUsers: Math.floor(users.length * 0.7),
-        topicsCount: topicsData?.count || Math.floor(Math.random() * 100),
-        commentsCount: commentsData?.count || Math.floor(Math.random() * 500),
-        newUsersThisWeek: newUsers,
-        averageSessionTime: Math.floor(Math.random() * 30) + 10
-      });
-    } catch (error) {
-      console.error("Error fetching stats:", error);
-    }
-  };
-  
-  const fetchContentStats = async () => {
-    try {
-      const { data: frontendTopics } = await supabase
-        .from("topics")
-        .select("count")
-        .eq("category", "frontend");
-        
-      const { data: backendTopics } = await supabase
-        .from("topics")
-        .select("count")
-        .eq("category", "backend");
-        
-      const { data: fullstackTopics } = await supabase
-        .from("topics")
-        .select("count")
-        .eq("category", "fullstack");
-      
-      const frontendCount = frontendTopics && frontendTopics[0] ? frontendTopics[0].count : Math.floor(Math.random() * 40) + 10;
-      const backendCount = backendTopics && backendTopics[0] ? backendTopics[0].count : Math.floor(Math.random() * 30) + 5;
-      const fullstackCount = fullstackTopics && fullstackTopics[0] ? fullstackTopics[0].count : Math.floor(Math.random() * 20) + 3;
-      
-      setContentStats({
-        totalTopics: stats.topicsCount,
-        totalComments: stats.commentsCount,
-        pendingReports: Math.floor(Math.random() * 5),
-        topCategories: [
-          { 
-            name: 'Frontend', 
-            count: frontendCount
-          },
-          { 
-            name: 'Backend', 
-            count: backendCount
-          },
-          { 
-            name: 'Fullstack', 
-            count: fullstackCount
-          }
-        ]
-      });
-    } catch (error) {
-      console.error("Error fetching content stats:", error);
-    }
-  };
-  
-  const resolveLoginAttempt = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from("admin_login_attempts")
-        .update({ is_resolved: true })
-        .eq("id", id);
-      
-      if (error) {
-        throw error;
-      }
-      
-      toast({
-        title: "Статус обновлен",
-        description: "Попытка входа была помечена как разрешенная",
-      });
-      
-      fetchLoginAttempts();
-    } catch (error) {
-      console.error("Error resolving login attempt:", error);
-      toast({
-        title: "Ошибка обновления",
-        description: "Не удалось обновить статус попытки входа",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  const deleteUser = async (userId: string) => {
-    try {
-      if (!window.confirm("Вы уверены, что хотите удалить этого пользователя? Это действие нельзя отменить.")) {
+      if (authError) {
+        console.error("Error fetching users:", authError);
         return;
       }
       
-      setLoading(true);
-      
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .delete()
-        .eq("id", userId);
-        
-      if (profileError) {
-        throw profileError;
-      }
-      
-      setUsers(users.filter(user => user.id !== userId));
-      
-      toast({
-        title: "Пользователь удален",
-        description: "Пользователь был успешно удален из системы",
-      });
+      setUsers(authUsers as User[]);
     } catch (error) {
-      console.error("Error deleting user:", error);
-      toast({
-        title: "Ошибка удаления",
-        description: "Не удалось удалить пользователя. Возможно, у него есть связанные данные.",
-        variant: "destructive",
-      });
+      console.error("Error fetching users:", error);
     } finally {
       setLoading(false);
     }
   };
-  
-  const updateUserSubscription = async (userId: string, subscriptionType: SubscriptionLevel) => {
-    try {
-      setLoading(true);
-      
-      const { error } = await supabase
-        .from("profiles")
-        .update({ subscription_type: subscriptionType })
-        .eq("id", userId);
-      
-      if (error) {
-        throw error;
-      }
-      
-      setUsers(users.map(user => 
-        user.id === userId 
-          ? { ...user, subscription_type: subscriptionType } 
-          : user
-      ));
-      
-      toast({
-        title: "Подписка обновлена",
-        description: `Тип подписки пользователя изменен на ${subscriptionType}`,
-      });
-    } catch (error) {
-      console.error("Error updating subscription:", error);
-      toast({
-        title: "Ошибка обновления",
-        description: "Не удалось обновить тип подписки",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const updateUserSpecialty = async (userId: string, specialty: string) => {
-    try {
-      setLoading(true);
-      
-      const { error } = await supabase
-        .from("profiles")
-        .update({ specialty })
-        .eq("id", userId);
-      
-      if (error) {
-        throw error;
-      }
-      
-      setUsers(users.map(user => 
-        user.id === userId 
-          ? { ...user, specialty } 
-          : user
-      ));
-      
-      toast({
-        title: "Специализация обновлена",
-        description: `Специализация пользователя изменена на ${specialty}`,
-      });
-    } catch (error) {
-      console.error("Error updating specialty:", error);
-      toast({
-        title: "Ошибка обновления",
-        description: "Не удалось обновить специализацию",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const sortUsers = (field: keyof UserProfile) => {
-    const sorted = [...filteredUsers].sort((a, b) => {
-      if (field === 'created_at') {
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      }
-      
-      if (field === 'username') {
-        return (a.username || '').localeCompare(b.username || '');
-      }
-      
-      if (field === 'subscription_type') {
-        const subA = a.subscription_type || 'free';
-        const subB = b.subscription_type || 'free';
-        return subA.localeCompare(subB);
-      }
-      
-      return 0;
-    });
-    
-    setFilteredUsers(sorted);
-  };
-  
-  const getSubscriptionBadge = (type: string | null) => {
-    switch(type) {
-      case 'admin':
-        return <Badge className="bg-red-500 text-white">ADMIN</Badge>;
-      case 'premium':
-        return <Badge className="bg-yellow-500 text-black">PREMIUM</Badge>;
-      case 'business':
-        return <Badge className="bg-blue-600 text-white">BUSINESS</Badge>;
-      case 'sponsor':
-        return <Badge className="bg-purple-600 text-white">SPONSOR</Badge>;
-      default:
-        return <Badge variant="outline">FREE</Badge>;
-    }
-  };
-  
-  const getSpecialtyBadge = (specialty: string | null) => {
-    if (!specialty) return null;
-    
-    switch(specialty) {
-      case 'frontend':
-        return <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">Frontend</Badge>;
-      case 'backend':
-        return <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">Backend</Badge>;
-      case 'fullstack':
-        return <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200">Fullstack</Badge>;
-      default:
-        return <Badge variant="outline">{specialty}</Badge>;
-    }
-  };
-  
-  const handleClose = () => {
-    if (!authenticated) {
-      onOpenChange(false);
-    } else {
-      if (window.confirm("Вы уверены, что хотите выйти из панели администратора?")) {
-        setAuthenticated(false);
-        setPassword("");
-        onOpenChange(false);
-      }
-    }
-  };
-  
-  const refreshData = () => {
-    fetchUsers();
-    fetchLoginAttempts();
-    fetchStats();
-    fetchContentStats();
-    
-    toast({
-      title: "Данные обновлены",
-      description: "Все данные успешно обновлены",
+
+  const handleSelectUser = (user: User) => {
+    setSelectedUser(user);
+    setEditedProfile({
+      username: user.profile.username,
+      subscription_type: user.profile.subscription_type || "free",
+      user_tag: user.profile.user_tag || "",
     });
   };
-  
+
+  const handleUpdateProfile = async () => {
+    if (!selectedUser) return;
+    
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          username: editedProfile.username,
+          subscription_type: editedProfile.subscription_type,
+          user_tag: editedProfile.user_tag,
+        })
+        .eq("id", selectedUser.id);
+      
+      if (error) {
+        toast({
+          title: "Ошибка обновления",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      toast({
+        title: "Профиль обновлен",
+        description: "Данные пользователя успешно обновлены",
+      });
+      
+      // Update local state
+      setUsers(prev => 
+        prev.map(user => 
+          user.id === selectedUser.id 
+            ? {
+                ...user,
+                profile: {
+                  ...user.profile,
+                  username: editedProfile.username || user.profile.username,
+                  subscription_type: editedProfile.subscription_type || user.profile.subscription_type,
+                  user_tag: editedProfile.user_tag || user.profile.user_tag,
+                }
+              }
+            : user
+        )
+      );
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast({
+        title: "Ошибка обновления",
+        description: "Произошла ошибка при обновлении профиля",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const filteredUsers = users.filter(user => 
+    user.profile.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (user.email && user.email.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat("ru-RU", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    }).format(date);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-primary" />
-            Панель администратора
-          </DialogTitle>
-          <DialogDescription>
-            Управление пользователями и системными настройками
-          </DialogDescription>
+          <DialogTitle>Панель администратора</DialogTitle>
         </DialogHeader>
         
-        {!authenticated ? (
-          <div className="space-y-4 py-4">
-            <div className="text-center p-4">
-              <Shield className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-              <h3 className="text-lg font-medium">Требуется аутентификация</h3>
-              <p className="text-sm text-muted-foreground mt-1 mb-4">
-                Пожалуйста, введите пароль администратора для доступа к панели
-              </p>
-            </div>
+        <div className="flex-grow overflow-hidden">
+          <Tabs defaultValue="users" className="w-full h-full">
+            <TabsList>
+              <TabsTrigger value="users">Пользователи</TabsTrigger>
+              <TabsTrigger value="settings">Настройки</TabsTrigger>
+              <TabsTrigger value="stats">Статистика</TabsTrigger>
+            </TabsList>
             
-            <div className="flex gap-2">
-              <div className="relative flex-1">
+            <TabsContent value="users" className="h-[70vh] flex flex-col">
+              <div className="flex justify-between items-center mb-4">
                 <Input 
-                  type={showPassword ? "text" : "password"} 
-                  placeholder="Введите пароль администратора" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      checkPassword();
-                    }
-                  }}
-                  className="pr-10"
+                  placeholder="Поиск пользователей..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="max-w-sm"
                 />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0 h-full"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </Button>
-              </div>
-              <Button onClick={checkPassword} disabled={loading}>
-                {loading ? "Проверка..." : "Войти"}
-              </Button>
-            </div>
-            
-            {loading && <Progress value={100} className="animate-pulse" />}
-          </div>
-        ) : (
-          <div className="flex flex-col h-full overflow-hidden">
-            <div className="flex justify-between items-center p-2 border-b">
-              <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="flex items-center gap-1"
-                  onClick={refreshData}
-                >
-                  <RefreshCw size={14} />
-                  <span>Обновить данные</span>
-                </Button>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Время последнего обновления: {new Date().toLocaleTimeString()}
-              </div>
-            </div>
-            
-            <Tabs 
-              value={activeTab} 
-              onValueChange={setActiveTab}
-              className="flex-1 overflow-hidden flex flex-col"
-            >
-              <div className="border-b">
-                <TabsList className="h-10">
-                  <TabsTrigger value="dashboard" className="flex items-center gap-1">
-                    <BarChart size={14} />
-                    <span>Панель управления</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="users" className="flex items-center gap-1">
-                    <Users size={14} />
-                    <span>Пользователи</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="content" className="flex items-center gap-1">
-                    <FileText size={14} />
-                    <span>Контент</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="security" className="flex items-center gap-1">
-                    <AlertTriangle size={14} />
-                    <span>Безопасность</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="settings" className="flex items-center gap-1">
-                    <Settings size={14} />
-                    <span>Настройки</span>
-                  </TabsTrigger>
-                </TabsList>
+                <Button variant="outline" onClick={fetchUsers}>Обновить</Button>
               </div>
               
-              <div className="flex-1 overflow-hidden">
-                <TabsContent value="dashboard" className="h-full overflow-auto p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium">
-                          Всего пользователей
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{stats.totalUsers}</div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          +{stats.newUsersThisWeek} за последнюю неделю
-                        </p>
-                        <Progress 
-                          value={75} 
-                          className="h-1 mt-2" 
-                        />
-                      </CardContent>
-                    </Card>
-                    
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium">
-                          Премиум пользователи
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{stats.premiumUsers}</div>
-                        <div className="flex justify-between items-center">
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {stats.totalUsers > 0 ? Math.floor(stats.premiumUsers / stats.totalUsers * 100) : 0}% от общего числа
-                          </p>
-                          <PieChart size={16} className="text-muted-foreground" />
-                        </div>
-                        <Progress 
-                          value={stats.totalUsers > 0 ? Math.floor(stats.premiumUsers / stats.totalUsers * 100) : 0} 
-                          className="h-1 mt-2" 
-                        />
-                      </CardContent>
-                    </Card>
-                    
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium">
-                          Темы форума
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{stats.topicsCount}</div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {stats.postsToday} новых сегодня
-                        </p>
-                        <Progress 
-                          value={60} 
-                          className="h-1 mt-2" 
-                        />
-                      </CardContent>
-                    </Card>
-                    
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium">
-                          Активные пользователи
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{stats.activeUsers}</div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {stats.totalUsers > 0 ? Math.floor(stats.activeUsers / stats.totalUsers * 100) : 0}% активности
-                        </p>
-                        <Progress 
-                          value={stats.totalUsers > 0 ? Math.floor(stats.activeUsers / stats.totalUsers * 100) : 0} 
-                          className="h-1 mt-2" 
-                        />
-                      </CardContent>
-                    </Card>
-                  </div>
+              <div className="flex gap-4 flex-grow overflow-hidden">
+                <Card className="w-1/2 overflow-hidden flex flex-col">
+                  <CardHeader>
+                    <CardTitle>Список пользователей</CardTitle>
+                  </CardHeader>
                   
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-                    <Card className="lg:col-span-2">
-                      <CardHeader>
-                        <CardTitle>Активность по категориям</CardTitle>
-                        <CardDescription>
-                          Распределение контента по основным категориям
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          {contentStats.topCategories.map((category) => (
-                            <div key={category.name} className="space-y-2">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="outline" className={
-                                    category.name === 'Frontend' ? 'bg-green-100' :
-                                    category.name === 'Backend' ? 'bg-blue-100' :
-                                    'bg-purple-100'
-                                  }>
-                                    {category.name}
-                                  </Badge>
-                                  <span className="text-sm font-medium">{category.count} тем</span>
-                                </div>
-                                <span className="text-xs text-muted-foreground">
-                                  {contentStats.totalTopics > 0 ? 
-                                    Math.floor(category.count / contentStats.totalTopics * 100) : 0}%
-                                </span>
+                  <CardContent className="p-0 flex-grow">
+                    <ScrollArea className="h-[calc(70vh-130px)] p-4">
+                      {loading ? (
+                        <div className="flex flex-col gap-2">
+                          {[1, 2, 3, 4, 5].map((i) => (
+                            <div key={i} className="flex items-center p-2 animate-pulse">
+                              <div className="bg-muted rounded-full h-10 w-10 mr-2" />
+                              <div className="space-y-2 flex-1">
+                                <div className="h-4 bg-muted rounded w-3/4" />
+                                <div className="h-3 bg-muted rounded w-1/2" />
                               </div>
-                              <Progress 
-                                value={contentStats.totalTopics > 0 ? 
-                                  Math.floor(category.count / contentStats.totalTopics * 100) : 0} 
+                            </div>
+                          ))}
+                        </div>
+                      ) : filteredUsers.length > 0 ? (
+                        <div className="flex flex-col gap-1">
+                          {filteredUsers.map((user) => (
+                            <div
+                              key={user.id}
+                              className={`flex items-center p-2 rounded-md cursor-pointer hover:bg-accent ${
+                                selectedUser?.id === user.id ? 'bg-accent' : ''
+                              }`}
+                              onClick={() => handleSelectUser(user)}
+                            >
+                              <Avatar className="h-10 w-10 mr-2">
+                                <AvatarImage src={user.profile.avatar_url || ""} />
+                                <AvatarFallback>
+                                  {user.profile.username.substring(0, 2).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium">{user.profile.username}</p>
+                                  {user.profile.subscription_type && user.profile.subscription_type !== "free" && (
+                                    <Badge 
+                                      variant="outline" 
+                                      className={
+                                        user.profile.subscription_type === "admin" ? "bg-red-100 text-red-800 border-red-200" :
+                                        user.profile.subscription_type === "premium" ? "bg-yellow-100 text-yellow-800 border-yellow-200" :
+                                        user.profile.subscription_type === "business" ? "bg-blue-100 text-blue-800 border-blue-200" :
+                                        user.profile.subscription_type === "sponsor" ? "bg-purple-100 text-purple-800 border-purple-200" :
+                                        ""
+                                      }
+                                    >
+                                      {user.profile.subscription_type}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-sm text-muted-foreground">{user.email}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-4">
+                          <p className="text-muted-foreground">Пользователи не найдены</p>
+                        </div>
+                      )}
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+                
+                <Card className="w-1/2 overflow-hidden flex flex-col">
+                  <CardHeader>
+                    <CardTitle>Детали пользователя</CardTitle>
+                  </CardHeader>
+                  
+                  <CardContent className="flex-grow">
+                    <ScrollArea className="h-[calc(70vh-130px)]">
+                      {selectedUser ? (
+                        <div>
+                          <div className="flex items-center mb-6">
+                            <Avatar className="h-16 w-16 mr-4">
+                              <AvatarImage src={selectedUser.profile.avatar_url || ""} />
+                              <AvatarFallback>
+                                {selectedUser.profile.username.substring(0, 2).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <h3 className="text-xl font-bold">{selectedUser.profile.username}</h3>
+                              <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
+                              <p className="text-xs text-muted-foreground">
+                                Зарегистрирован: {formatDate(selectedUser.created_at)}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <Separator className="my-4" />
+                          
+                          <div className="space-y-4">
+                            <div>
+                              <Label htmlFor="username">Имя пользователя</Label>
+                              <Input
+                                id="username"
+                                value={editedProfile.username || ""}
+                                onChange={(e) => setEditedProfile(prev => ({ ...prev, username: e.target.value }))}
+                                className="mt-1"
                               />
                             </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                    
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Статистика сессий</CardTitle>
-                        <CardDescription>
-                          Информация о пользовательских сессиях
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-6">
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <Activity size={16} className="text-muted-foreground" />
-                                <span className="text-sm">Активные сессии</span>
-                              </div>
-                              <span className="font-medium">{Math.floor(stats.activeUsers * 0.8)}</span>
-                            </div>
-                            <Progress value={80} />
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <Clock size={16} className="text-muted-foreground" />
-                                <span className="text-sm">Среднее время</span>
-                              </div>
-                              <span className="font-medium">{stats.averageSessionTime} мин</span>
-                            </div>
-                            <Progress value={stats.averageSessionTime / 60 * 100} />
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <Calendar size={16} className="text-muted-foreground" />
-                                <span className="text-sm">Новые пользователи</span>
-                              </div>
-                              <span className="font-medium">{stats.newUsersThisWeek} за неделю</span>
-                            </div>
-                            <Progress value={stats.newUsersThisWeek / (stats.totalUsers ? stats.totalUsers * 0.1 : 1) * 100} />
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Последние регистрации</CardTitle>
-                        <CardDescription>
-                          Список недавно зарегистрированных пользователей
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          {users.slice(0, 5).map((user) => (
-                            <div 
-                              key={user.id} 
-                              className="flex items-center justify-between p-2 rounded-md hover:bg-muted transition-colors"
-                            >
-                              <div className="flex items-center gap-2">
-                                <Avatar className="h-8 w-8">
-                                  <AvatarImage src={user.avatar_url || ""} alt={user.username} />
-                                  <AvatarFallback>{user.username.substring(0, 2).toUpperCase()}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <p className="text-sm font-medium">{user.username}</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {new Date(user.created_at).toLocaleDateString()}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                {getSubscriptionBadge(user.subscription_type)}
-                                {getSpecialtyBadge(user.specialty)}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                    
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Безопасность</CardTitle>
-                        <CardDescription>
-                          Последние попытки входа в панель администратора
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          {loginAttempts.slice(0, 5).map((attempt) => (
-                            <div 
-                              key={attempt.id} 
-                              className="flex items-center justify-between p-2 rounded-md hover:bg-muted transition-colors"
-                            >
-                              <div>
-                                <p className="text-sm font-medium">IP: {attempt.ip_address}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {new Date(attempt.timestamp).toLocaleString()} - {attempt.attempts} попыток
-                                </p>
-                              </div>
-                              {attempt.is_resolved ? (
-                                <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">
-                                  Разрешено
-                                </Badge>
-                              ) : (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-7 text-xs"
-                                  onClick={() => resolveLoginAttempt(attempt.id)}
-                                >
-                                  <Check size={12} className="mr-1" />
-                                  Разрешить
-                                </Button>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="users" className="h-full overflow-auto p-4">
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <h2 className="text-2xl font-bold">Управление пользователями</h2>
-                      <div className="flex items-center gap-2">
-                        <div className="relative">
-                          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            placeholder="Поиск пользователей..."
-                            className="pl-8"
-                            value={userSearch}
-                            onChange={(e) => setUserSearch(e.target.value)}
-                          />
-                        </div>
-                        <select
-                          className="h-10 rounded-md border border-input bg-background px-3 py-2"
-                          value={userFilter}
-                          onChange={(e) => setUserFilter(e.target.value)}
-                        >
-                          <option value="all">Все</option>
-                          <option value="free">Free</option>
-                          <option value="premium">Premium</option>
-                          <option value="business">Business</option>
-                          <option value="sponsor">Sponsor</option>
-                          <option value="admin">Admin</option>
-                        </select>
-                      </div>
-                    </div>
-                    
-                    <div className="border rounded-md">
-                      <div className="grid grid-cols-12 gap-2 p-4 bg-muted font-medium text-sm">
-                        <div className="col-span-4 flex items-center gap-2">
-                          <Button variant="ghost" size="sm" className="p-0 h-7" onClick={() => sortUsers('username')}>
-                            <User size={14} className="mr-1" />
-                            Пользователь
-                            <ArrowUpDown size={14} className="ml-1" />
-                          </Button>
-                        </div>
-                        <div className="col-span-2">Тег</div>
-                        <div className="col-span-2">
-                          <Button variant="ghost" size="sm" className="p-0 h-7" onClick={() => sortUsers('subscription_type')}>
-                            <CreditCard size={14} className="mr-1" />
-                            Подписка
-                            <ArrowUpDown size={14} className="ml-1" />
-                          </Button>
-                        </div>
-                        <div className="col-span-2">Специализация</div>
-                        <div className="col-span-2 text-right">Действия</div>
-                      </div>
-                      
-                      <ScrollArea className="h-[calc(100vh-380px)]">
-                        {filteredUsers.length > 0 ? (
-                          filteredUsers.map((user) => (
-                            <div 
-                              key={user.id}
-                              className="grid grid-cols-12 gap-2 p-4 border-t hover:bg-muted/50 transition-colors"
-                            >
-                              <div className="col-span-4">
-                                <div className="flex items-center gap-2">
-                                  <Avatar className="h-8 w-8">
-                                    <AvatarImage src={user.avatar_url || ""} alt={user.username} />
-                                    <AvatarFallback>{user.username.substring(0, 2).toUpperCase()}</AvatarFallback>
-                                  </Avatar>
-                                  <div>
-                                    <div className="font-medium">{user.username}</div>
-                                    <div className="text-xs text-muted-foreground">
-                                      {new Date(user.created_at).toLocaleDateString()}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                              
-                              <div className="col-span-2 flex items-center">
-                                {user.user_tag ? (
-                                  <Badge variant="outline">@{user.user_tag}</Badge>
-                                ) : (
-                                  <span className="text-muted-foreground text-sm">—</span>
-                                )}
-                              </div>
-                              
-                              <div className="col-span-2 flex items-center">
-                                <select
-                                  className="h-8 rounded-md border border-input bg-background px-2 py-1 text-sm"
-                                  value={user.subscription_type || 'free'}
-                                  onChange={(e) => updateUserSubscription(user.id, e.target.value as SubscriptionLevel)}
-                                >
-                                  <option value="free">Free</option>
-                                  <option value="premium">Premium</option>
-                                  <option value="business">Business</option>
-                                  <option value="sponsor">Sponsor</option>
-                                  <option value="admin">Admin</option>
-                                </select>
-                              </div>
-                              
-                              <div className="col-span-2 flex items-center">
-                                <select
-                                  className="h-8 rounded-md border border-input bg-background px-2 py-1 text-sm"
-                                  value={user.specialty || ''}
-                                  onChange={(e) => updateUserSpecialty(user.id, e.target.value)}
-                                >
-                                  <option value="">Не указана</option>
-                                  <option value="frontend">Frontend</option>
-                                  <option value="backend">Backend</option>
-                                  <option value="fullstack">Fullstack</option>
-                                </select>
-                              </div>
-                              
-                              <div className="col-span-2 flex items-center justify-end gap-2">
-                                <Button variant="outline" size="icon" className="h-8 w-8">
-                                  <Pencil size={14} />
-                                </Button>
-                                <Button 
-                                  variant="outline" 
-                                  size="icon" 
-                                  className="h-8 w-8 text-red-500 hover:text-red-700"
-                                  onClick={() => deleteUser(user.id)}
-                                >
-                                  <Trash2 size={14} />
-                                </Button>
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="p-8 text-center">
-                            <UserX size={40} className="mx-auto text-muted-foreground mb-2" />
-                            <h3 className="text-lg font-medium">Пользователи не найдены</h3>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              Попробуйте изменить параметры поиска или фильтрации
-                            </p>
-                          </div>
-                        )}
-                      </ScrollArea>
-                    </div>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="content" className="h-full overflow-auto p-4">
-                  <div className="text-center py-10">
-                    <FileText size={40} className="mx-auto text-muted-foreground mb-2" />
-                    <h3 className="text-lg font-medium">Управление контентом</h3>
-                    <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
-                      Здесь будет располагаться функционал для управления темами, комментариями и другим контентом форума
-                    </p>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="security" className="h-full overflow-auto p-4">
-                  <div className="space-y-6">
-                    <div>
-                      <h2 className="text-2xl font-bold mb-4">Безопасность</h2>
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>Попытки входа в админ-панель</CardTitle>
-                          <CardDescription>
-                            История попыток входа в панель администратора
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          {loginAttempts.length > 0 ? (
-                            <div className="space-y-4">
-                              {loginAttempts.map((attempt) => (
-                                <div 
-                                  key={attempt.id}
-                                  className="flex items-center justify-between p-3 rounded-md border"
-                                >
-                                  <div>
-                                    <div className="font-medium">IP: {attempt.ip_address}</div>
-                                    <div className="text-sm text-muted-foreground">
-                                      {new Date(attempt.timestamp).toLocaleString()} - {attempt.attempts} попыток
-                                    </div>
-                                  </div>
-                                  
-                                  <div>
-                                    {attempt.is_resolved ? (
-                                      <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">
-                                        Разрешено
-                                      </Badge>
-                                    ) : (
-                                      <div className="flex items-center gap-2">
-                                        {attempt.attempts >= 5 && (
-                                          <Badge variant="destructive">Заблокировано</Badge>
-                                        )}
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => resolveLoginAttempt(attempt.id)}
-                                        >
-                                          <Check size={14} className="mr-1" />
-                                          Разрешить
-                                        </Button>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="text-center py-8">
-                              <Shield className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-                              <p className="text-muted-foreground">Нет записей о попытках входа</p>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </div>
-                    
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Блокировки</CardTitle>
-                        <CardDescription>
-                          IP-адреса, заблокированные из-за подозрительной активности
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        {blockedIPs.length > 0 ? (
-                          <div className="space-y-2">
-                            {blockedIPs.map((ip, index) => (
-                              <div 
-                                key={index}
-                                className="flex items-center justify-between p-2 rounded-md border"
+                            
+                            <div>
+                              <Label htmlFor="subscription">Тип подписки</Label>
+                              <Select
+                                value={editedProfile.subscription_type || "free"}
+                                onValueChange={(value) => setEditedProfile(prev => ({ ...prev, subscription_type: value }))}
                               >
-                                <div className="font-medium">{ip}</div>
-                                <Button variant="outline" size="sm">
-                                  <X size={14} className="mr-1" />
-                                  Разблокировать
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center py-6">
-                            <Shield className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                            <p className="text-muted-foreground">Нет заблокированных IP-адресов</p>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="settings" className="h-full overflow-auto p-4">
-                  <div className="space-y-6">
-                    <h2 className="text-2xl font-bold">Настройки</h2>
-                    
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Общие настройки</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <Label htmlFor="maintenance-mode">Режим обслуживания</Label>
-                            <p className="text-sm text-muted-foreground">
-                              Включить режим обслуживания сайта
-                            </p>
-                          </div>
-                          <Switch id="maintenance-mode" />
-                        </div>
-                        
-                        <Separator />
-                        
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <Label htmlFor="new-users">Регистрация новых пользователей</Label>
-                            <p className="text-sm text-muted-foreground">
-                              Разрешить регистрацию новых пользователей
-                            </p>
-                          </div>
-                          <Switch id="new-users" defaultChecked />
-                        </div>
-                        
-                        <Separator />
-                        
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <Label htmlFor="email-notifications">Уведомления по email</Label>
-                            <p className="text-sm text-muted-foreground">
-                              Отправлять уведомления о новых пользователях
-                            </p>
-                          </div>
-                          <Switch id="email-notifications" />
-                        </div>
-                      </CardContent>
-                    </Card>
-                    
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Настройки форума</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div>
-                          <Label htmlFor="posts-per-page">Количество тем на страницу</Label>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Input id="posts-per-page" type="number" defaultValue="10" className="w-24" />
-                            <span className="text-sm text-muted-foreground">тем</span>
+                                <SelectTrigger id="subscription" className="mt-1">
+                                  <SelectValue placeholder="Выберите тип подписки" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="free">Бесплатная</SelectItem>
+                                  <SelectItem value="premium">Премиум</SelectItem>
+                                  <SelectItem value="business">Бизнес</SelectItem>
+                                  <SelectItem value="sponsor">Спонсор</SelectItem>
+                                  <SelectItem value="admin">Администратор</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            
+                            <div>
+                              <Label htmlFor="user_tag">Тег пользователя</Label>
+                              <Input
+                                id="user_tag"
+                                value={editedProfile.user_tag || ""}
+                                onChange={(e) => setEditedProfile(prev => ({ ...prev, user_tag: e.target.value }))}
+                                className="mt-1"
+                                placeholder="Например: Эксперт, Новичок, Разработчик"
+                              />
+                            </div>
+                            
+                            <Button 
+                              className="w-full mt-2" 
+                              onClick={handleUpdateProfile}
+                            >
+                              Сохранить изменения
+                            </Button>
                           </div>
                         </div>
-                        
-                        <Separator />
-                        
-                        <div>
-                          <Label htmlFor="comments-per-page">Количество комментариев на страницу</Label>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Input id="comments-per-page" type="number" defaultValue="20" className="w-24" />
-                            <span className="text-sm text-muted-foreground">комментариев</span>
-                          </div>
+                      ) : (
+                        <div className="text-center py-8">
+                          <p className="text-muted-foreground">Выберите пользователя из списка</p>
                         </div>
-                        
-                        <Separator />
-                        
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <Label htmlFor="moderate-comments">Модерация комментариев</Label>
-                            <p className="text-sm text-muted-foreground">
-                              Включить премодерацию комментариев
-                            </p>
-                          </div>
-                          <Switch id="moderate-comments" />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </TabsContent>
+                      )}
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
               </div>
-            </Tabs>
-          </div>
-        )}
+            </TabsContent>
+            
+            <TabsContent value="settings">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Настройки сайта</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label htmlFor="maintenance-mode">Режим обслуживания</Label>
+                        <p className="text-sm text-muted-foreground">Временно закрыть доступ к сайту</p>
+                      </div>
+                      <Switch id="maintenance-mode" />
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label htmlFor="registration">Регистрация новых пользователей</Label>
+                        <p className="text-sm text-muted-foreground">Разрешить регистрацию новых пользователей</p>
+                      </div>
+                      <Switch id="registration" defaultChecked />
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label htmlFor="comments">Комментарии</Label>
+                        <p className="text-sm text-muted-foreground">Разрешить комментарии на сайте</p>
+                      </div>
+                      <Switch id="comments" defaultChecked />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="stats">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Статистика сайта</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-card border rounded-lg p-4">
+                      <p className="text-sm text-muted-foreground">Пользователей</p>
+                      <h3 className="text-2xl font-bold">{users.length}</h3>
+                    </div>
+                    
+                    <div className="bg-card border rounded-lg p-4">
+                      <p className="text-sm text-muted-foreground">Премиум подписок</p>
+                      <h3 className="text-2xl font-bold">
+                        {users.filter(u => u.profile.subscription_type && u.profile.subscription_type !== "free").length}
+                      </h3>
+                    </div>
+                    
+                    <div className="bg-card border rounded-lg p-4">
+                      <p className="text-sm text-muted-foreground">Активных тем</p>
+                      <h3 className="text-2xl font-bold">-</h3>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
       </DialogContent>
     </Dialog>
   );

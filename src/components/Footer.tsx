@@ -97,8 +97,8 @@ const Footer: React.FC<FooterProps> = ({
         </div>
         
         <div className="border-t mt-8 pt-6 flex flex-col md:flex-row justify-center items-center text-sm text-muted-foreground">
-          <div className="mb-4 md:mb-0">© 2025 DevTalk. Все права защищены.</div>
-          <div className="flex gap-4 mx-auto">
+          <div className="mb-4 md:mb-0 text-center">© 2025 DevTalk. Все права защищены.</div>
+          <div className="flex gap-4 mx-auto md:mx-4">
             <Link to="/terms" className="hover:text-foreground">Условия использования</Link>
             <Link to="/privacy" className="hover:text-foreground">Политика конфиденциальности</Link>
           </div>
