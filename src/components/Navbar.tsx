@@ -11,10 +11,7 @@ import NavbarLinks from "./NavbarLinks";
 import Logo from "./Logo";
 import { useTheme } from "@/hooks/useTheme";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { supabase } from "@/integrations/supabase/client";
-import { recordLoginAttempt } from "@/utils/db-helpers";
 import { AdminPanel } from "./admin";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 const Navbar = () => {
   const {
@@ -27,10 +24,7 @@ const Navbar = () => {
   } = useTheme();
   const [isScrolled, setIsScrolled] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
-  const [adminPassword, setAdminPassword] = useState("");
-  const [adminLoginError, setAdminLoginError] = useState("");
   const navigate = useNavigate();
   
   useEffect(() => {
@@ -51,43 +45,6 @@ const Navbar = () => {
       console.log("Searching for:", searchQuery);
       navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
       setSearchQuery("");
-    }
-  };
-
-  const handleAdminLogin = async () => {
-    try {
-      // Record login attempt (for security monitoring)
-      const ipAddress = "unknown"; // In a real app, you would get this from the server
-      await recordLoginAttempt(ipAddress);
-      
-      // Direct password check - using the fixed admin password
-      const correctPassword = "20000304gav";
-      
-      if (adminPassword === correctPassword) {
-        setShowAdminLogin(false);
-        setShowAdminPanel(true);
-        setAdminPassword("");
-        setAdminLoginError("");
-      } else {
-        setAdminLoginError("Неверный пароль");
-      }
-    } catch (error) {
-      console.error("Error during admin login:", error);
-      setAdminLoginError("Произошла ошибка при входе");
-    }
-  };
-
-  const handleAdminButtonClick = () => {
-    // Always show the password dialog first, never directly open the admin panel
-    setShowAdminLogin(true);
-  };
-  
-  // When admin panel is closed, reset state
-  const handleAdminPanelOpenChange = (open: boolean) => {
-    setShowAdminPanel(open);
-    // If panel is closed, we should require password again next time
-    if (!open) {
-      setAdminPassword("");
     }
   };
 
@@ -147,7 +104,7 @@ const Navbar = () => {
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={handleAdminButtonClick} 
+              onClick={() => setShowAdminPanel(true)} 
               className="mx-1"
               title="Панель администратора"
             >
@@ -160,40 +117,11 @@ const Navbar = () => {
         </div>
       </div>
       
-      {/* Admin Password Dialog */}
-      <Dialog open={showAdminLogin} onOpenChange={setShowAdminLogin}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Вход в панель администратора</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Input
-                id="admin-password"
-                placeholder="Введите пароль администратора"
-                type="password"
-                value={adminPassword}
-                onChange={(e) => setAdminPassword(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAdminLogin()}
-              />
-              {adminLoginError && (
-                <p className="text-sm text-red-500">{adminLoginError}</p>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAdminLogin(false)}>
-              Отмена
-            </Button>
-            <Button onClick={handleAdminLogin}>
-              Войти
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
       {/* Admin Panel Component */}
-      <AdminPanel open={showAdminPanel} onOpenChange={handleAdminPanelOpenChange} />
+      <AdminPanel 
+        open={showAdminPanel} 
+        onOpenChange={setShowAdminPanel}
+      />
     </header>;
 };
 
