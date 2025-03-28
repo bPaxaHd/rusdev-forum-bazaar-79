@@ -196,10 +196,13 @@ const TopicCard: React.FC<TopicCardProps> = ({
     }
     
     try {
+      // Fix: Convert id to string explicitly to ensure type compatibility
+      const topicId = String(id);
+      
       const { data, error } = await supabase
         .from("topics")
         .delete()
-        .eq("id", id);
+        .eq("id", topicId);
         
       if (error) {
         console.error("Ошибка при удалении темы:", error);
