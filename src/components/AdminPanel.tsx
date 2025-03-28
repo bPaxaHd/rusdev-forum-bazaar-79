@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -15,7 +16,6 @@ import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { UserProfile } from "@/types/auth";
-import { SupportMessage, getUserSupportDialog, markSupportMessageAsRead, sendAdminSupportMessage, getUnreadSupportMessages } from "@/utils/db-helpers";
 import {
   Trash2,
   User,
@@ -36,8 +36,7 @@ import {
   BarChart,
   MessageSquare,
   VolumeX,
-  Snowflake,
-  Send
+  Snowflake
 } from "lucide-react";
 import "../styles/admin.css";
 
@@ -53,13 +52,6 @@ interface User {
   profile: UserProfile;
 }
 
-interface UserWithMessages {
-  profile: UserProfile;
-  unreadCount: number;
-  lastMessage?: string;
-  lastMessageTime?: string;
-}
-
 const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,17 +60,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
   const [editedProfile, setEditedProfile] = useState<Partial<UserProfile>>({});
   const { toast } = useToast();
 
-  const [supportUsers, setSupportUsers] = useState<UserWithMessages[]>([]);
-  const [loadingSupport, setLoadingSupport] = useState(false);
-  const [selectedSupportUser, setSelectedSupportUser] = useState<UserProfile | null>(null);
-  const [userMessages, setUserMessages] = useState<SupportMessage[]>([]);
-  const [replyMessage, setReplyMessage] = useState("");
-  const [supportSearchQuery, setSupportSearchQuery] = useState("");
-
   useEffect(() => {
     if (open) {
       fetchUsers();
-      fetchSupportUsers();
     }
   }, [open]);
 
@@ -86,6 +70,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
     try {
       setLoading(true);
       
+      // Fetch profiles from the profiles table
       const { data: profiles, error: profileError } = await supabase
         .from("profiles")
         .select("*");
@@ -106,9 +91,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
         return;
       }
       
+      // Create user objects with profiles
       const formattedUsers = profiles.map(profile => ({
         id: profile.id,
-        email: profile.username,
+        email: profile.username, // We don't have direct access to emails, so using username as a fallback
         created_at: profile.created_at,
         profile: profile as UserProfile
       }));
@@ -168,6 +154,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
         description: "Данные пользователя успешно обновлены",
       });
       
+      // Update the local user list with the changes
       setUsers(prev => 
         prev.map(user => 
           user.id === selectedUser.id 
@@ -231,164 +218,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
     }
   };
 
-  const fetchSupportUsers = async () => {
-    try {
-      setLoadingSupport(true);
-      
-      const unreadMessages = await getUnreadSupportMessages();
-      
-      const userIds = [...new Set(unreadMessages.map(msg => msg.user_id))];
-      
-      if (userIds.length === 0) {
-        const { data, error } = await supabase
-          .from("support_messages")
-          .select("user_id")
-          .order("created_at", { ascending: false })
-          .limit(50);
-          
-        if (error) {
-          console.error("Error fetching support users:", error);
-          return;
-        }
-        
-        if (data) {
-          data.forEach(item => {
-            if (!userIds.includes(item.user_id)) {
-              userIds.push(item.user_id);
-            }
-          });
-        }
-      }
-      
-      const usersWithMessages: UserWithMessages[] = [];
-      
-      for (const userId of userIds) {
-        try {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", userId)
-            .single();
-            
-          if (!profile) continue;
-          
-          const { data: unread } = await supabase
-            .from("support_messages")
-            .select("id")
-            .eq("user_id", userId)
-            .eq("is_admin", false)
-            .eq("read", false);
-            
-          const unreadCount = unread ? unread.length : 0;
-          
-          const { data: lastMsg } = await supabase
-            .from("support_messages")
-            .select("*")
-            .eq("user_id", userId)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .single();
-            
-          usersWithMessages.push({
-            profile: profile as UserProfile,
-            unreadCount,
-            lastMessage: lastMsg ? lastMsg.content : undefined,
-            lastMessageTime: lastMsg ? lastMsg.created_at : undefined
-          });
-        } catch (error) {
-          console.error(`Error processing user ${userId}:`, error);
-        }
-      }
-      
-      usersWithMessages.sort((a, b) => b.unreadCount - a.unreadCount);
-      
-      setSupportUsers(usersWithMessages);
-    } catch (error) {
-      console.error("Error fetching support users:", error);
-      toast({
-        title: "Ошибка",
-        description: "Не удалось загрузить список пользователей поддержки",
-        variant: "destructive",
-      });
-    } finally {
-      setLoadingSupport(false);
-    }
-  };
-
-  const handleSelectSupportUser = async (profile: UserProfile) => {
-    setSelectedSupportUser(profile);
-    
-    try {
-      const messages = await getUserSupportDialog(profile.id);
-      setUserMessages(messages);
-      
-      const unreadMessages = messages.filter(msg => !msg.is_admin && !msg.read);
-      
-      for (const msg of unreadMessages) {
-        await markSupportMessageAsRead(msg.id);
-      }
-      
-      setSupportUsers(prev => 
-        prev.map(user => 
-          user.profile.id === profile.id 
-            ? { ...user, unreadCount: 0 } 
-            : user
-        )
-      );
-    } catch (error) {
-      console.error("Error loading dialog:", error);
-      toast({
-        title: "Ошибка",
-        description: "Не удалось загрузить диалог с пользователем",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const sendReply = async () => {
-    if (!selectedSupportUser || !replyMessage.trim()) return;
-    
-    try {
-      const success = await sendAdminSupportMessage(selectedSupportUser.id, replyMessage);
-      
-      if (success) {
-        const newMessage: SupportMessage = {
-          id: crypto.randomUUID(),
-          user_id: selectedSupportUser.id,
-          content: replyMessage,
-          is_admin: true,
-          read: false,
-          created_at: new Date().toISOString()
-        };
-        
-        setUserMessages(prev => [...prev, newMessage]);
-        setReplyMessage("");
-        
-        toast({
-          title: "Сообщение отправлено",
-          description: "Ваш ответ успешно отправлен пользователю",
-        });
-      } else {
-        throw new Error("Failed to send message");
-      }
-    } catch (error) {
-      console.error("Error sending reply:", error);
-      toast({
-        title: "Ошибка",
-        description: "Не удалось отправить сообщение",
-        variant: "destructive",
-      });
-    }
-  };
-
   const filteredUsers = users.filter(user => 
     user.profile.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (user.profile.user_tag && user.profile.user_tag.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
-
-  const filteredSupportUsers = supportUsers.filter(item =>
-    item.profile.username.toLowerCase().includes(supportSearchQuery.toLowerCase()) ||
-    (item.lastMessage && item.lastMessage.toLowerCase().includes(supportSearchQuery.toLowerCase()))
   );
 
   const formatDate = (dateString: string) => {
@@ -430,11 +262,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
               <TabsTrigger value="support" className="flex items-center gap-1">
                 <MessageSquare size={16} />
                 <span>Поддержка</span>
-                {supportUsers.reduce((count, user) => count + user.unreadCount, 0) > 0 && (
-                  <Badge variant="destructive" className="ml-1 px-1.5 py-0.5 text-xs">
-                    {supportUsers.reduce((count, user) => count + user.unreadCount, 0)}
-                  </Badge>
-                )}
               </TabsTrigger>
             </TabsList>
             
@@ -827,176 +654,21 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
               </Card>
             </TabsContent>
             
-            <TabsContent value="support" className="h-[70vh] flex flex-col">
-              <div className="flex justify-between items-center mb-4">
-                <Input 
-                  placeholder="Поиск по сообщениям..." 
-                  value={supportSearchQuery}
-                  onChange={(e) => setSupportSearchQuery(e.target.value)}
-                  className="max-w-sm"
-                />
-                <Button variant="outline" onClick={fetchSupportUsers}>Обновить</Button>
-              </div>
-              
-              <div className="flex gap-4 flex-grow overflow-hidden">
-                <Card className="w-1/2 overflow-hidden flex flex-col">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <MessageSquare size={16} className="text-purple-500" />
-                      <span>Диалоги с пользователями</span>
-                    </CardTitle>
-                  </CardHeader>
-                  
-                  <CardContent className="p-0 flex-grow overflow-hidden">
-                    <ScrollArea className="h-[calc(70vh-130px)] p-4">
-                      {loadingSupport ? (
-                        <div className="flex flex-col gap-2">
-                          {[1, 2, 3, 4, 5].map((i) => (
-                            <div key={i} className="flex items-center p-2 animate-pulse">
-                              <div className="bg-muted rounded-full h-10 w-10 mr-2" />
-                              <div className="space-y-2 flex-1">
-                                <div className="h-4 bg-muted rounded w-3/4" />
-                                <div className="h-3 bg-muted rounded w-1/2" />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : filteredSupportUsers.length > 0 ? (
-                        <div className="flex flex-col gap-1">
-                          {filteredSupportUsers.map((item) => (
-                            <div
-                              key={item.profile.id}
-                              className={`flex items-center p-2 rounded-md cursor-pointer hover:bg-accent transition-colors ${
-                                selectedSupportUser?.id === item.profile.id ? 'bg-accent' : ''
-                              }`}
-                              onClick={() => handleSelectSupportUser(item.profile)}
-                            >
-                              <Avatar className="h-10 w-10 mr-2">
-                                <AvatarImage src={item.profile.avatar_url || ""} />
-                                <AvatarFallback className="bg-gradient-to-br from-purple-400 to-blue-500 text-white">
-                                  {item.profile.username.substring(0, 2).toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between">
-                                  <p className="font-medium truncate">{item.profile.username}</p>
-                                  {item.unreadCount > 0 && (
-                                    <Badge variant="destructive" className="ml-2">
-                                      {item.unreadCount}
-                                    </Badge>
-                                  )}
-                                </div>
-                                {item.lastMessage && (
-                                  <p className="text-sm text-muted-foreground truncate">
-                                    {item.lastMessage.length > 30 
-                                      ? `${item.lastMessage.substring(0, 30)}...` 
-                                      : item.lastMessage}
-                                  </p>
-                                )}
-                                {item.lastMessageTime && (
-                                  <p className="text-xs text-muted-foreground">
-                                    {formatDate(item.lastMessageTime)}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-4">
-                          <p className="text-muted-foreground">Нет активных диалогов</p>
-                        </div>
-                      )}
-                    </ScrollArea>
-                  </CardContent>
-                </Card>
-                
-                <Card className="w-1/2 overflow-hidden flex flex-col">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <MessageSquare size={16} className="text-purple-500" />
-                      <span>Диалог с пользователем</span>
-                    </CardTitle>
-                  </CardHeader>
-                  
-                  <CardContent className="flex-grow overflow-auto flex flex-col p-0">
-                    {selectedSupportUser ? (
-                      <>
-                        <div className="px-4 py-2 border-b flex items-center">
-                          <Avatar className="h-8 w-8 mr-2">
-                            <AvatarImage src={selectedSupportUser.avatar_url || ""} />
-                            <AvatarFallback className="bg-gradient-to-br from-purple-400 to-blue-500 text-white">
-                              {selectedSupportUser.username.substring(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">{selectedSupportUser.username}</p>
-                            {selectedSupportUser.subscription_type && selectedSupportUser.subscription_type !== "free" && (
-                              <Badge 
-                                variant="outline" 
-                                className={`text-xs ${
-                                  selectedSupportUser.subscription_type === "admin" ? "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800" :
-                                  selectedSupportUser.subscription_type === "premium" ? "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800" :
-                                  selectedSupportUser.subscription_type === "business" ? "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800" :
-                                  selectedSupportUser.subscription_type === "sponsor" ? "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800" :
-                                  ""
-                                }`}
-                              >
-                                {selectedSupportUser.subscription_type}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <ScrollArea className="flex-grow h-[calc(70vh-230px)] p-4 space-y-4">
-                          {userMessages.length === 0 ? (
-                            <div className="text-center py-8 text-muted-foreground">
-                              <p>Нет сообщений</p>
-                            </div>
-                          ) : (
-                            <div className="space-y-4">
-                              {userMessages.map(message => (
-                                <div key={message.id} className={`flex ${message.is_admin ? "justify-end" : "justify-start"}`}>
-                                  <div 
-                                    className={`max-w-[80%] rounded-lg p-3 ${
-                                      message.is_admin 
-                                        ? "bg-purple-500 text-white" 
-                                        : "bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
-                                    }`}
-                                  >
-                                    <div className="text-sm">{message.content}</div>
-                                    <div className={`text-xs mt-1 ${message.is_admin ? "text-purple-100" : "text-gray-500 dark:text-gray-400"}`}>
-                                      {formatDate(message.created_at)}
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </ScrollArea>
-                        
-                        <div className="p-3 border-t flex items-center gap-2">
-                          <Input 
-                            value={replyMessage} 
-                            onChange={e => setReplyMessage(e.target.value)}
-                            placeholder="Введите сообщение..."
-                            className="flex-grow" 
-                            onKeyDown={e => e.key === "Enter" && sendReply()}
-                          />
-                          <Button onClick={sendReply} size="icon" className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">
-                            <Send size={16} />
-                          </Button>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="text-center py-8 h-full flex flex-col items-center justify-center">
-                        <MessageSquare className="h-12 w-12 mb-4 text-muted-foreground/30" />
-                        <p className="text-muted-foreground">Выберите диалог из списка</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
+            <TabsContent value="support">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageSquare size={16} className="text-purple-500" />
+                    <span>Сообщения поддержки</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8">
+                    <MessageSquare className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
+                    <p className="text-muted-foreground">Функционал управления поддержкой находится в разработке</p>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         </div>

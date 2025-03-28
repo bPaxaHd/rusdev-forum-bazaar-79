@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { SendIcon, XIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-
 interface Message {
   id: string;
   user_id: string;
@@ -17,12 +15,10 @@ interface Message {
   created_at: string;
   read: boolean;
 }
-
 interface SupportChatProps {
   userId: string;
   onClose: () => void;
 }
-
 const SupportChat: React.FC<SupportChatProps> = ({
   userId,
   onClose
@@ -32,7 +28,9 @@ const SupportChat: React.FC<SupportChatProps> = ({
   const [loading, setLoading] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
 
   // Загрузка сообщений
   useEffect(() => {
@@ -142,14 +140,11 @@ const SupportChat: React.FC<SupportChatProps> = ({
       month: "short"
     }).format(date);
   };
-  
   return <Card className="w-full max-w-md shadow-lg">
       <CardHeader className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">
         <div className="flex justify-between items-center">
           <CardTitle className="text-lg">Чат с поддержкой</CardTitle>
-          <Button variant="ghost" size="icon" onClick={onClose} className="text-white hover:bg-white/20">
-            <XIcon size={18} />
-          </Button>
+          
         </div>
         {userProfile && <div className="flex items-center mt-2">
             <Avatar className="h-8 w-8 mr-2">
@@ -190,5 +185,4 @@ const SupportChat: React.FC<SupportChatProps> = ({
       </CardFooter>
     </Card>;
 };
-
 export default SupportChat;
