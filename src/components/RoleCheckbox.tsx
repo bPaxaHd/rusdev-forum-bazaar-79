@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { UserRole } from '@/utils/auth-helpers';
+import { useToast } from '@/hooks/use-toast';
 
 interface RoleCheckboxProps {
   userId: string;
@@ -27,19 +28,35 @@ const RoleCheckbox: React.FC<RoleCheckboxProps> = ({
 }) => {
   const [checked, setChecked] = useState(false);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     const checkUserRole = async () => {
       try {
         setLoading(true);
+        
+        if (!userId) {
+          setLoading(false);
+          return;
+        }
+
         const { data, error } = await supabase
           .from('user_roles')
           .select('role')
           .eq('user_id', userId)
-          .eq('role', role)
-          .single();
+          .eq('role', role);
           
-        setChecked(!!data);
+        if (error) {
+          console.error(`Error checking if user has role ${role}:`, error);
+          toast({
+            title: "Ошибка",
+            description: `Не удалось проверить роль ${role}`,
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        setChecked(data && data.length > 0);
       } catch (err) {
         console.error(`Error checking if user has role ${role}:`, err);
       } finally {
@@ -48,11 +65,22 @@ const RoleCheckbox: React.FC<RoleCheckboxProps> = ({
     };
     
     checkUserRole();
-  }, [userId, role]);
+  }, [userId, role, toast]);
 
   const handleToggle = async (checked: boolean) => {
-    setChecked(checked);
-    await onToggle(userId, role, checked);
+    try {
+      setChecked(checked);
+      await onToggle(userId, role, checked);
+    } catch (error) {
+      console.error(`Error toggling role ${role}:`, error);
+      // Revert UI state if there was an error
+      setChecked(!checked);
+      toast({
+        title: "Ошибка",
+        description: `Не удалось ${checked ? 'назначить' : 'удалить'} роль ${role}`,
+        variant: "destructive"
+      });
+    }
   };
 
   return (

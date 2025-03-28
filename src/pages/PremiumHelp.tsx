@@ -21,7 +21,7 @@ interface Message {
 }
 
 const PremiumHelp = () => {
-  const { user } = useAuth();
+  const { user, userRoles } = useAuth();
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -51,8 +51,8 @@ const PremiumHelp = () => {
 
         setUserProfile(data);
         
-        // Загружаем сообщения если пользователь имеет премиум
-        if (data && data.subscription_type && data.subscription_type !== 'free') {
+        // Загружаем сообщения если пользователь имеет доступ к премиум
+        if (hasPremiumAccess()) {
           fetchMessages();
         }
       } catch (error) {
@@ -133,7 +133,7 @@ const PremiumHelp = () => {
       return;
     }
 
-    if (!userProfile || userProfile.subscription_type === 'free') {
+    if (!hasPremiumAccess()) {
       toast({
         title: 'Доступно только для премиум-пользователей',
         description: 'Для доступа к чату поддержки необходима премиум-подписка',
@@ -183,8 +183,22 @@ const PremiumHelp = () => {
     }).format(date);
   };
 
-  // Проверяем, имеет ли пользователь премиум подписку
-  const isPremiumUser = userProfile && userProfile.subscription_type && userProfile.subscription_type !== 'free';
+  // Проверяем, имеет ли пользователь доступ к премиум функциям
+  const hasPremiumAccess = () => {
+    if (!user) return false;
+    
+    // Проверяем наличие ролей
+    const hasStaffRole = userRoles.some(role => 
+      ['creator', 'admin', 'moderator'].includes(role)
+    );
+    
+    // Проверяем тип подписки
+    const hasPremiumSubscription = userProfile && 
+      userProfile.subscription_type && 
+      ['premium', 'business', 'sponsor'].includes(userProfile.subscription_type);
+    
+    return hasStaffRole || hasPremiumSubscription;
+  };
 
   if (loading) {
     return (
@@ -222,7 +236,7 @@ const PremiumHelp = () => {
     );
   }
 
-  if (!isPremiumUser) {
+  if (!hasPremiumAccess()) {
     return (
       <div className="container mx-auto py-12 px-4 text-center">
         <Card className="mx-auto max-w-lg bg-gradient-to-r from-amber-50 to-gray-50 dark:from-gray-900 dark:to-amber-900">
@@ -231,13 +245,13 @@ const PremiumHelp = () => {
               Премиум поддержка
             </CardTitle>
             <CardDescription className="text-center text-muted-foreground">
-              Доступно только для пользователей с премиум-подпиской
+              Доступно только для пользователей с премиум-подпиской или особыми правами
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-4">
             <Crown className="h-12 w-12 text-amber-500" />
             <p className="text-muted-foreground">
-              Для доступа к премиум-поддержке необходимо приобрести одну из премиум-подписок
+              Для доступа к премиум-поддержке необходимо иметь премиум-подписку или особые права
             </p>
             <Button asChild className="mt-4 bg-gradient-to-r from-amber-500 to-amber-600">
               <a href="/premium">Подробнее о премиум-подписке</a>
@@ -265,7 +279,9 @@ const PremiumHelp = () => {
             <div className="flex justify-between items-center">
               <CardTitle>Ваш диалог с поддержкой</CardTitle>
               <Badge className="bg-gradient-to-r from-blue-500 to-purple-500">
-                {userProfile?.subscription_type}
+                {userProfile?.subscription_type || (userRoles.includes('admin') ? 'admin' : 
+                  userRoles.includes('creator') ? 'creator' : 
+                  userRoles.includes('moderator') ? 'moderator' : 'premium')}
               </Badge>
             </div>
             <CardDescription>
@@ -288,12 +304,12 @@ const PremiumHelp = () => {
                     <div
                       key={message.id}
                       className={`flex ${
-                        message.is_admin ? 'justify-start' : 'justify-end'
+                        message.is_admin ? "justify-start" : "justify-end"
                       }`}
                     >
                       <div
                         className={`flex max-w-[80%] ${
-                          message.is_admin ? 'flex-row' : 'flex-row-reverse'
+                          message.is_admin ? "flex-row" : "flex-row-reverse"
                         }`}
                       >
                         <Avatar className="h-8 w-8 mx-2">
