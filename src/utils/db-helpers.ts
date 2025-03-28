@@ -1,6 +1,15 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
+// Admin login attempt interface
+export interface AdminLoginAttempt {
+  id: string;
+  ip_address: string;
+  timestamp: string;
+  attempts: number;
+  is_resolved: boolean;
+}
+
 // Функция для обновления структуры базы данных (вызывается при необходимости)
 export const setupRequiredTables = async () => {
   try {
@@ -83,5 +92,89 @@ export const updateSubscriptionByTag = async (userTag: string, subscriptionType:
   } catch (error) {
     console.error("Error updating subscription by tag:", error);
     return { success: false, message: "Произошла ошибка при обновлении подписки" };
+  }
+};
+
+// Функции для работы с admin_login_attempts
+
+// Функция для регистрации попытки входа
+export const recordLoginAttempt = async (ipAddress: string) => {
+  try {
+    // Проверяем, существует ли уже запись для данного IP
+    const { data: existingRecord } = await supabase
+      .from("admin_login_attempts")
+      .select("*")
+      .eq("ip_address", ipAddress)
+      .eq("is_resolved", false)
+      .single();
+    
+    if (existingRecord) {
+      // Увеличиваем счетчик попыток
+      const { error } = await supabase
+        .from("admin_login_attempts")
+        .update({ attempts: existingRecord.attempts + 1 })
+        .eq("id", existingRecord.id);
+        
+      if (error) {
+        console.error("Error updating login attempts:", error);
+      }
+      
+      return existingRecord.attempts + 1;
+    } else {
+      // Создаем новую запись
+      const { error } = await supabase
+        .from("admin_login_attempts")
+        .insert({ ip_address: ipAddress });
+        
+      if (error) {
+        console.error("Error creating login attempt record:", error);
+      }
+      
+      return 1;
+    }
+  } catch (error) {
+    console.error("Error recording login attempt:", error);
+    return 0;
+  }
+};
+
+// Функция для получения всех нерешенных попыток входа
+export const getUnresolvedLoginAttempts = async (): Promise<AdminLoginAttempt[]> => {
+  try {
+    const { data, error } = await supabase
+      .from("admin_login_attempts")
+      .select("*")
+      .eq("is_resolved", false)
+      .order("timestamp", { ascending: false });
+      
+    if (error) {
+      console.error("Error fetching unresolved login attempts:", error);
+      return [];
+    }
+    
+    return data as AdminLoginAttempt[];
+  } catch (error) {
+    console.error("Error fetching unresolved login attempts:", error);
+    return [];
+  }
+};
+
+// Функция для разрешения инцидента
+export const resolveLoginAttempt = async (id: string) => {
+  try {
+    const { error } = await supabase
+      .from("admin_login_attempts")
+      .update({ is_resolved: true })
+      .eq("id", id);
+      
+    if (error) {
+      console.error("Error resolving login attempt:", error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error resolving login attempt:", error);
+    return false;
   }
 };
