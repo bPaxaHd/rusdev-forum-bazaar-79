@@ -35,6 +35,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [editedProfile, setEditedProfile] = useState<any>({});
+  
+  // Support chat states
+  const [supportUsers, setSupportUsers] = useState<any[]>([]);
+  const [loadingSupport, setLoadingSupport] = useState(false);
+  const [supportSearchQuery, setSupportSearchQuery] = useState("");
   
   // Reset authentication when panel is closed
   useEffect(() => {
@@ -63,6 +70,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
         
         // Load initial data after authentication
         fetchUsers();
+        fetchSupportUsers();
         
         toast({
           title: "Авторизация успешна",
@@ -133,6 +141,73 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
     }
   };
   
+  // Fetch support users with messages
+  const fetchSupportUsers = async (): Promise<void> => {
+    try {
+      setLoadingSupport(true);
+      
+      // First get unique user IDs who have sent support messages
+      const { data: messageData, error: messageError } = await supabase
+        .from("support_messages")
+        .select("user_id, created_at, content, is_admin, read")
+        .order("created_at", { ascending: false });
+        
+      if (messageError) {
+        throw messageError;
+      }
+      
+      // Get unique user IDs
+      const userIds = Array.from(new Set(messageData?.map(msg => msg.user_id) || []));
+      
+      if (userIds.length === 0) {
+        setSupportUsers([]);
+        return;
+      }
+      
+      // Fetch profiles for these users
+      const { data: profiles, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .in("id", userIds);
+        
+      if (profileError) {
+        throw profileError;
+      }
+      
+      // Prepare the support users data
+      const supportUsersData = profiles?.map(profile => {
+        const userMessages = messageData?.filter(msg => msg.user_id === profile.id) || [];
+        const lastMessage = userMessages[0]?.content || "";
+        const lastMessageTime = userMessages[0]?.created_at || "";
+        const unreadCount = userMessages.filter(msg => !msg.is_admin && !msg.read).length || 0;
+        
+        return {
+          profile,
+          lastMessage,
+          lastMessageTime,
+          unreadCount
+        };
+      }).sort((a, b) => {
+        // Sort by unread count first, then by last message time
+        if (a.unreadCount !== b.unreadCount) {
+          return b.unreadCount - a.unreadCount;
+        }
+        return new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime();
+      });
+      
+      setSupportUsers(supportUsersData || []);
+    } catch (error) {
+      console.error("Error fetching support users:", error);
+      toast({
+        title: "Ошибка",
+        description: "Произошла ошибка при загрузке обращений в поддержку",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingSupport(false);
+    }
+  };
+  
   // Filter users based on search query
   useEffect(() => {
     if (searchQuery.trim() === '') {
@@ -150,9 +225,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
     setFilteredUsers(filtered);
   }, [searchQuery, users]);
 
-  // Ensure this function returns a Promise<void> to match the expected type
-  const handleSelectUser = (): void => {
-    // This function needs to be implemented if it's used
+  // Proper implementation of handleSelectUser
+  const handleSelectUser = (user: User): void => {
+    setSelectedUser(user);
+    setEditedProfile({
+      username: user.profile.username,
+      subscription_type: user.profile.subscription_type,
+      user_tag: user.profile.user_tag,
+      is_banned: user.profile.is_banned,
+      is_muted: user.profile.is_muted,
+      is_frozen: user.profile.is_frozen
+    });
   };
 
   return (
@@ -242,11 +325,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
                   loading={loadingUsers}
                   searchQuery={searchQuery}
                   setSearchQuery={setSearchQuery}
-                  selectedUser={null}
+                  selectedUser={selectedUser}
                   fetchUsers={fetchUsers}
                   handleSelectUser={handleSelectUser}
-                  editedProfile={{}}
-                  setEditedProfile={() => {}}
+                  editedProfile={editedProfile}
+                  setEditedProfile={setEditedProfile}
                   isCreator={true}
                   isAdmin={true}
                 />
@@ -262,11 +345,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
               
               <TabsContent value="support" className="flex-grow overflow-auto">
                 <SupportTab 
-                  supportUsers={[]}
-                  loadingSupport={false}
-                  supportSearchQuery=""
-                  setSupportSearchQuery={() => {}}
-                  fetchSupportUsers={() => Promise.resolve()}  // Ensure this returns a Promise
+                  supportUsers={supportUsers}
+                  loadingSupport={loadingSupport}
+                  supportSearchQuery={supportSearchQuery}
+                  setSupportSearchQuery={setSupportSearchQuery}
+                  fetchSupportUsers={fetchSupportUsers}
                 />
               </TabsContent>
             </Tabs>

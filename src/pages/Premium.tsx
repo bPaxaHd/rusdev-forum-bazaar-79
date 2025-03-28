@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ const Premium = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const [isMobile, setIsMobile] = useState(false);
+  const { user } = useAuth();
 
   // Определяем, является ли устройство мобильным
   useEffect(() => {
@@ -32,9 +34,6 @@ const Premium = () => {
     const fetchUserProfile = async () => {
       try {
         setLoading(true);
-        
-        // Получаем текущего пользователя
-        const { data: { user } } = await supabase.auth.getUser();
         
         if (user) {
           // Получаем профиль пользователя
@@ -59,14 +58,22 @@ const Premium = () => {
     };
     
     fetchUserProfile();
-  }, []);
+  }, [user]);
   
   const handleChatClick = () => {
-    if (!userProfile) {
+    if (!user) {
       toast({
         title: "Необходима авторизация",
         description: "Пожалуйста, войдите в аккаунт, чтобы использовать чат поддержки",
         variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!userProfile) {
+      toast({
+        title: "Загрузка профиля",
+        description: "Пожалуйста, подождите, идет загрузка вашего профиля",
       });
       return;
     }
