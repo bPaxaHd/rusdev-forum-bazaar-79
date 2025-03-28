@@ -14,7 +14,6 @@ interface AvatarUploadProps {
   size?: "sm" | "md" | "lg";
   username?: string;
   showLabel?: boolean;
-  maxFileSize?: number; // In MB
 }
 
 const AvatarUpload = ({ 
@@ -23,8 +22,7 @@ const AvatarUpload = ({
   onAvatarChange, 
   size = "md", 
   username,
-  showLabel = true,
-  maxFileSize = 20 // Default to 20MB as per our storage policy
+  showLabel = true 
 }: AvatarUploadProps) => {
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
@@ -51,12 +49,6 @@ const AvatarUpload = ({
       .substring(0, 2);
   };
 
-  // Функция для проверки типа файла
-  const validateFileType = (file: File): boolean => {
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    return allowedTypes.includes(file.type);
-  }
-
   // Функция загрузки файла в Supabase Storage с улучшенной безопасностью
   const uploadAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
@@ -67,42 +59,31 @@ const AvatarUpload = ({
       }
       
       const file = event.target.files[0];
-      const fileExt = file.name.split(".").pop()?.toLowerCase();
-      
-      // Проверка типа файла
-      if (!validateFileType(file)) {
-        toast({
-          title: "Ошибка загрузки",
-          description: "Пожалуйста, загрузите изображение формата JPG, PNG, GIF или WebP.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Проверка расширения файла
-      if (!fileExt || !['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt)) {
-        toast({
-          title: "Ошибка загрузки",
-          description: "Пожалуйста, загрузите файл с расширением JPG, PNG, GIF или WebP.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Проверка размера файла (макс. определяется параметром maxFileSize)
-      const maxSizeBytes = maxFileSize * 1024 * 1024;
-      if (file.size > maxSizeBytes) {
-        toast({
-          title: "Ошибка загрузки",
-          description: `Изображение не должно превышать ${maxFileSize}MB.`,
-          variant: "destructive",
-        });
-        return;
-      }
+      const fileExt = file.name.split(".").pop();
       
       // Используем userId в пути к файлу для обеспечения безопасности
       // Формат: userid/filename.ext
       const filePath = `${userId}/${Math.random().toString(36).substring(2)}.${fileExt}`;
+      
+      // Проверка типа файла
+      if (!file.type.startsWith("image/")) {
+        toast({
+          title: "Ошибка загрузки",
+          description: "Пожалуйста, загрузите изображение.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Проверка размера файла (макс. 2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        toast({
+          title: "Ошибка загрузки",
+          description: "Изображение не должно превышать 2MB.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       // Удаление предыдущих аватаров пользователя перед загрузкой нового
       // Найти все файлы в папке с идентификатором пользователя
@@ -217,13 +198,13 @@ const AvatarUpload = ({
           <input
             id="avatar-upload"
             type="file"
-            accept="image/jpeg,image/png,image/gif,image/webp"
+            accept="image/*"
             onChange={uploadAvatar}
             disabled={uploading}
             className="sr-only"
           />
           <p className="text-xs text-muted-foreground">
-            JPG, PNG, GIF или WebP. Макс. размер {maxFileSize}MB.
+            JPG, PNG или GIF. Макс. размер 2MB.
           </p>
         </div>
       )}

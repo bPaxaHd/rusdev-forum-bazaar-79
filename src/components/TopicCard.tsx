@@ -110,7 +110,7 @@ const TopicCard: React.FC<TopicCardProps> = ({
           <div className="flex justify-between items-center pt-2">
             <div className="flex items-center gap-2">
               <Avatar className="h-7 w-7">
-                <AvatarImage src={authorAvatar} alt={author} />
+                <AvatarImage src={authorAvatar} />
                 <AvatarFallback className="bg-primary/10 text-primary text-xs">
                   {fallbackInitial}
                 </AvatarFallback>

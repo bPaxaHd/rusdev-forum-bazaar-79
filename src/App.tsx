@@ -1,8 +1,9 @@
 
-import React from "react";
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Navbar from "./components/Navbar";
-import Footer from "./components/Footer";
 import Index from "./pages/Index";
 import Frontend from "./pages/Frontend";
 import Backend from "./pages/Backend";
@@ -14,54 +15,40 @@ import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
-import Documentation from "./pages/Documentation";
-import Blog from "./pages/Blog";
-import VideoTutorials from "./pages/VideoTutorials";
-import Career from "./pages/Career";
-import Jobs from "./pages/Jobs";
-import AboutUs from "./pages/AboutUs";
-import ForumRules from "./pages/ForumRules";
-import Contacts from "./pages/Contacts";
-import Help from "./pages/Help";
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
 import { AuthProvider } from "./contexts/AuthContext";
-import { Toaster } from "@/components/ui/toaster";
 
-const App = () => {
-  return (
-    <AuthProvider>
-      <BrowserRouter>
-        <div className="flex flex-col min-h-screen">
+const queryClient = new QueryClient();
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <BrowserRouter>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
           <Navbar />
-          <main className="flex-grow">
+          <div className="pt-16 min-h-screen">
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/frontend" element={<Frontend />} />
               <Route path="/backend" element={<Backend />} />
               <Route path="/fullstack" element={<Fullstack />} />
               <Route path="/forum" element={<Forum />} />
-              <Route path="/topic/:id" element={<TopicView />} />
+              <Route path="/topic/:category/:id" element={<TopicView />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/settings" element={<Settings />} />
-              <Route path="/documentation" element={<Documentation />} />
-              <Route path="/blog" element={<Blog />} />
-              <Route path="/video-tutorials" element={<VideoTutorials />} />
-              <Route path="/career" element={<Career />} />
-              <Route path="/jobs" element={<Jobs />} />
-              <Route path="/about-us" element={<AboutUs />} />
-              <Route path="/forum-rules" element={<ForumRules />} />
-              <Route path="/contacts" element={<Contacts />} />
-              <Route path="/help" element={<Help />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </main>
+          </div>
           <Footer />
-          <Toaster />
-        </div>
-      </BrowserRouter>
-    </AuthProvider>
-  );
-};
+        </TooltipProvider>
+      </AuthProvider>
+    </BrowserRouter>
+  </QueryClientProvider>
+);
 
 export default App;

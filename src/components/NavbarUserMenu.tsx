@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -13,62 +13,11 @@ import { User, Settings, LogOut } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
-import { supabase } from "@/integrations/supabase/client";
 
 const NavbarUserMenu = () => {
   const { user, signOut, loading } = useAuth();
-  const [profile, setProfile] = useState<{ username: string; avatar_url: string | null } | null>(null);
-  const [fetchingProfile, setFetchingProfile] = useState(false);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user) return;
-      
-      try {
-        setFetchingProfile(true);
-        
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("username, avatar_url")
-          .eq("id", user.id)
-          .single();
-          
-        if (error) {
-          console.error("Ошибка при загрузке профиля:", error);
-          return;
-        }
-        
-        setProfile(data);
-      } catch (error) {
-        console.error("Ошибка при загрузке профиля:", error);
-      } finally {
-        setFetchingProfile(false);
-      }
-    };
-    
-    if (user) {
-      fetchProfile();
-    }
-    
-    // Подписка на изменения профиля пользователя
-    const subscription = supabase
-      .channel(`profile:${user?.id}`)
-      .on('postgres_changes', { 
-        event: 'UPDATE', 
-        schema: 'public', 
-        table: 'profiles',
-        filter: `id=eq.${user?.id}` 
-      }, (payload) => {
-        setProfile(payload.new as any);
-      })
-      .subscribe();
-      
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [user]);
-
-  if (loading || fetchingProfile) {
+  if (loading) {
     return (
       <div className="flex items-center gap-2">
         <Skeleton className="h-8 w-8 rounded-full" />
@@ -92,9 +41,6 @@ const NavbarUserMenu = () => {
     );
   }
 
-  const avatarUrl = profile?.avatar_url || user.user_metadata?.avatar_url;
-  const username = profile?.username || user.user_metadata?.username || user.email;
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -103,14 +49,14 @@ const NavbarUserMenu = () => {
           className="relative h-8 w-8 rounded-full"
         >
           <Avatar className="h-8 w-8">
-            <AvatarImage src={avatarUrl} alt={username} />
-            <AvatarFallback>{getInitials(username)}</AvatarFallback>
+            <AvatarImage src={user.user_metadata?.avatar_url} alt={user.user_metadata?.username || user.email} />
+            <AvatarFallback>{getInitials(user.user_metadata?.username || user.email)}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <div className="flex flex-col space-y-1 p-2">
-          <p className="text-sm font-medium leading-none">{username}</p>
+          <p className="text-sm font-medium leading-none">{user.user_metadata?.username || "Пользователь"}</p>
           <p className="text-xs leading-none text-muted-foreground">
             {user.email}
           </p>
