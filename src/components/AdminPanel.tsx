@@ -37,9 +37,11 @@ import {
   MessageSquare,
   VolumeX,
   Snowflake,
-  Send
+  Send,
+  Hammer
 } from "lucide-react";
 import "../styles/admin.css";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface AdminPanelProps {
   open: boolean;
@@ -67,6 +69,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [editedProfile, setEditedProfile] = useState<Partial<UserProfile>>({});
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [userRoles, setUserRoles] = useState<string[]>([]);
+  const [isCreator, setIsCreator] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isModerator, setIsModerator] = useState(false);
 
   const [supportUsers, setSupportUsers] = useState<UserWithMessages[]>([]);
   const [loadingSupport, setLoadingSupport] = useState(false);
@@ -79,8 +86,33 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
     if (open) {
       fetchUsers();
       fetchSupportUsers();
+      fetchCurrentUserRoles();
     }
   }, [open]);
+
+  const fetchCurrentUserRoles = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id);
+        
+      if (error) {
+        console.error('Error fetching user roles:', error);
+        return;
+      }
+      
+      const roles = data?.map(r => r.role) || [];
+      setUserRoles(roles);
+      setIsCreator(roles.includes('creator'));
+      setIsAdmin(roles.includes('admin'));
+      setIsModerator(roles.includes('moderator'));
+    } catch (err) {
+      console.error('Error fetching user roles:', err);
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -142,6 +174,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
     if (!selectedUser) return;
     
     try {
+      // Update profile data
       const { error } = await supabase
         .from("profiles")
         .update({
@@ -191,6 +224,96 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
       toast({
         title: "Ошибка обновления",
         description: "Произошла ошибка при обновлении профиля",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdateUserRole = async (userId: string, role: 'user' | 'moderator' | 'admin' | 'creator', addOrRemove: boolean) => {
+    if (!user) return;
+    
+    // Check if the current user has permission to modify this role
+    if (role === 'creator' && !isCreator) {
+      toast({
+        title: "Доступ запрещен",
+        description: "Только создатели могут назначать роль создателя",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Admins cannot assign creator role
+    if (role === 'creator' && isAdmin && !isCreator) {
+      toast({
+        title: "Доступ запрещен",
+        description: "Администраторы не могут назначать роль создателя",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Moderators cannot assign admin or creator roles
+    if ((role === 'admin' || role === 'creator') && isModerator && !isAdmin && !isCreator) {
+      toast({
+        title: "Доступ запрещен",
+        description: "Модераторы не могут назначать роли администратора или создателя",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      if (addOrRemove) {
+        // Add role
+        const { error } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: userId,
+            role: role
+          });
+          
+        if (error) {
+          // If unique constraint error, the role already exists
+          if (error.code === '23505') {
+            toast({
+              title: "Роль уже назначена",
+              description: `Пользователь уже имеет роль ${role}`,
+            });
+            return;
+          }
+          
+          throw error;
+        }
+        
+        toast({
+          title: "Роль назначена",
+          description: `Роль ${role} успешно назначена пользователю`,
+        });
+      } else {
+        // Remove role
+        const { error } = await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', userId)
+          .eq('role', role);
+          
+        if (error) {
+          throw error;
+        }
+        
+        toast({
+          title: "Роль удалена",
+          description: `Роль ${role} успешно удалена у пользователя`,
+        });
+      }
+      
+      // Refresh user data
+      fetchUsers();
+    } catch (error: any) {
+      console.error("Error updating user role:", error);
+      toast({
+        title: "Ошибка",
+        description: error.message || "Произошла ошибка при обновлении роли пользователя",
         variant: "destructive",
       });
     }
@@ -400,6 +523,25 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
       hour: "2-digit",
       minute: "2-digit"
     }).format(date);
+  };
+
+  const fetchUserRoles = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId);
+        
+      if (error) {
+        console.error('Error fetching user roles:', error);
+        return [];
+      }
+      
+      return data?.map(r => r.role) || [];
+    } catch (err) {
+      console.error('Error fetching user roles:', err);
+      return [];
+    }
   };
 
   return (
@@ -634,6 +776,46 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
                             
                             <Separator className="my-4" />
                             
+                            {/* User Roles Section */}
+                            <div className="mb-6">
+                              <h3 className="text-lg font-medium mb-3">Роли пользователя</h3>
+                              
+                              <div className="space-y-3 mb-4">
+                                {/* User role checkboxes will be rendered here from fetched roles */}
+                                <RoleCheckbox 
+                                  userId={selectedUser.id}
+                                  role="creator"
+                                  label="Создатель"
+                                  description="Полные права на сайте и его контент"
+                                  onToggle={handleUpdateUserRole}
+                                  disabled={!isCreator} // Only creators can assign creator role
+                                  icon={<Crown className="h-4 w-4 text-amber-500" />}
+                                />
+                                
+                                <RoleCheckbox 
+                                  userId={selectedUser.id}
+                                  role="admin"
+                                  label="Администратор"
+                                  description="Доступ к админ-панели и управлению пользователями"
+                                  onToggle={handleUpdateUserRole}
+                                  disabled={!isCreator && !isAdmin} // Only creators and admins can assign admin role
+                                  icon={<Shield className="h-4 w-4 text-red-500" />}
+                                />
+                                
+                                <RoleCheckbox 
+                                  userId={selectedUser.id}
+                                  role="moderator"
+                                  label="Модератор"
+                                  description="Модерация контента и сообщений"
+                                  onToggle={handleUpdateUserRole}
+                                  disabled={!isCreator && !isAdmin} // Only creators and admins can assign moderator role
+                                  icon={<Hammer className="h-4 w-4 text-blue-500" />}
+                                />
+                              </div>
+                            </div>
+                            
+                            <Separator className="my-4" />
+                            
                             <div className="space-y-3">
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
@@ -665,344 +847,3 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
                                   onCheckedChange={(checked) => setEditedProfile(prev => ({ ...prev, is_muted: checked }))}
                                   className={editedProfile.is_muted ? "bg-orange-500" : ""}
                                 />
-                              </div>
-                              
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <Snowflake size={18} className="text-blue-500" />
-                                  <div>
-                                    <Label htmlFor="freeze-switch">Заморозить аккаунт</Label>
-                                    <p className="text-sm text-muted-foreground">Аккаунт будет временно недоступен</p>
-                                  </div>
-                                </div>
-                                <Switch 
-                                  id="freeze-switch" 
-                                  checked={editedProfile.is_frozen || false}
-                                  onCheckedChange={(checked) => setEditedProfile(prev => ({ ...prev, is_frozen: checked }))}
-                                  className={editedProfile.is_frozen ? "bg-blue-500" : ""}
-                                />
-                              </div>
-                            </div>
-                            
-                            <div className="flex gap-2 mt-6">
-                              <Button 
-                                className="flex-1"
-                                onClick={handleUpdateProfile}
-                                variant="default"
-                              >
-                                Сохранить изменения
-                              </Button>
-                              
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="destructive" size="icon">
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Удаление пользователя</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Вы уверены, что хотите удалить этого пользователя? Это действие нельзя отменить.
-                                      Все данные пользователя будут удалены из системы.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Отмена</AlertDialogCancel>
-                                    <AlertDialogAction onClick={handleDeleteUser} className="bg-red-600 hover:bg-red-700">
-                                      Удалить
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center py-8">
-                          <UserCog className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
-                          <p className="text-muted-foreground">Выберите пользователя из списка</p>
-                        </div>
-                      )}
-                    </ScrollArea>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="settings">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Settings size={16} className="text-purple-500" />
-                    <span>Настройки сайта</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <AlertOctagon size={18} className="text-orange-500" />
-                        <div>
-                          <Label htmlFor="maintenance-mode">Режим обслуживания</Label>
-                          <p className="text-sm text-muted-foreground">Временно закрыть доступ к сайту</p>
-                        </div>
-                      </div>
-                      <Switch id="maintenance-mode" />
-                    </div>
-                    
-                    <Separator />
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <UserPlus size={18} className="text-green-500" />
-                        <div>
-                          <Label htmlFor="registration">Регистрация новых пользователей</Label>
-                          <p className="text-sm text-muted-foreground">Разрешить регистрацию новых пользователей</p>
-                        </div>
-                      </div>
-                      <Switch id="registration" defaultChecked />
-                    </div>
-                    
-                    <Separator />
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <MessageSquare size={18} className="text-blue-500" />
-                        <div>
-                          <Label htmlFor="comments">Комментарии</Label>
-                          <p className="text-sm text-muted-foreground">Разрешить комментарии на сайте</p>
-                        </div>
-                      </div>
-                      <Switch id="comments" defaultChecked />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="stats">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BarChart size={16} className="text-purple-500" />
-                    <span>Статистика сайта</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-card border rounded-lg p-4 flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                        <Users size={24} className="text-purple-600 dark:text-purple-300" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Пользователей</p>
-                        <h3 className="text-2xl font-bold">{users.length}</h3>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-card border rounded-lg p-4 flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
-                        <Crown size={24} className="text-yellow-600 dark:text-yellow-300" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Премиум подписок</p>
-                        <h3 className="text-2xl font-bold">
-                          {users.filter(u => u.profile.subscription_type && u.profile.subscription_type !== "free").length}
-                        </h3>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-card border rounded-lg p-4 flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                        <FileText size={24} className="text-blue-600 dark:text-blue-300" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Активных тем</p>
-                        <h3 className="text-2xl font-bold">-</h3>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="support" className="h-[70vh] flex flex-col">
-              <div className="flex justify-between items-center mb-4">
-                <Input 
-                  placeholder="Поиск по сообщениям..." 
-                  value={supportSearchQuery}
-                  onChange={(e) => setSupportSearchQuery(e.target.value)}
-                  className="max-w-sm"
-                />
-                <Button variant="outline" onClick={fetchSupportUsers}>Обновить</Button>
-              </div>
-              
-              <div className="flex gap-4 flex-grow overflow-hidden">
-                <Card className="w-1/2 overflow-hidden flex flex-col">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <MessageSquare size={16} className="text-purple-500" />
-                      <span>Диалоги с пользователями</span>
-                    </CardTitle>
-                  </CardHeader>
-                  
-                  <CardContent className="p-0 flex-grow overflow-hidden">
-                    <ScrollArea className="h-[calc(70vh-130px)] p-4">
-                      {loadingSupport ? (
-                        <div className="flex flex-col gap-2">
-                          {[1, 2, 3, 4, 5].map((i) => (
-                            <div key={i} className="flex items-center p-2 animate-pulse">
-                              <div className="bg-muted rounded-full h-10 w-10 mr-2" />
-                              <div className="space-y-2 flex-1">
-                                <div className="h-4 bg-muted rounded w-3/4" />
-                                <div className="h-3 bg-muted rounded w-1/2" />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : filteredSupportUsers.length > 0 ? (
-                        <div className="flex flex-col gap-1">
-                          {filteredSupportUsers.map((item) => (
-                            <div
-                              key={item.profile.id}
-                              className={`flex items-center p-2 rounded-md cursor-pointer hover:bg-accent transition-colors ${
-                                selectedSupportUser?.id === item.profile.id ? 'bg-accent' : ''
-                              }`}
-                              onClick={() => handleSelectSupportUser(item.profile)}
-                            >
-                              <Avatar className="h-10 w-10 mr-2">
-                                <AvatarImage src={item.profile.avatar_url || ""} />
-                                <AvatarFallback className="bg-gradient-to-br from-purple-400 to-blue-500 text-white">
-                                  {item.profile.username.substring(0, 2).toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between">
-                                  <p className="font-medium truncate">{item.profile.username}</p>
-                                  {item.unreadCount > 0 && (
-                                    <Badge variant="destructive" className="ml-2">
-                                      {item.unreadCount}
-                                    </Badge>
-                                  )}
-                                </div>
-                                {item.lastMessage && (
-                                  <p className="text-sm text-muted-foreground truncate">
-                                    {item.lastMessage.length > 30 
-                                      ? `${item.lastMessage.substring(0, 30)}...` 
-                                      : item.lastMessage}
-                                  </p>
-                                )}
-                                {item.lastMessageTime && (
-                                  <p className="text-xs text-muted-foreground">
-                                    {formatDate(item.lastMessageTime)}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-4">
-                          <p className="text-muted-foreground">Нет активных диалогов</p>
-                        </div>
-                      )}
-                    </ScrollArea>
-                  </CardContent>
-                </Card>
-                
-                <Card className="w-1/2 overflow-hidden flex flex-col">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <MessageSquare size={16} className="text-purple-500" />
-                      <span>Диалог с пользователем</span>
-                    </CardTitle>
-                  </CardHeader>
-                  
-                  <CardContent className="flex-grow overflow-auto flex flex-col p-0">
-                    {selectedSupportUser ? (
-                      <>
-                        <div className="px-4 py-2 border-b flex items-center">
-                          <Avatar className="h-8 w-8 mr-2">
-                            <AvatarImage src={selectedSupportUser.avatar_url || ""} />
-                            <AvatarFallback className="bg-gradient-to-br from-purple-400 to-blue-500 text-white">
-                              {selectedSupportUser.username.substring(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">{selectedSupportUser.username}</p>
-                            {selectedSupportUser.subscription_type && selectedSupportUser.subscription_type !== "free" && (
-                              <Badge 
-                                variant="outline" 
-                                className={`text-xs ${
-                                  selectedSupportUser.subscription_type === "admin" ? "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800" :
-                                  selectedSupportUser.subscription_type === "premium" ? "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800" :
-                                  selectedSupportUser.subscription_type === "business" ? "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800" :
-                                  selectedSupportUser.subscription_type === "sponsor" ? "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800" :
-                                  ""
-                                }`}
-                              >
-                                {selectedSupportUser.subscription_type}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <ScrollArea className="flex-grow h-[calc(70vh-230px)] p-4 space-y-4">
-                          {userMessages.length === 0 ? (
-                            <div className="text-center py-8 text-muted-foreground">
-                              <p>Нет сообщений</p>
-                            </div>
-                          ) : (
-                            <div className="space-y-4">
-                              {userMessages.map(message => (
-                                <div key={message.id} className={`flex ${message.is_admin ? "justify-end" : "justify-start"}`}>
-                                  <div 
-                                    className={`max-w-[80%] rounded-lg p-3 ${
-                                      message.is_admin 
-                                        ? "bg-purple-500 text-white" 
-                                        : "bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
-                                    }`}
-                                  >
-                                    <div className="text-sm">{message.content}</div>
-                                    <div className={`text-xs mt-1 ${message.is_admin ? "text-purple-100" : "text-gray-500 dark:text-gray-400"}`}>
-                                      {formatDate(message.created_at)}
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </ScrollArea>
-                        
-                        <div className="p-3 border-t flex items-center gap-2">
-                          <Input 
-                            value={replyMessage} 
-                            onChange={e => setReplyMessage(e.target.value)}
-                            placeholder="Введите сообщение..."
-                            className="flex-grow" 
-                            onKeyDown={e => e.key === "Enter" && sendReply()}
-                          />
-                          <Button onClick={sendReply} size="icon" className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">
-                            <Send size={16} />
-                          </Button>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="text-center py-8 h-full flex flex-col items-center justify-center">
-                        <MessageSquare className="h-12 w-12 mb-4 text-muted-foreground/30" />
-                        <p className="text-muted-foreground">Выберите диалог из списка</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-export default AdminPanel;

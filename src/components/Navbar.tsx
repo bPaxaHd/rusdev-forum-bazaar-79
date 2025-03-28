@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Menu, Search, Sun, Moon } from "lucide-react";
+import { Menu, Search, Sun, Moon, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,10 @@ import NavbarLinks from "./NavbarLinks";
 import Logo from "./Logo";
 import { useTheme } from "@/hooks/useTheme";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { canAccessAdminPanel } from "@/utils/auth-helpers";
+import AdminPanel from "./AdminPanel";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+
 const Navbar = () => {
   const {
     user
@@ -20,7 +25,13 @@ const Navbar = () => {
   } = useTheme();
   const [isScrolled, setIsScrolled] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [adminPassword, setAdminPassword] = useState("");
+  const [canAccessAdmin, setCanAccessAdmin] = useState(false);
+  const [adminLoginError, setAdminLoginError] = useState("");
   const navigate = useNavigate();
+  
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 10) {
@@ -32,6 +43,22 @@ const Navbar = () => {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      checkAdminAccess();
+    } else {
+      setCanAccessAdmin(false);
+    }
+  }, [user]);
+
+  const checkAdminAccess = async () => {
+    if (!user) return;
+    
+    const hasAccess = await canAccessAdminPanel(user.id);
+    setCanAccessAdmin(hasAccess);
+  };
+  
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -40,6 +67,21 @@ const Navbar = () => {
       setSearchQuery("");
     }
   };
+
+  const handleAdminLogin = () => {
+    // Simple hardcoded password check - in production you should use a more secure method
+    const correctPassword = "admin1234"; // Better to store this securely or integrate with auth system
+    
+    if (adminPassword === correctPassword) {
+      setShowAdminLogin(false);
+      setShowAdminPanel(true);
+      setAdminPassword("");
+      setAdminLoginError("");
+    } else {
+      setAdminLoginError("Неверный пароль");
+    }
+  };
+
   return <header className={`sticky top-0 z-50 w-full border-b bg-background/90 backdrop-blur transition-shadow duration-200 ${isScrolled ? "shadow-sm" : ""}`}>
       <div className="container flex h-16 items-center">
         <Sheet>
@@ -90,10 +132,59 @@ const Navbar = () => {
             {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             <span className="sr-only">Переключить тему</span>
           </Button>
+          
+          {/* Admin Panel Button (only shows if user has admin/creator role) */}
+          {canAccessAdmin && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setShowAdminLogin(true)} 
+              className="mx-1"
+              title="Панель администратора"
+            >
+              <ShieldAlert className="h-5 w-5 text-purple-500" />
+              <span className="sr-only">Админ панель</span>
+            </Button>
+          )}
 
           <NavbarUserMenu />
         </div>
       </div>
+      
+      {/* Admin Password Dialog */}
+      <Dialog open={showAdminLogin} onOpenChange={setShowAdminLogin}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Вход в панель администратора</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Input
+                id="admin-password"
+                placeholder="Введите пароль администратора"
+                type="password"
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAdminLogin()}
+              />
+              {adminLoginError && (
+                <p className="text-sm text-red-500">{adminLoginError}</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAdminLogin(false)}>
+              Отмена
+            </Button>
+            <Button onClick={handleAdminLogin}>
+              Войти
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Admin Panel Component */}
+      <AdminPanel open={showAdminPanel} onOpenChange={setShowAdminPanel} />
     </header>;
 };
 export default Navbar;

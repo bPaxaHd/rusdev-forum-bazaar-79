@@ -3,16 +3,23 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getUserRoles, UserRole, canAccessAdminPanel } from "@/utils/auth-helpers";
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
   authLoading: boolean;
+  userRoles: UserRole[];
+  isCreator: boolean;
+  isAdmin: boolean;
+  isModerator: boolean;
+  canAccessAdmin: boolean;
   signUp: (email: string, password: string, username: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  refreshUserRoles: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,7 +29,36 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(false);
+  const [userRoles, setUserRoles] = useState<UserRole[]>([]);
+  const [isCreator, setIsCreator] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isModerator, setIsModerator] = useState(false);
+  const [canAccessAdmin, setCanAccessAdmin] = useState(false);
   const { toast } = useToast();
+
+  // Function to fetch and update user roles
+  const fetchUserRoles = async (userId: string) => {
+    if (!userId) return;
+    
+    try {
+      const roles = await getUserRoles(userId);
+      setUserRoles(roles);
+      setIsCreator(roles.includes('creator'));
+      setIsAdmin(roles.includes('admin'));
+      setIsModerator(roles.includes('moderator'));
+      
+      const hasAdminAccess = await canAccessAdminPanel(userId);
+      setCanAccessAdmin(hasAdminAccess);
+    } catch (error) {
+      console.error("Error fetching user roles:", error);
+    }
+  };
+
+  const refreshUserRoles = async () => {
+    if (user) {
+      await fetchUserRoles(user.id);
+    }
+  };
 
   useEffect(() => {
     // Check active session
@@ -30,6 +66,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
       setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        await fetchUserRoles(session.user.id);
+      }
+      
       setLoading(false);
     };
     
@@ -39,6 +80,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        // Use setTimeout to avoid potential deadlock with Supabase auth events
+        setTimeout(() => {
+          fetchUserRoles(session.user.id);
+        }, 0);
+      } else {
+        setUserRoles([]);
+        setIsCreator(false);
+        setIsAdmin(false);
+        setIsModerator(false);
+        setCanAccessAdmin(false);
+      }
+      
       setLoading(false);
     });
 
@@ -163,11 +218,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       user, 
       session, 
       loading, 
-      authLoading, 
+      authLoading,
+      userRoles,
+      isCreator,
+      isAdmin,
+      isModerator,
+      canAccessAdmin,
       signUp, 
       signIn, 
       signInWithGoogle, 
-      signOut 
+      signOut,
+      refreshUserRoles
     }}>
       {children}
     </AuthContext.Provider>
