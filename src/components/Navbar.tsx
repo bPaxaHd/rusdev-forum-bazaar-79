@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,14 +10,17 @@ import NavbarLinks from "./NavbarLinks";
 import Logo from "./Logo";
 import { useTheme } from "@/hooks/useTheme";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-
 const Navbar = () => {
-  const { user } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const {
+    user
+  } = useAuth();
+  const {
+    theme,
+    toggleTheme
+  } = useTheme();
   const [isScrolled, setIsScrolled] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
-
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 10) {
@@ -30,7 +32,6 @@ const Navbar = () => {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -39,7 +40,6 @@ const Navbar = () => {
       setSearchQuery("");
     }
   };
-
   return <header className={`sticky top-0 z-50 w-full border-b bg-background/90 backdrop-blur transition-shadow duration-200 ${isScrolled ? "shadow-sm" : ""}`}>
       <div className="container flex h-16 items-center">
         <Sheet>
@@ -52,7 +52,7 @@ const Navbar = () => {
           <SheetContent side="left" className="w-[280px] sm:w-[350px]">
             <Link to="/" className="flex items-center gap-2 mb-8">
               <Logo />
-              <span className="font-bold">DevTalk</span>
+              
             </Link>
             <NavbarLinks isMobile={true} />
           </SheetContent>
@@ -75,12 +75,7 @@ const Navbar = () => {
             </PopoverTrigger>
             <PopoverContent className="w-80 p-0" align="end">
               <form onSubmit={handleSearch} className="flex p-1">
-                <Input 
-                  placeholder="Поиск по сайту..." 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1 border-0 focus-visible:ring-0"
-                />
+                <Input placeholder="Поиск по сайту..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="flex-1 border-0 focus-visible:ring-0" />
                 <Button type="submit" size="sm" className="ml-1">
                   Найти
                 </Button>
@@ -88,17 +83,8 @@ const Navbar = () => {
             </PopoverContent>
           </Popover>
           
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={toggleTheme} 
-            className="mx-1"
-          >
-            {theme === 'dark' ? (
-              <Sun className="h-5 w-5" />
-            ) : (
-              <Moon className="h-5 w-5" />
-            )}
+          <Button variant="ghost" size="icon" onClick={toggleTheme} className="mx-1">
+            {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             <span className="sr-only">Переключить тему</span>
           </Button>
 
