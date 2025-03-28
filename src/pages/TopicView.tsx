@@ -11,7 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   Heart, MessageCircle, Share, BookmarkPlus, ChevronLeft, 
-  Send, ThumbsUp, Loader2 
+  Send, ThumbsUp, Loader2, Crown, Star, Diamond
 } from "lucide-react";
 
 interface TopicData {
@@ -27,6 +27,7 @@ interface TopicData {
   profile?: {
     username: string;
     avatar_url: string | null;
+    subscription_type?: string | null;
   };
 }
 
@@ -39,6 +40,7 @@ interface CommentData {
   profile?: {
     username: string;
     avatar_url: string | null;
+    subscription_type?: string | null;
   };
 }
 
@@ -57,7 +59,6 @@ const TopicView = () => {
   const [likedComments, setLikedComments] = useState<Record<string, boolean>>({});
   const [viewIncrementDone, setViewIncrementDone] = useState(false);
   
-  // Check if user has already liked the topic
   useEffect(() => {
     if (user && topic) {
       const checkTopicLike = async () => {
@@ -75,7 +76,6 @@ const TopicView = () => {
     }
   }, [user, topic, id]);
   
-  // Check which comments the user has already liked
   useEffect(() => {
     if (user && comments.length > 0) {
       const checkCommentLikes = async () => {
@@ -97,7 +97,6 @@ const TopicView = () => {
     }
   }, [user, comments]);
   
-  // Основной эффект для загрузки темы и комментариев
   useEffect(() => {
     const fetchTopic = async () => {
       if (!id) return;
@@ -105,7 +104,6 @@ const TopicView = () => {
       try {
         setLoading(true);
         
-        // Получаем данные темы
         const { data: topicData, error: topicError } = await supabase
           .from("topics")
           .select(`
@@ -118,7 +116,7 @@ const TopicView = () => {
             updated_at, 
             likes, 
             views,
-            profiles:user_id(username, avatar_url)
+            profiles:user_id(username, avatar_url, subscription_type)
           `)
           .eq("id", id)
           .single();
@@ -129,7 +127,6 @@ const TopicView = () => {
           return;
         }
         
-        // Увеличиваем счетчик просмотров только один раз
         if (!viewIncrementDone && topicData) {
           await supabase
             .from("topics")
@@ -139,7 +136,6 @@ const TopicView = () => {
           setViewIncrementDone(true);
         }
         
-        // Получаем комментарии к теме
         const { data: commentsData, error: commentsError } = await supabase
           .from("comments")
           .select(`
@@ -148,7 +144,7 @@ const TopicView = () => {
             user_id,
             created_at,
             likes,
-            profiles:user_id(username, avatar_url)
+            profiles:user_id(username, avatar_url, subscription_type)
           `)
           .eq("topic_id", id)
           .order("created_at", { ascending: true });
@@ -169,7 +165,6 @@ const TopicView = () => {
     
     fetchTopic();
     
-    // Подписываемся на изменения в комментариях
     const commentsSubscription = supabase
       .channel('comments_changes')
       .on('postgres_changes', { 
@@ -178,9 +173,7 @@ const TopicView = () => {
         table: 'comments',
         filter: `topic_id=eq.${id}`
       }, (payload) => {
-        // При добавлении нового комментария
         if (payload.eventType === 'INSERT') {
-          // Получаем данные профиля автора комментария
           const fetchCommentWithProfile = async () => {
             const { data: commentWithProfile } = await supabase
               .from("comments")
@@ -190,7 +183,7 @@ const TopicView = () => {
                 user_id,
                 created_at,
                 likes,
-                profiles:user_id(username, avatar_url)
+                profiles:user_id(username, avatar_url, subscription_type)
               `)
               .eq("id", payload.new.id)
               .single();
@@ -202,7 +195,6 @@ const TopicView = () => {
           
           fetchCommentWithProfile();
         } else if (payload.eventType === 'UPDATE') {
-          // Обновляем лайки при обновлении комментария
           setComments(prev => 
             prev.map(comment => 
               comment.id === payload.new.id 
@@ -214,7 +206,6 @@ const TopicView = () => {
       })
       .subscribe();
     
-    // Подписываемся на изменения в теме (обновления лайков)
     const topicSubscription = supabase
       .channel('topic_changes')
       .on('postgres_changes', { 
@@ -235,7 +226,63 @@ const TopicView = () => {
     };
   }, [id, navigate, viewIncrementDone]);
 
-  // Форматирование даты
+  const getSubscriptionBadge = (type?: string | null) => {
+    if (!type || type === 'free') return null;
+    
+    switch(type) {
+      case 'premium':
+        return (
+          <Badge className="ml-2 bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-300">
+            <Crown className="h-3 w-3 mr-1" /> Premium
+          </Badge>
+        );
+      case 'business':
+        return (
+          <Badge className="ml-2 bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300">
+            <Star className="h-3 w-3 mr-1" /> Бизнес
+          </Badge>
+        );
+      case 'sponsor':
+        return (
+          <Badge className="ml-2 bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
+            <Diamond className="h-3 w-3 mr-1" /> Спонсор
+          </Badge>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const getAvatarStyles = (subscriptionType?: string | null) => {
+    if (!subscriptionType || subscriptionType === 'free') return '';
+    
+    switch(subscriptionType) {
+      case 'premium':
+        return 'ring-2 ring-amber-300 ring-offset-1';
+      case 'business':
+        return 'ring-2 ring-purple-400 ring-offset-1';
+      case 'sponsor':
+        return 'ring-2 ring-blue-400 ring-offset-1';
+      default:
+        return '';
+    }
+  };
+
+  const getAvatarFallbackStyles = (subscriptionType?: string | null) => {
+    if (!subscriptionType || subscriptionType === 'free') return 'bg-muted';
+    
+    switch(subscriptionType) {
+      case 'premium':
+        return 'bg-gradient-to-r from-amber-200 to-amber-400 text-amber-900';
+      case 'business':
+        return 'bg-gradient-to-r from-purple-200 to-purple-400 text-purple-900';
+      case 'sponsor':
+        return 'bg-gradient-to-r from-blue-200 to-blue-400 text-blue-900';
+      default:
+        return 'bg-muted';
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const options: Intl.DateTimeFormatOptions = {
       year: 'numeric',
@@ -247,7 +294,6 @@ const TopicView = () => {
     return new Date(dateString).toLocaleDateString('ru-RU', options);
   };
 
-  // Обработчик отправки комментария
   const handleSubmitComment = async () => {
     if (!newComment.trim() || !user) return;
     
@@ -285,7 +331,6 @@ const TopicView = () => {
     }
   };
 
-  // Обработчик лайка темы
   const handleLikeTopic = async () => {
     if (!user) {
       toast({
@@ -307,7 +352,6 @@ const TopicView = () => {
     try {
       const newLikesCount = likesCount + 1;
       
-      // Обновляем счетчик лайков темы
       const { error: updateError } = await supabase
         .from("topics")
         .update({ likes: newLikesCount })
@@ -318,7 +362,6 @@ const TopicView = () => {
         return;
       }
       
-      // Записываем лайк в таблицу topic_likes
       const { error: insertError } = await supabase
         .from("topic_likes")
         .insert({
@@ -343,7 +386,6 @@ const TopicView = () => {
     }
   };
 
-  // Обработчик лайка комментария
   const handleLikeComment = async (commentId: string, currentLikes: number) => {
     if (!user) {
       toast({
@@ -363,7 +405,6 @@ const TopicView = () => {
     }
     
     try {
-      // Обновляем счетчик лайков комментария
       const { error: updateError } = await supabase
         .from("comments")
         .update({ likes: currentLikes + 1 })
@@ -374,7 +415,6 @@ const TopicView = () => {
         return;
       }
       
-      // Записываем лайк в таблицу comment_likes
       const { error: insertError } = await supabase
         .from("comment_likes")
         .insert({
@@ -387,13 +427,11 @@ const TopicView = () => {
         return;
       }
       
-      // Обновляем локальный список лайкнутых комментариев
       setLikedComments(prev => ({
         ...prev,
         [commentId]: true
       }));
       
-      // Обновляем локальный список комментариев
       setComments(
         comments.map(comment => 
           comment.id === commentId 
@@ -410,7 +448,6 @@ const TopicView = () => {
     }
   };
 
-  // Обработчик сохранения темы
   const handleSaveTopic = () => {
     toast({
       title: "Тема сохранена",
@@ -418,7 +455,6 @@ const TopicView = () => {
     });
   };
 
-  // Обработчик поделиться темой
   const handleShareTopic = () => {
     navigator.clipboard.writeText(window.location.href);
     toast({
@@ -452,10 +488,12 @@ const TopicView = () => {
     );
   }
 
+  const isPremiumUser = topic.profile?.subscription_type && 
+    ["premium", "business", "sponsor"].includes(topic.profile.subscription_type);
+
   return (
     <div className="animate-fade-in py-8 md:py-12">
       <div className="container px-4 mx-auto">
-        {/* Хлебные крошки */}
         <div className="mb-6">
           <div className="flex items-center text-sm text-muted-foreground">
             <NavLink to="/forum" className="hover:text-primary flex items-center gap-1">
@@ -473,30 +511,42 @@ const TopicView = () => {
           </div>
         </div>
 
-        {/* Заголовок темы */}
         <div className="mb-6">
           <h1 className="text-2xl md:text-3xl font-bold mb-4">{topic.title}</h1>
-          <Badge variant="secondary" className="mb-4">
-            {topic.category === "frontend" 
-              ? "Frontend" 
-              : topic.category === "backend" 
-                ? "Backend" 
-                : "Fullstack"}
-          </Badge>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="secondary" className="mb-4">
+              {topic.category === "frontend" 
+                ? "Frontend" 
+                : topic.category === "backend" 
+                  ? "Backend" 
+                  : "Fullstack"}
+            </Badge>
+            {getSubscriptionBadge(topic.profile?.subscription_type)}
+          </div>
         </div>
 
-        {/* Основной конт��нт темы */}
-        <Card className="mb-8 p-6">
+        <Card className={`mb-8 p-6 ${isPremiumUser ? 'border-amber-300 dark:border-amber-700' : ''}`}>
           <div className="flex items-start gap-4">
-            <Avatar className="h-10 w-10">
+            <Avatar className={`h-10 w-10 ${getAvatarStyles(topic.profile?.subscription_type)}`}>
               <AvatarImage src={topic.profile?.avatar_url || ""} alt={topic.profile?.username || "User"} />
-              <AvatarFallback>{(topic.profile?.username?.[0] || "U").toUpperCase()}</AvatarFallback>
+              <AvatarFallback className={getAvatarFallbackStyles(topic.profile?.subscription_type)}>
+                {(topic.profile?.username?.[0] || "U").toUpperCase()}
+              </AvatarFallback>
             </Avatar>
             
             <div className="flex-1">
               <div className="flex justify-between items-center mb-2">
                 <div>
-                  <div className="font-medium">{topic.profile?.username || "Пользователь"}</div>
+                  <div className="font-medium flex items-center">
+                    {topic.profile?.username || "Пользователь"}
+                    {isPremiumUser && (
+                      <span className="ml-2">
+                        {topic.profile?.subscription_type === 'premium' && <Crown className="h-4 w-4 text-amber-400" />}
+                        {topic.profile?.subscription_type === 'business' && <Star className="h-4 w-4 text-purple-400" />}
+                        {topic.profile?.subscription_type === 'sponsor' && <Diamond className="h-4 w-4 text-blue-400" />}
+                      </span>
+                    )}
+                  </div>
                   <div className="text-sm text-muted-foreground">
                     {topic.category === "frontend" 
                       ? "Frontend разработчик" 
@@ -510,7 +560,7 @@ const TopicView = () => {
                 </div>
               </div>
               
-              <div className="mt-4 prose prose-sm dark:prose-invert max-w-none">
+              <div className={`mt-4 prose prose-sm dark:prose-invert max-w-none ${isPremiumUser ? 'prose-headings:text-amber-700 dark:prose-headings:text-amber-300' : ''}`}>
                 {topic.content}
               </div>
               
@@ -554,7 +604,6 @@ const TopicView = () => {
           </div>
         </Card>
 
-        {/* Ответы */}
         <div className="mb-8">
           <h2 className="text-xl font-medium mb-4">
             Комментарии <span className="text-muted-foreground">({comments.length})</span>
@@ -562,41 +611,51 @@ const TopicView = () => {
           
           {comments.length > 0 ? (
             <div className="space-y-4">
-              {comments.map((comment) => (
-                <Card key={comment.id} className="p-6">
-                  <div className="flex items-start gap-4">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={comment.profile?.avatar_url || ""} alt={comment.profile?.username || "User"} />
-                      <AvatarFallback>{(comment.profile?.username?.[0] || "U").toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    
-                    <div className="flex-1">
-                      <div className="flex justify-between items-center mb-2">
-                        <div>
-                          <div className="font-medium">{comment.profile?.username || "Пользователь"}</div>
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {formatDate(comment.created_at)}
-                        </div>
-                      </div>
+              {comments.map((comment) => {
+                const isCommentPremium = comment.profile?.subscription_type && 
+                  ["premium", "business", "sponsor"].includes(comment.profile.subscription_type);
+                  
+                return (
+                  <Card key={comment.id} className={`p-6 ${isCommentPremium ? 'border-amber-200 dark:border-amber-800' : ''}`}>
+                    <div className="flex items-start gap-4">
+                      <Avatar className={`h-8 w-8 ${getAvatarStyles(comment.profile?.subscription_type)}`}>
+                        <AvatarImage src={comment.profile?.avatar_url || ""} alt={comment.profile?.username || "User"} />
+                        <AvatarFallback className={getAvatarFallbackStyles(comment.profile?.subscription_type)}>
+                          {(comment.profile?.username?.[0] || "U").toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
                       
-                      <div className="mt-2">{comment.content}</div>
-                      
-                      <div className="mt-4 flex items-center gap-4">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className={`gap-2 ${likedComments[comment.id] ? 'text-primary' : ''}`}
-                          onClick={() => handleLikeComment(comment.id, comment.likes)}
-                        >
-                          <ThumbsUp size={14} className={likedComments[comment.id] ? "fill-primary" : ""} />
-                          <span>{comment.likes || 0}</span>
-                        </Button>
+                      <div className="flex-1">
+                        <div className="flex justify-between items-center mb-2">
+                          <div className="flex items-center">
+                            <div className="font-medium">{comment.profile?.username || "Пользователь"}</div>
+                            {getSubscriptionBadge(comment.profile?.subscription_type)}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {formatDate(comment.created_at)}
+                          </div>
+                        </div>
+                        
+                        <div className={`mt-2 ${isCommentPremium ? 'text-gray-800 dark:text-gray-100' : ''}`}>
+                          {comment.content}
+                        </div>
+                        
+                        <div className="mt-4 flex items-center gap-4">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className={`gap-2 ${likedComments[comment.id] ? 'text-primary' : ''}`}
+                            onClick={() => handleLikeComment(comment.id, comment.likes)}
+                          >
+                            <ThumbsUp size={14} className={likedComments[comment.id] ? "fill-primary" : ""} />
+                            <span>{comment.likes || 0}</span>
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
             </div>
           ) : (
             <div className="text-center py-8 bg-secondary/30 rounded-lg">
@@ -606,7 +665,6 @@ const TopicView = () => {
           )}
         </div>
 
-        {/* Форма ответа */}
         <Card className="p-6">
           <h3 className="text-lg font-medium mb-4">Ваш комментарий</h3>
           {user ? (

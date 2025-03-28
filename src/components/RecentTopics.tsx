@@ -5,6 +5,7 @@ import CreateTopicDialog from "./CreateTopicDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 
 interface TopicData {
   id: string; // String to match Supabase UUID format
@@ -19,11 +20,13 @@ interface TopicData {
   profile?: {
     username: string;
     avatar_url: string | null;
+    subscription_type?: string | null;
   };
   comments?: { id: string }[];
   profiles?: {
     username: string;
     avatar_url: string | null;
+    subscription_type?: string | null;
   };
 }
 
@@ -51,7 +54,7 @@ const RecentTopics = () => {
             updated_at, 
             likes, 
             views,
-            profiles:user_id(username, avatar_url),
+            profiles:user_id(username, avatar_url, subscription_type),
             comments:comments(id)
           `)
           .order('created_at', { ascending: false })
@@ -74,7 +77,8 @@ const RecentTopics = () => {
           ...topic,
           profile: {
             username: topic.profiles?.username || "Unknown",
-            avatar_url: topic.profiles?.avatar_url
+            avatar_url: topic.profiles?.avatar_url,
+            subscription_type: topic.profiles?.subscription_type || "free"
           },
           comments: topic.comments || []
         }));
@@ -116,6 +120,9 @@ const RecentTopics = () => {
       
     // Cast category to the specific type for the TopicCard component
     const typedCategory = topic.category as "frontend" | "backend" | "fullstack";
+    
+    const isPremium = topic.profile?.subscription_type && 
+      ["premium", "business", "sponsor"].includes(topic.profile.subscription_type);
       
     return {
       id: topic.id, // Use the UUID directly instead of converting to number
@@ -133,7 +140,8 @@ const RecentTopics = () => {
       viewsCount: topic.views || 0,
       tags: [typedCategory], // Добавляем базовый тег из категории
       lastActivity: topic.updated_at || topic.created_at,
-      category: typedCategory
+      category: typedCategory,
+      isPremium: isPremium
     };
   };
 
