@@ -13,7 +13,7 @@ import { useTheme } from "@/hooks/useTheme";
 
 const Navbar = () => {
   const { user } = useAuth();
-  const { theme, setTheme } = useTheme();
+  const { theme, toggleTheme } = useTheme(); // Fixed: use toggleTheme instead of setTheme
   const [isScrolled, setIsScrolled] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -57,7 +57,7 @@ const Navbar = () => {
           </SheetTrigger>
           <SheetContent side="left" className="w-[280px] sm:w-[350px]">
             <Link to="/" className="flex items-center gap-2 mb-8">
-              <Logo className="h-8 w-8" />
+              <Logo /> {/* Removed className prop */}
               <span className="font-bold">DevTalk</span>
             </Link>
             <NavbarLinks isMobile={true} />
@@ -65,7 +65,7 @@ const Navbar = () => {
         </Sheet>
 
         <Link to="/" className="mr-6 flex items-center gap-2">
-          <Logo className="h-8 w-8" />
+          <Logo /> {/* Removed className prop */}
           <span className="font-bold hidden sm:inline-flex">DevTalk</span>
         </Link>
 
