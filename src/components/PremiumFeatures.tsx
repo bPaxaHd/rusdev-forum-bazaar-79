@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Check, Crown, Star } from "lucide-react";
+import { Check, Crown, Star, Diamond } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 
@@ -69,6 +69,21 @@ const PremiumFeatures = () => {
       ],
       buttonText: "Связаться с нами",
       icon: <Crown className="h-5 w-5" />
+    },
+    {
+      name: "Спонсор",
+      price: "₽10,000",
+      description: "Эксклюзивные возможности и продвижение бренда",
+      features: [
+        { text: "Все преимущества Бизнес", included: true },
+        { text: "Брендированный профиль", included: true },
+        { text: "Логотип на главной странице", included: true },
+        { text: "Приоритетное размещение контента", included: true },
+        { text: "Эксклюзивный доступ к новым функциям", included: true },
+        { text: "Личный менеджер аккаунта", included: true },
+      ],
+      buttonText: "Стать спонсором",
+      icon: <Diamond className="h-5 w-5" />
     }
   ];
 
@@ -82,7 +97,7 @@ const PremiumFeatures = () => {
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {plans.map((plan, index) => (
           <Card key={index} className={`flex flex-col h-full ${plan.popular ? 'border-primary shadow-md relative' : ''}`}>
             {plan.popular && (
