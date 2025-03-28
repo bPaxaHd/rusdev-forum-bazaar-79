@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import TopicCard from "./TopicCard";
 import CreateTopicDialog from "./CreateTopicDialog";
@@ -10,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Crown } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
 
 interface TopicData {
   id: string; // String to match Supabase UUID format
@@ -215,7 +215,7 @@ const RecentTopics = () => {
       isModerator: isModerator,
       sponsorLevel: sponsorLevel,
       isPremium: isPremium,
-      userId: topic.user_id // Добавляем ID пользователя-создателя темы
+      userId: topic.user_id // Добавляем ID пользователя-��оздателя темы
     };
   };
 
