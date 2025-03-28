@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -61,7 +60,7 @@ const Navbar = () => {
 
         <Link to="/" className="mr-6 flex items-center gap-2">
           <Logo />
-          <span className="font-bold hidden sm:inline-flex">DevTalk</span>
+          
         </Link>
 
         {/* Center the navbar links */}
