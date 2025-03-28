@@ -1,25 +1,16 @@
 
-import { UserProfile } from "@/types/auth";
-
 export interface User {
   id: string;
-  email: string;
-  created_at: string;
-  profile: UserProfile;
-}
-
-export interface SupportMessage {
-  id: string;
-  user_id: string;
-  content: string;
-  is_admin: boolean;
-  read: boolean;
-  created_at: string;
-}
-
-export interface UserWithMessages {
-  profile: UserProfile;
-  unreadCount: number;
-  lastMessage?: string;
-  lastMessageTime?: string;
+  profile: {
+    id: string;
+    username: string;
+    avatar_url: string | null;
+    subscription_type: string | null;
+    user_tag: string | null;
+    is_banned: boolean;
+    is_muted: boolean;
+    is_frozen: boolean;
+    created_at: string;
+  };
+  roles: string[];
 }

@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Users, UserCog, Ban, VolumeX, Snowflake, User as UserIcon } from "lucide-react";
 import UserProfileEdit from "./UserProfileEdit";
-import { formatDate } from "./utils";
+import { formatDate, getSubscriptionBadgeStyles } from "./utils";
 import { User } from "./types";
 import { UserProfile } from "@/types/auth";
 
@@ -86,11 +87,13 @@ const UsersTab: React.FC<UsersTabProps> = ({
                       onClick={() => handleSelectUser(user)}
                     >
                       <Avatar className="h-10 w-10 mr-2" style={{
-                        borderColor: user.profile.subscription_type === "admin" ? 'rgb(220, 38, 38)' : 
+                        borderColor: user.roles.includes('creator') ? 'rgb(139, 92, 246)' : 
+                          user.roles.includes('admin') ? 'rgb(220, 38, 38)' :
+                          user.roles.includes('moderator') ? 'rgb(34, 197, 94)' :
                           user.profile.subscription_type === "premium" ? 'rgb(234, 179, 8)' :
                           user.profile.subscription_type === "business" ? 'rgb(59, 130, 246)' :
                           user.profile.subscription_type === "sponsor" ? 'rgb(139, 92, 246)' : 'transparent',
-                        borderWidth: user.profile.subscription_type !== "free" ? '2px' : '0',
+                        borderWidth: user.roles.length > 0 || user.profile.subscription_type !== "free" ? '2px' : '0',
                         borderStyle: 'solid'
                       }}>
                         <AvatarImage src={user.profile.avatar_url || ""} />
@@ -101,20 +104,48 @@ const UsersTab: React.FC<UsersTabProps> = ({
                       <div className="flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-medium">{user.profile.username}</p>
-                          {user.profile.subscription_type && user.profile.subscription_type !== "free" && (
+                          
+                          {/* Role/Subscription badges */}
+                          {user.roles.includes('creator') && (
                             <Badge 
                               variant="outline" 
-                              className={
-                                user.profile.subscription_type === "admin" ? "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800" :
-                                user.profile.subscription_type === "premium" ? "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800" :
-                                user.profile.subscription_type === "business" ? "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800" :
-                                user.profile.subscription_type === "sponsor" ? "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800" :
-                                ""
-                              }
+                              className={getSubscriptionBadgeStyles('creator')}
+                            >
+                              Создатель
+                            </Badge>
+                          )}
+                          
+                          {user.roles.includes('admin') && !user.roles.includes('creator') && (
+                            <Badge 
+                              variant="outline" 
+                              className={getSubscriptionBadgeStyles('admin')}
+                            >
+                              Админ
+                            </Badge>
+                          )}
+                          
+                          {user.roles.includes('moderator') && !user.roles.includes('admin') && !user.roles.includes('creator') && (
+                            <Badge 
+                              variant="outline" 
+                              className={getSubscriptionBadgeStyles('moderator')}
+                            >
+                              Модератор
+                            </Badge>
+                          )}
+                          
+                          {user.profile.subscription_type && 
+                           user.profile.subscription_type !== "free" && 
+                           !user.roles.includes('creator') && 
+                           !user.roles.includes('admin') && 
+                           !user.roles.includes('moderator') && (
+                            <Badge 
+                              variant="outline" 
+                              className={getSubscriptionBadgeStyles(user.profile.subscription_type)}
                             >
                               {user.profile.subscription_type}
                             </Badge>
                           )}
+                          
                           {user.profile.is_banned && (
                             <Badge variant="destructive" className="flex items-center gap-1">
                               <Ban size={12} />
