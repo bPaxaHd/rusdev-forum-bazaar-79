@@ -77,6 +77,11 @@ const Navbar = () => {
     }
   };
 
+  const handleAdminButtonClick = () => {
+    // Always show the password dialog first, never directly open the admin panel
+    setShowAdminLogin(true);
+  };
+
   return <header className={`sticky top-0 z-50 w-full border-b bg-background/90 backdrop-blur transition-shadow duration-200 ${isScrolled ? "shadow-sm" : ""}`}>
       <div className="container flex h-16 items-center">
         <Sheet>
@@ -133,7 +138,7 @@ const Navbar = () => {
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={() => setShowAdminLogin(true)} 
+              onClick={handleAdminButtonClick} 
               className="mx-1"
               title="Панель администратора"
             >
