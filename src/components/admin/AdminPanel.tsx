@@ -150,6 +150,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
     setFilteredUsers(filtered);
   }, [searchQuery, users]);
 
+  // Ensure this function returns a Promise<void> to match the expected type
+  const handleSelectUser = (): void => {
+    // This function needs to be implemented if it's used
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -239,7 +244,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
                   setSearchQuery={setSearchQuery}
                   selectedUser={null}
                   fetchUsers={fetchUsers}
-                  handleSelectUser={() => {}}
+                  handleSelectUser={handleSelectUser}
                   editedProfile={{}}
                   setEditedProfile={() => {}}
                   isCreator={true}
@@ -261,7 +266,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
                   loadingSupport={false}
                   supportSearchQuery=""
                   setSupportSearchQuery={() => {}}
-                  fetchSupportUsers={() => {}}
+                  fetchSupportUsers={() => Promise.resolve()}  // Ensure this returns a Promise
                 />
               </TabsContent>
             </Tabs>
@@ -273,4 +278,3 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
 };
 
 export default AdminPanel;
-
