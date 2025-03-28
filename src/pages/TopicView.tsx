@@ -504,7 +504,7 @@ const TopicView = () => {
     );
   }
 
-  const topicProfile = topic.profiles && topic.profiles.length > 0 ? topic.profiles[0] : null;
+  const topicProfile = topic.profiles || null;
   const isPremiumUser = topicProfile?.subscription_type && 
     ["premium", "business", "sponsor"].includes(topicProfile.subscription_type);
 
@@ -639,7 +639,7 @@ const TopicView = () => {
           {comments.length > 0 ? (
             <div className="space-y-4">
               {comments.map((comment) => {
-                const commentProfile = comment.profiles && comment.profiles.length > 0 ? comment.profiles[0] : null;
+                const commentProfile = comment.profiles || null;
                 const isCommentPremium = commentProfile?.subscription_type && 
                   ["premium", "business", "sponsor"].includes(commentProfile.subscription_type);
                   
