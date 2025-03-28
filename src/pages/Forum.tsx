@@ -5,10 +5,13 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import TopicCard from "@/components/TopicCard";
 import CreateTopicDialog from "@/components/CreateTopicDialog";
-import { MessageCircle, Search, Filter, Monitor, Database, Layers, Sparkles } from "lucide-react";
+import { MessageCircle, Search, Filter, Monitor, Database, Layers, Sparkles, Crown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { initDb } from "@/utils/db-helpers";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 interface TopicData {
   id: string;
@@ -20,14 +23,17 @@ interface TopicData {
   updated_at: string;
   likes: number;
   views: number;
+  is_premium?: boolean;
   profile?: {
     username: string;
     avatar_url: string | null;
+    subscription_type?: string | null;
   };
   comments?: { id: string }[];
   profiles?: {
     username: string;
     avatar_url: string | null;
+    subscription_type?: string | null;
   };
 }
 
@@ -35,7 +41,12 @@ const Forum = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<"all" | "frontend" | "backend" | "fullstack">("all");
   const [topics, setTopics] = useState<TopicData[]>([]);
+  const [premiumTopics, setPremiumTopics] = useState<TopicData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [premiumLoading, setPremiumLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"regular" | "premium">("regular");
+  const { user, userRoles } = useAuth();
+  const { toast } = useToast();
   
   // Инициализация БД при первой загрузке
   useEffect(() => {
@@ -61,9 +72,11 @@ const Forum = () => {
             updated_at, 
             likes, 
             views,
-            profiles:user_id(username, avatar_url),
+            is_premium,
+            profiles:user_id(username, avatar_url, subscription_type),
             comments:comments(id)
           `)
+          .eq('is_premium', false)
           .order('created_at', { ascending: false });
           
         if (activeFilter !== "all") {
@@ -82,7 +95,8 @@ const Forum = () => {
           ...topic,
           profile: {
             username: topic.profiles?.username || "Unknown",
-            avatar_url: topic.profiles?.avatar_url
+            avatar_url: topic.profiles?.avatar_url,
+            subscription_type: topic.profiles?.subscription_type
           },
           comments: topic.comments || []
         }));
@@ -95,13 +109,72 @@ const Forum = () => {
       }
     };
     
+    const fetchPremiumTopics = async () => {
+      try {
+        setPremiumLoading(true);
+        
+        let query = supabase
+          .from("topics")
+          .select(`
+            id, 
+            title, 
+            content, 
+            user_id, 
+            category, 
+            created_at, 
+            updated_at, 
+            likes, 
+            views,
+            is_premium,
+            profiles:user_id(username, avatar_url, subscription_type),
+            comments:comments(id)
+          `)
+          .eq('is_premium', true)
+          .order('created_at', { ascending: false });
+          
+        if (activeFilter !== "all") {
+          query = query.eq('category', activeFilter);
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) {
+          console.error("Ошибка при загрузке премиум тем:", error);
+          return;
+        }
+        
+        // Преобразуем данные в формат, который ожидает TopicCard
+        const formattedTopics = data.map(topic => ({
+          ...topic,
+          profile: {
+            username: topic.profiles?.username || "Unknown",
+            avatar_url: topic.profiles?.avatar_url,
+            subscription_type: topic.profiles?.subscription_type
+          },
+          comments: topic.comments || []
+        }));
+        
+        setPremiumTopics(formattedTopics as TopicData[]);
+      } catch (error) {
+        console.error("Ошибка при загрузке премиум тем:", error);
+      } finally {
+        setPremiumLoading(false);
+      }
+    };
+    
     fetchTopics();
+    fetchPremiumTopics();
     
     // Подписываемся на изменения в таблице topics
     const subscription = supabase
       .channel('public:topics')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'topics' }, (payload) => {
-        fetchTopics();
+        const newTopic = payload.new as TopicData;
+        if (newTopic.is_premium) {
+          fetchPremiumTopics();
+        } else {
+          fetchTopics();
+        }
       })
       .subscribe();
     
@@ -133,9 +206,11 @@ const Forum = () => {
       repliesCount: topic.comments?.length || 0,
       likesCount: topic.likes || 0,
       viewsCount: topic.views || 0,
-      tags: [typedCategory], // Добавляем базовый тег из категории
+      tags: [typedCategory, ...(topic.is_premium ? ["premium"] : [])], // Добавляем базовый тег из категории и premium если нужно
       lastActivity: topic.updated_at || topic.created_at,
-      category: typedCategory
+      category: typedCategory,
+      isPremium: topic.is_premium,
+      sponsorLevel: topic.profile?.subscription_type as 'premium' | 'business' | 'sponsor' | undefined
     };
   };
   
@@ -148,6 +223,39 @@ const Forum = () => {
                          
     return matchesSearch;
   });
+  
+  // Фильтрация премиум тем по поисковому запросу
+  const filteredPremiumTopics = premiumTopics.filter(topic => {
+    const matchesSearch = searchQuery
+      ? topic.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        topic.content.toLowerCase().includes(searchQuery.toLowerCase())
+      : true;
+                         
+    return matchesSearch;
+  });
+  
+  // Проверка, имеет ли пользователь премиум-подписку
+  const hasPremiumAccess = user && user.id ? true : false; // В реальном приложении проверяйте подписку
+  
+  const handleCreatePremiumTopic = () => {
+    if (!user) {
+      toast({
+        title: "Необходима авторизация",
+        description: "Для создания премиум тем необходимо войти в аккаунт",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!hasPremiumAccess) {
+      toast({
+        title: "Недоступно",
+        description: "Создание премиум тем доступно только для пользователей с премиум подпиской",
+        variant: "destructive"
+      });
+      return;
+    }
+  };
 
   return (
     <div className="animate-fade-in">
@@ -169,19 +277,57 @@ const Forum = () => {
               Задавайте вопросы, делитесь опытом и участвуйте в дискуссиях с русскоязычными разработчиками.
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-4">
-              <CreateTopicDialog />
+            <Tabs defaultValue="regular" className="mb-6" onValueChange={(value) => setActiveTab(value as "regular" | "premium")}>
+              <TabsList className="grid w-full grid-cols-2 mb-4">
+                <TabsTrigger value="regular">Обычный форум</TabsTrigger>
+                <TabsTrigger value="premium" className="flex items-center gap-1">
+                  <Crown size={14} className="text-amber-500" />
+                  Премиум помощь
+                </TabsTrigger>
+              </TabsList>
               
-              <div className="relative flex-grow">
-                <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-                <Input 
-                  className="pl-10 h-10 w-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-blue-100 dark:border-gray-700 focus-visible:ring-blue-500" 
-                  placeholder="Поиск по темам..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-            </div>
+              <TabsContent value="regular" className="mt-0">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <CreateTopicDialog isPremium={false} />
+                  
+                  <div className="relative flex-grow">
+                    <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+                    <Input 
+                      className="pl-10 h-10 w-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-blue-100 dark:border-gray-700 focus-visible:ring-blue-500" 
+                      placeholder="Поиск по темам..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="premium" className="mt-0">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <CreateTopicDialog isPremium={true} />
+                  
+                  <div className="relative flex-grow">
+                    <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+                    <Input 
+                      className="pl-10 h-10 w-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-amber-100 dark:border-amber-700 focus-visible:ring-amber-500" 
+                      placeholder="Поиск по премиум темам..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                </div>
+                
+                <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                  <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300">
+                    <Crown size={16} />
+                    <p className="text-sm">
+                      Премиум помощь - это приоритетные темы, которые обрабатываются в первую очередь нашими экспертами.
+                      {!hasPremiumAccess && " Доступно только для пользователей с премиум подпиской."}
+                    </p>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </section>
@@ -261,61 +407,133 @@ const Forum = () => {
             
             {/* Main Content - улучшенный дизайн с основной цветовой схемой */}
             <div className="w-full md:w-3/4">
-              <div className="mb-6 flex items-center justify-between bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm p-4 rounded-lg border border-blue-100 dark:border-gray-700">
-                <h2 className="text-xl font-medium text-blue-700 dark:text-blue-300">
-                  {activeFilter === "all" 
-                    ? "Все темы" 
-                    : activeFilter === "frontend" 
-                      ? "Frontend темы" 
-                      : activeFilter === "backend" 
-                        ? "Backend темы" 
-                        : "Fullstack темы"}
-                </h2>
-                <div className="text-sm text-muted-foreground">
-                  {filteredTopics.length} {filteredTopics.length === 1 ? "тема" : filteredTopics.length > 1 && filteredTopics.length < 5 ? "темы" : "тем"}
-                </div>
-              </div>
-              
-              {loading ? (
-                <div className="space-y-4">
-                  {[1, 2, 3].map((_, index) => (
-                    <div key={index} className="p-6 rounded-lg border border-blue-100 dark:border-gray-700 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm shadow-sm">
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <Skeleton className="h-4 w-20 mb-2 bg-blue-100 dark:bg-gray-700" />
-                          <Skeleton className="h-6 w-64 mb-2 bg-blue-100 dark:bg-gray-700" />
-                        </div>
-                        <Skeleton className="h-4 w-16 bg-blue-100 dark:bg-gray-700" />
-                      </div>
-                      <Skeleton className="h-4 w-full mb-6 bg-blue-100 dark:bg-gray-700" />
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <Skeleton className="h-8 w-8 rounded-full bg-blue-100 dark:bg-gray-700" />
-                          <div>
-                            <Skeleton className="h-4 w-20 mb-1 bg-blue-100 dark:bg-gray-700" />
-                            <Skeleton className="h-3 w-24 bg-blue-100 dark:bg-gray-700" />
+              {/* Содержимое зависит от активной вкладки */}
+              {activeTab === "regular" ? (
+                <>
+                  <div className="mb-6 flex items-center justify-between bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm p-4 rounded-lg border border-blue-100 dark:border-gray-700">
+                    <h2 className="text-xl font-medium text-blue-700 dark:text-blue-300">
+                      {activeFilter === "all" 
+                        ? "Все темы" 
+                        : activeFilter === "frontend" 
+                          ? "Frontend темы" 
+                          : activeFilter === "backend" 
+                            ? "Backend темы" 
+                            : "Fullstack темы"}
+                    </h2>
+                    <div className="text-sm text-muted-foreground">
+                      {filteredTopics.length} {filteredTopics.length === 1 ? "тема" : filteredTopics.length > 1 && filteredTopics.length < 5 ? "темы" : "тем"}
+                    </div>
+                  </div>
+                  
+                  {loading ? (
+                    <div className="space-y-4">
+                      {[1, 2, 3].map((_, index) => (
+                        <div key={index} className="p-6 rounded-lg border border-blue-100 dark:border-gray-700 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm shadow-sm">
+                          <div className="flex justify-between items-start mb-4">
+                            <div>
+                              <Skeleton className="h-4 w-20 mb-2 bg-blue-100 dark:bg-gray-700" />
+                              <Skeleton className="h-6 w-64 mb-2 bg-blue-100 dark:bg-gray-700" />
+                            </div>
+                            <Skeleton className="h-4 w-16 bg-blue-100 dark:bg-gray-700" />
+                          </div>
+                          <Skeleton className="h-4 w-full mb-6 bg-blue-100 dark:bg-gray-700" />
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                              <Skeleton className="h-8 w-8 rounded-full bg-blue-100 dark:bg-gray-700" />
+                              <div>
+                                <Skeleton className="h-4 w-20 mb-1 bg-blue-100 dark:bg-gray-700" />
+                                <Skeleton className="h-3 w-24 bg-blue-100 dark:bg-gray-700" />
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Skeleton className="h-4 w-8 bg-blue-100 dark:bg-gray-700" />
+                              <Skeleton className="h-4 w-8 bg-blue-100 dark:bg-gray-700" />
+                              <Skeleton className="h-4 w-8 bg-blue-100 dark:bg-gray-700" />
+                            </div>
                           </div>
                         </div>
-                        <div className="flex gap-2">
-                          <Skeleton className="h-4 w-8 bg-blue-100 dark:bg-gray-700" />
-                          <Skeleton className="h-4 w-8 bg-blue-100 dark:bg-gray-700" />
-                          <Skeleton className="h-4 w-8 bg-blue-100 dark:bg-gray-700" />
-                        </div>
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              ) : filteredTopics.length > 0 ? (
-                <div className="space-y-4">
-                  {filteredTopics.map((topic) => (
-                    <TopicCard key={topic.id} {...mapTopicToCardProps(topic)} />
-                  ))}
-                </div>
+                  ) : filteredTopics.length > 0 ? (
+                    <div className="space-y-4">
+                      {filteredTopics.map((topic) => (
+                        <TopicCard key={topic.id} {...mapTopicToCardProps(topic)} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 border rounded-lg border-blue-100 dark:border-gray-700 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm">
+                      <p className="text-muted-foreground mb-4">Темы не найдены</p>
+                      <CreateTopicDialog isPremium={false} />
+                    </div>
+                  )}
+                </>
               ) : (
-                <div className="text-center py-8 border rounded-lg border-blue-100 dark:border-gray-700 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm">
-                  <p className="text-muted-foreground mb-4">Темы не найдены</p>
-                  <CreateTopicDialog />
-                </div>
+                <>
+                  <div className="mb-6 flex items-center justify-between bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm p-4 rounded-lg border border-amber-200 dark:border-amber-700">
+                    <h2 className="text-xl font-medium text-amber-700 dark:text-amber-300 flex items-center gap-2">
+                      <Crown size={18} />
+                      Премиум помощь
+                    </h2>
+                    <div className="text-sm text-muted-foreground">
+                      {filteredPremiumTopics.length} {filteredPremiumTopics.length === 1 ? "тема" : filteredPremiumTopics.length > 1 && filteredPremiumTopics.length < 5 ? "темы" : "тем"}
+                    </div>
+                  </div>
+                  
+                  {premiumLoading ? (
+                    <div className="space-y-4">
+                      {[1, 2, 3].map((_, index) => (
+                        <div key={index} className="p-6 rounded-lg border border-amber-200 dark:border-amber-700 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm shadow-sm">
+                          <div className="flex justify-between items-start mb-4">
+                            <div>
+                              <Skeleton className="h-4 w-20 mb-2 bg-amber-100 dark:bg-amber-700/50" />
+                              <Skeleton className="h-6 w-64 mb-2 bg-amber-100 dark:bg-amber-700/50" />
+                            </div>
+                            <Skeleton className="h-4 w-16 bg-amber-100 dark:bg-amber-700/50" />
+                          </div>
+                          <Skeleton className="h-4 w-full mb-6 bg-amber-100 dark:bg-amber-700/50" />
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                              <Skeleton className="h-8 w-8 rounded-full bg-amber-100 dark:bg-amber-700/50" />
+                              <div>
+                                <Skeleton className="h-4 w-20 mb-1 bg-amber-100 dark:bg-amber-700/50" />
+                                <Skeleton className="h-3 w-24 bg-amber-100 dark:bg-amber-700/50" />
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Skeleton className="h-4 w-8 bg-amber-100 dark:bg-amber-700/50" />
+                              <Skeleton className="h-4 w-8 bg-amber-100 dark:bg-amber-700/50" />
+                              <Skeleton className="h-4 w-8 bg-amber-100 dark:bg-amber-700/50" />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : hasPremiumAccess ? (
+                    filteredPremiumTopics.length > 0 ? (
+                      <div className="space-y-4">
+                        {filteredPremiumTopics.map((topic) => (
+                          <TopicCard key={topic.id} {...mapTopicToCardProps(topic)} />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 border rounded-lg border-amber-200 dark:border-amber-700 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm">
+                        <p className="text-muted-foreground mb-4">Премиум темы не найдены</p>
+                        <CreateTopicDialog isPremium={true} />
+                      </div>
+                    )
+                  ) : (
+                    <div className="text-center py-12 border rounded-lg border-amber-200 dark:border-amber-700 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm">
+                      <Crown size={48} className="mx-auto mb-4 text-amber-500" />
+                      <h3 className="text-xl font-medium mb-2">Доступно только для премиум пользователей</h3>
+                      <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                        Получите приоритетную помощь от экспертов, задавая вопросы в разделе премиум-поддержки
+                      </p>
+                      <Button asChild className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700">
+                        <a href="/premium">Узнать о премиум-подписке</a>
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
