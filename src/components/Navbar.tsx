@@ -49,26 +49,24 @@ const Navbar = () => {
   };
 
   return <header className={`sticky top-0 z-50 w-full border-b bg-background/90 backdrop-blur transition-shadow duration-200 ${isScrolled ? "shadow-sm" : ""}`}>
-      <div className="container flex h-16 items-center">
+      <div className="container flex h-14 sm:h-16 items-center px-2 sm:px-4">
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="mr-2 md:hidden" aria-label="Toggle Menu">
+            <Button variant="ghost" size="icon" className="mr-1 sm:mr-2 md:hidden" aria-label="Toggle Menu">
               <Menu className="h-5 w-5" />
               <span className="sr-only">Toggle Menu</span>
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-[280px] sm:w-[350px]">
-            <Link to="/" className="flex items-center gap-2 mb-8">
+            <Link to="/" className="flex items-center gap-2 mb-6 sm:mb-8">
               <Logo />
-              
             </Link>
             <NavbarLinks isMobile={true} />
           </SheetContent>
         </Sheet>
 
-        <Link to="/" className="mr-6 flex items-center gap-2">
+        <Link to="/" className="mr-2 sm:mr-6 flex items-center gap-1 sm:gap-2">
           <Logo />
-          
         </Link>
 
         {/* Center the navbar links */}
@@ -76,7 +74,7 @@ const Navbar = () => {
           <NavbarLinks />
         </div>
 
-        <div className="flex items-center space-x-2 ml-auto">
+        <div className="flex items-center space-x-1 sm:space-x-2 ml-auto">
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="ghost" size="icon" className="mx-1">
@@ -84,7 +82,7 @@ const Navbar = () => {
                 <span className="sr-only">Поиск</span>
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80 p-0" align="end">
+            <PopoverContent className="w-[280px] sm:w-80 p-0" align="end">
               <form onSubmit={handleSearch} className="flex p-1">
                 <Input placeholder="Поиск по сайту..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="flex-1 border-0 focus-visible:ring-0" />
                 <Button type="submit" size="sm" className="ml-1">

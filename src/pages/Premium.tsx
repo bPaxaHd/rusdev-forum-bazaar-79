@@ -74,18 +74,18 @@ const Premium = () => {
   const isPremiumUser = userProfile && userProfile.subscription_type && userProfile.subscription_type !== "free";
 
   return (
-    <div className="container mx-auto py-8 bg-grid-pattern min-h-screen">
-      <h1 className="text-4xl font-bold mb-10 text-center bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600">
+    <div className="container mx-auto py-6 sm:py-8 bg-grid-pattern min-h-screen px-4 sm:px-6">
+      <h1 className="page-title bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600">
         Подписки DevTalk
       </h1>
       
       {isPremiumUser && (
-        <div className="mb-8 p-4 md:p-6 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-gray-800 dark:to-gray-700 rounded-lg border border-purple-100 dark:border-gray-600 flex flex-col md:flex-row justify-between items-center shadow-md animate-fade-in">
-          <div>
-            <h2 className="text-lg md:text-xl font-semibold text-purple-700 dark:text-purple-300">
+        <div className="mb-6 sm:mb-8 p-4 md:p-6 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-gray-800 dark:to-gray-700 rounded-lg border border-purple-100 dark:border-gray-600 flex flex-col md:flex-row justify-between items-center shadow-md animate-fade-in">
+          <div className="w-full md:w-auto">
+            <h2 className="text-lg md:text-xl font-semibold text-purple-700 dark:text-purple-300 text-center md:text-left">
               У вас активна подписка: {userProfile?.subscription_type}
             </h2>
-            <p className="text-sm md:text-base text-muted-foreground mt-1">
+            <p className="text-sm md:text-base text-muted-foreground mt-1 text-center md:text-left">
               Спасибо за поддержку нашего проекта! Если у вас возникли вопросы, используйте чат поддержки.
             </p>
           </div>
@@ -99,12 +99,12 @@ const Premium = () => {
         </div>
       )}
       
-      <div className="rounded-xl overflow-hidden shadow-xl transform transition-all duration-300 hover:scale-[1.01] mb-12">
+      <div className="rounded-xl overflow-hidden shadow-xl transform transition-all duration-300 hover:scale-[1.01] mb-8 sm:mb-12">
         <PremiumDesktop />
       </div>
       
-      <div className="mt-16 pt-8 border-t border-purple-100 dark:border-gray-700">
-        <h2 className="text-3xl font-bold mb-8 text-center text-purple-700 dark:text-purple-300">
+      <div className="mt-10 sm:mt-16 pt-6 sm:pt-8 border-t border-purple-100 dark:border-gray-700">
+        <h2 className="section-title text-center text-purple-700 dark:text-purple-300">
           Преимущества подписки
         </h2>
         <PremiumFeatures />
