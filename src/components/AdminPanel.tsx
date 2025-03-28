@@ -24,7 +24,19 @@ import {
   Lock,
   UserX,
   ShieldAlert,
-  Tag
+  Tag,
+  Users,
+  Settings,
+  UserCog,
+  AlertOctagon,
+  UserPlus,
+  Crown,
+  FileText,
+  ChartBar,
+  BarChart,
+  MessageSquare,
+  VolumeX,
+  Snowflake
 } from "lucide-react";
 import "../styles/admin.css";
 
@@ -248,7 +260,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
                 <span>Статистика</span>
               </TabsTrigger>
               <TabsTrigger value="support" className="flex items-center gap-1">
-                <MessageCircle size={16} />
+                <MessageSquare size={16} />
                 <span>Поддержка</span>
               </TabsTrigger>
             </TabsList>
@@ -299,13 +311,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
                                 ${user.profile.is_frozen ? 'border-l-4 border-blue-500' : ''}`}
                               onClick={() => handleSelectUser(user)}
                             >
-                              <Avatar className="h-10 w-10 mr-2 ring-2 ring-offset-2 ring-offset-background" 
-                                style={{
-                                  ringColor: user.profile.subscription_type === "admin" ? 'rgb(220, 38, 38)' : 
-                                    user.profile.subscription_type === "premium" ? 'rgb(234, 179, 8)' :
-                                    user.profile.subscription_type === "business" ? 'rgb(59, 130, 246)' :
-                                    user.profile.subscription_type === "sponsor" ? 'rgb(139, 92, 246)' : 'transparent'
-                                }}>
+                              <Avatar className="h-10 w-10 mr-2" style={{
+                                borderColor: user.profile.subscription_type === "admin" ? 'rgb(220, 38, 38)' : 
+                                  user.profile.subscription_type === "premium" ? 'rgb(234, 179, 8)' :
+                                  user.profile.subscription_type === "business" ? 'rgb(59, 130, 246)' :
+                                  user.profile.subscription_type === "sponsor" ? 'rgb(139, 92, 246)' : 'transparent',
+                                borderWidth: user.profile.subscription_type !== "free" ? '2px' : '0',
+                                borderStyle: 'solid'
+                              }}>
                                 <AvatarImage src={user.profile.avatar_url || ""} />
                                 <AvatarFallback className="bg-gradient-to-br from-purple-400 to-blue-500 text-white">
                                   {user.profile.username.substring(0, 2).toUpperCase()}
@@ -336,13 +349,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
                                   )}
                                   {user.profile.is_muted && (
                                     <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800 flex items-center gap-1">
-                                      <Volume2Off size={12} />
+                                      <VolumeX size={12} />
                                       <span>Мут</span>
                                     </Badge>
                                   )}
                                   {user.profile.is_frozen && (
                                     <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800 flex items-center gap-1">
-                                      <Snow size={12} />
+                                      <Snowflake size={12} />
                                       <span>Заморожен</span>
                                     </Badge>
                                   )}
@@ -381,13 +394,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
                       {selectedUser ? (
                         <div>
                           <div className="flex items-center mb-6">
-                            <Avatar className="h-16 w-16 mr-4 ring-2 ring-offset-2 ring-offset-background" 
-                              style={{
-                                ringColor: selectedUser.profile.subscription_type === "admin" ? 'rgb(220, 38, 38)' : 
-                                  selectedUser.profile.subscription_type === "premium" ? 'rgb(234, 179, 8)' :
-                                  selectedUser.profile.subscription_type === "business" ? 'rgb(59, 130, 246)' :
-                                  selectedUser.profile.subscription_type === "sponsor" ? 'rgb(139, 92, 246)' : 'transparent'
-                              }}>
+                            <Avatar className="h-16 w-16 mr-4" style={{
+                              borderColor: selectedUser.profile.subscription_type === "admin" ? 'rgb(220, 38, 38)' : 
+                                selectedUser.profile.subscription_type === "premium" ? 'rgb(234, 179, 8)' :
+                                selectedUser.profile.subscription_type === "business" ? 'rgb(59, 130, 246)' :
+                                selectedUser.profile.subscription_type === "sponsor" ? 'rgb(139, 92, 246)' : 'transparent',
+                              borderWidth: selectedUser.profile.subscription_type !== "free" ? '2px' : '0',
+                              borderStyle: 'solid'
+                            }}>
                               <AvatarImage src={selectedUser.profile.avatar_url || ""} />
                               <AvatarFallback className="bg-gradient-to-br from-purple-400 to-blue-500 text-white">
                                 {selectedUser.profile.username.substring(0, 2).toUpperCase()}
@@ -466,7 +480,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
                               
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                  <Volume2Off size={18} className="text-orange-500" />
+                                  <VolumeX size={18} className="text-orange-500" />
                                   <div>
                                     <Label htmlFor="mute-switch">Мут пользователя</Label>
                                     <p className="text-sm text-muted-foreground">Пользователь не сможет писать комментарии и создавать темы</p>
@@ -482,7 +496,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
                               
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                  <Snow size={18} className="text-blue-500" />
+                                  <Snowflake size={18} className="text-blue-500" />
                                   <div>
                                     <Label htmlFor="freeze-switch">Заморозить аккаунт</Label>
                                     <p className="text-sm text-muted-foreground">Аккаунт будет временно недоступен</p>
@@ -644,13 +658,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <MessageCircle size={16} className="text-purple-500" />
+                    <MessageSquare size={16} className="text-purple-500" />
                     <span>Сообщения поддержки</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-center py-8">
-                    <MessageCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
+                    <MessageSquare className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
                     <p className="text-muted-foreground">Функционал управления поддержкой находится в разработке</p>
                   </div>
                 </CardContent>
@@ -662,20 +676,5 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
     </Dialog>
   );
 };
-
-import { 
-  Users, 
-  MessageSquare, 
-  Settings,
-  Volume2Off,
-  Snow,
-  UserCog,
-  AlertOctagon,
-  UserPlus,
-  Crown,
-  FileText,
-  ChartBar,
-  BarChart
-} from "lucide-react";
 
 export default AdminPanel;
