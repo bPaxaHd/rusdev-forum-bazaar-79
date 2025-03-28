@@ -5,6 +5,9 @@ export interface UserProfile {
   avatar_url?: string | null;
   subscription_type?: string | null;
   user_tag?: string | null;
+  is_banned?: boolean;
+  is_muted?: boolean;
+  is_frozen?: boolean;
   bio?: string | null;
   location?: string | null;
   github_url?: string | null;

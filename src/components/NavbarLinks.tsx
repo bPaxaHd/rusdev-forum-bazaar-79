@@ -9,7 +9,7 @@ interface NavbarLinksProps {
 
 const NavbarLinks: React.FC<NavbarLinksProps> = ({ isMobile = false }) => {
   return (
-    <div className={`${isMobile ? 'flex flex-col space-y-2' : 'hidden md:flex items-center space-x-8'}`}>
+    <div className={`${isMobile ? 'flex flex-col space-y-2' : 'flex items-center justify-center space-x-8'}`}>
       <NavLink
         to="/"
         className={({ isActive }) =>

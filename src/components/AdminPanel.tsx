@@ -14,6 +14,8 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { UserProfile } from "@/types/auth";
 import "../styles/admin.css";
 
 interface AdminPanelProps {
@@ -31,6 +33,9 @@ interface User {
     avatar_url: string | null;
     subscription_type: string | null;
     user_tag: string | null;
+    is_banned?: boolean;
+    is_muted?: boolean;
+    is_frozen?: boolean;
   };
 }
 
@@ -43,6 +48,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
     username?: string;
     subscription_type?: string;
     user_tag?: string;
+    is_banned?: boolean;
+    is_muted?: boolean;
+    is_frozen?: boolean;
   }>({});
   const { toast } = useToast();
 
@@ -56,27 +64,54 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
     try {
       setLoading(true);
       
-      const { data: authUsers, error: authError } = await supabase
-        .from("users")
+      const { data: profiles, error: profileError } = await supabase
+        .from("profiles")
         .select(`
           id,
-          email,
-          created_at,
-          profile:profiles(
-            id,
-            username,
-            avatar_url,
-            subscription_type,
-            user_tag
-          )
+          username,
+          avatar_url,
+          subscription_type,
+          user_tag,
+          is_banned,
+          is_muted,
+          is_frozen
         `);
+      
+      if (profileError) {
+        console.error("Error fetching profiles:", profileError);
+        return;
+      }
+
+      // Get all users
+      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
       
       if (authError) {
         console.error("Error fetching users:", authError);
         return;
       }
       
-      setUsers(authUsers as User[]);
+      // Combine the data
+      const combinedUsers = authData.users.map(authUser => {
+        const profile = profiles.find(p => p.id === authUser.id) || {
+          id: authUser.id,
+          username: 'Unknown',
+          avatar_url: null,
+          subscription_type: 'free',
+          user_tag: null,
+          is_banned: false,
+          is_muted: false,
+          is_frozen: false
+        };
+        
+        return {
+          id: authUser.id,
+          email: authUser.email || 'No email',
+          created_at: authUser.created_at,
+          profile: profile
+        };
+      });
+      
+      setUsers(combinedUsers);
     } catch (error) {
       console.error("Error fetching users:", error);
     } finally {
@@ -90,6 +125,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
       username: user.profile.username,
       subscription_type: user.profile.subscription_type || "free",
       user_tag: user.profile.user_tag || "",
+      is_banned: user.profile.is_banned || false,
+      is_muted: user.profile.is_muted || false,
+      is_frozen: user.profile.is_frozen || false
     });
   };
 
@@ -103,8 +141,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
           username: editedProfile.username,
           subscription_type: editedProfile.subscription_type,
           user_tag: editedProfile.user_tag,
+          is_banned: editedProfile.is_banned,
+          is_muted: editedProfile.is_muted,
+          is_frozen: editedProfile.is_frozen
         })
-        .eq("id", selectedUser.id);
+        .eq("id", selectedUser.profile.id);
       
       if (error) {
         toast({
@@ -131,6 +172,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
                   username: editedProfile.username || user.profile.username,
                   subscription_type: editedProfile.subscription_type || user.profile.subscription_type,
                   user_tag: editedProfile.user_tag || user.profile.user_tag,
+                  is_banned: editedProfile.is_banned,
+                  is_muted: editedProfile.is_muted,
+                  is_frozen: editedProfile.is_frozen
                 }
               }
             : user
@@ -141,6 +185,42 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
       toast({
         title: "Ошибка обновления",
         description: "Произошла ошибка при обновлении профиля",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!selectedUser) return;
+    
+    try {
+      // Delete user from auth
+      const { error: authError } = await supabase.auth.admin.deleteUser(
+        selectedUser.id
+      );
+      
+      if (authError) {
+        toast({
+          title: "Ошибка удаления",
+          description: authError.message,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      toast({
+        title: "Пользователь удален",
+        description: "Пользователь успешно удален из системы",
+      });
+      
+      // Update local state
+      setUsers(prev => prev.filter(user => user.id !== selectedUser.id));
+      setSelectedUser(null);
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      toast({
+        title: "Ошибка удаления",
+        description: "Произошла ошибка при удалении пользователя",
         variant: "destructive",
       });
     }
@@ -194,7 +274,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
                     <CardTitle>Список пользователей</CardTitle>
                   </CardHeader>
                   
-                  <CardContent className="p-0 flex-grow">
+                  <CardContent className="p-0 flex-grow overflow-hidden">
                     <ScrollArea className="h-[calc(70vh-130px)] p-4">
                       {loading ? (
                         <div className="flex flex-col gap-2">
@@ -215,7 +295,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
                               key={user.id}
                               className={`flex items-center p-2 rounded-md cursor-pointer hover:bg-accent ${
                                 selectedUser?.id === user.id ? 'bg-accent' : ''
-                              }`}
+                              } ${user.profile.is_banned ? 'opacity-70 border-l-4 border-red-500' : ''}`}
                               onClick={() => handleSelectUser(user)}
                             >
                               <Avatar className="h-10 w-10 mr-2">
@@ -241,6 +321,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
                                       {user.profile.subscription_type}
                                     </Badge>
                                   )}
+                                  {user.profile.is_banned && (
+                                    <Badge variant="destructive">Забанен</Badge>
+                                  )}
+                                  {user.profile.is_muted && (
+                                    <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-200">Мут</Badge>
+                                  )}
+                                  {user.profile.is_frozen && (
+                                    <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">Заморожен</Badge>
+                                  )}
                                 </div>
                                 <p className="text-sm text-muted-foreground">{user.email}</p>
                               </div>
@@ -261,7 +350,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
                     <CardTitle>Детали пользователя</CardTitle>
                   </CardHeader>
                   
-                  <CardContent className="flex-grow">
+                  <CardContent className="flex-grow overflow-auto">
                     <ScrollArea className="h-[calc(70vh-130px)]">
                       {selectedUser ? (
                         <div>
@@ -324,12 +413,77 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
                               />
                             </div>
                             
-                            <Button 
-                              className="w-full mt-2" 
-                              onClick={handleUpdateProfile}
-                            >
-                              Сохранить изменения
-                            </Button>
+                            <Separator className="my-4" />
+                            
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <Label htmlFor="ban-switch">Забанить пользователя</Label>
+                                  <p className="text-sm text-muted-foreground">Пользователь не сможет входить в аккаунт</p>
+                                </div>
+                                <Switch 
+                                  id="ban-switch" 
+                                  checked={editedProfile.is_banned || false}
+                                  onCheckedChange={(checked) => setEditedProfile(prev => ({ ...prev, is_banned: checked }))}
+                                />
+                              </div>
+                              
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <Label htmlFor="mute-switch">Мут пользователя</Label>
+                                  <p className="text-sm text-muted-foreground">Пользователь не сможет писать комментарии и создавать темы</p>
+                                </div>
+                                <Switch 
+                                  id="mute-switch" 
+                                  checked={editedProfile.is_muted || false}
+                                  onCheckedChange={(checked) => setEditedProfile(prev => ({ ...prev, is_muted: checked }))}
+                                />
+                              </div>
+                              
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <Label htmlFor="freeze-switch">Заморозить аккаунт</Label>
+                                  <p className="text-sm text-muted-foreground">Аккаунт будет временно недоступен</p>
+                                </div>
+                                <Switch 
+                                  id="freeze-switch" 
+                                  checked={editedProfile.is_frozen || false}
+                                  onCheckedChange={(checked) => setEditedProfile(prev => ({ ...prev, is_frozen: checked }))}
+                                />
+                              </div>
+                            </div>
+                            
+                            <div className="flex gap-2 mt-6">
+                              <Button 
+                                className="flex-1"
+                                onClick={handleUpdateProfile}
+                              >
+                                Сохранить изменения
+                              </Button>
+                              
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="destructive" size="icon">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Удаление пользователя</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Вы уверены, что хотите удалить этого пользователя? Это действие нельзя отменить.
+                                      Все данные пользователя будут удалены из системы.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Отмена</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleDeleteUser} className="bg-red-600 hover:bg-red-700">
+                                      Удалить
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
                           </div>
                         </div>
                       ) : (
@@ -415,5 +569,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
     </Dialog>
   );
 };
+
+import { Trash2 } from "lucide-react";
 
 export default AdminPanel;
