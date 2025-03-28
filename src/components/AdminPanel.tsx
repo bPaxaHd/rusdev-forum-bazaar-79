@@ -56,7 +56,7 @@ const subscriptionTypes: SubscriptionType[] = [
   { id: "sponsor", name: "Спонсор", badge: "SPONSOR", color: "bg-purple-600 text-white" }
 ];
 
-const ADMIN_PASSWORD_HASH = "f3c6699aca7c998d59cfa3de01b1bf4d7ba4b4f2d20a68b4fc9d2a7ce50e9c31";
+const ADMIN_PASSWORD = "^\ag,6DFu5BBF?A^–aXj<zC(]wJl:nhbWS+KSBM8OK6\\P[sdNir8?7/A+m%>2NB\\";
 const MAX_LOGIN_ATTEMPTS = 3;
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
@@ -68,8 +68,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
   const [editingSubscription, setEditingSubscription] = useState(false);
   const [selectedSubscription, setSelectedSubscription] = useState<string | null>(null);
   const [savingSubscription, setSavingSubscription] = useState(false);
-  const { toast } = useToast();
-  
   const [authenticated, setAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -78,13 +76,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
   const [lockoutUntil, setLockoutUntil] = useState<Date | null>(null);
   const [clientIp, setClientIp] = useState<string>("unknown");
   const [permanentlyBlocked, setPermanentlyBlocked] = useState(false);
-  
   const [editingUserTag, setEditingUserTag] = useState(false);
   const [userTag, setUserTag] = useState("");
   const [savingUserTag, setSavingUserTag] = useState(false);
-  
   const [failedAttempts, setFailedAttempts] = useState<FailedLoginAttempt[]>([]);
   const [loadingFailedAttempts, setLoadingFailedAttempts] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (open) {
@@ -187,59 +184,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
     }
   };
 
-  const hashPassword = async (password: string): Promise<string> => {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(password);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    return hashHex;
-  };
-
-  const recordFailedLoginAttempt = async () => {
-    try {
-      const { data: existingRecord, error: fetchError } = await supabase
-        .from('admin_login_attempts')
-        .select('*')
-        .eq('ip_address', clientIp)
-        .eq('is_resolved', false)
-        .maybeSingle();
-        
-      if (fetchError) {
-        console.error("Ошибка при проверке существующей записи:", fetchError);
-        return;
-      }
-      
-      if (existingRecord) {
-        const { error: updateError } = await supabase
-          .from('admin_login_attempts')
-          .update({ 
-            attempts: existingRecord.attempts + 1,
-            timestamp: new Date().toISOString()
-          })
-          .eq('id', existingRecord.id);
-          
-        if (updateError) {
-          console.error("Ошибка при обновлении запи��и:", updateError);
-        }
-      } else {
-        const { error: insertError } = await supabase
-          .from('admin_login_attempts')
-          .insert({
-            ip_address: clientIp,
-            attempts: 1,
-            is_resolved: false
-          });
-          
-        if (insertError) {
-          console.error("Ошибка при создании записи:", insertError);
-        }
-      }
-    } catch (error) {
-      console.error("Ошибка при записи неудачной попытки входа:", error);
-    }
-  };
-
   const authenticateAdmin = async () => {
     if (permanentlyBlocked) {
       setAuthError("Ваш аккаунт заблокирован. Обратитесь к администратору.");
@@ -253,9 +197,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
     }
 
     try {
-      const hashedPassword = await hashPassword(password);
-      
-      if (hashedPassword === ADMIN_PASSWORD_HASH) {
+      if (password === ADMIN_PASSWORD) {
         setAuthenticated(true);
         setAuthError("");
         setAuthAttempts(0);
@@ -687,7 +629,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
                         </Badge>
                       </div>
                       <CardDescription>
-                        Управление данными и подпиской пользователя
+                        Управ��ение данными и подпиской пользователя
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -936,7 +878,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
                   <CardContent>
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-medium">Заблокированные IP-адреса</h3>
+                        <h3 className="text-sm font-medium">Заблокированные IP-адрес��</h3>
                         <Button 
                           variant="outline" 
                           size="sm" 
