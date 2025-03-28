@@ -81,6 +81,15 @@ const Navbar = () => {
     // Always show the password dialog first, never directly open the admin panel
     setShowAdminLogin(true);
   };
+  
+  // When admin panel is closed, reset state
+  const handleAdminPanelOpenChange = (open: boolean) => {
+    setShowAdminPanel(open);
+    // If panel is closed, we should require password again next time
+    if (!open) {
+      setAdminPassword("");
+    }
+  };
 
   return <header className={`sticky top-0 z-50 w-full border-b bg-background/90 backdrop-blur transition-shadow duration-200 ${isScrolled ? "shadow-sm" : ""}`}>
       <div className="container flex h-16 items-center">
@@ -184,7 +193,7 @@ const Navbar = () => {
       </Dialog>
       
       {/* Admin Panel Component */}
-      <AdminPanel open={showAdminPanel} onOpenChange={setShowAdminPanel} />
+      <AdminPanel open={showAdminPanel} onOpenChange={handleAdminPanelOpenChange} />
     </header>;
 };
 
