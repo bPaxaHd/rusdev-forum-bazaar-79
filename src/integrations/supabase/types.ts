@@ -339,6 +339,27 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -352,6 +373,13 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      can_modify_content: {
+        Args: {
+          content_user_id: string
+          current_user_id: string
+        }
+        Returns: boolean
+      }
       create_admins_if_not_exists: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -364,9 +392,16 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      has_role: {
+        Args: {
+          user_id: string
+          required_role: Database["public"]["Enums"]["user_role"]
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      user_role: "user" | "moderator" | "admin" | "creator"
     }
     CompositeTypes: {
       [_ in never]: never

@@ -11,8 +11,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   Heart, MessageCircle, Share, BookmarkPlus, ChevronLeft, 
-  Send, ThumbsUp, Loader2, Crown, Star, Diamond
+  Send, ThumbsUp, Loader2, Crown, Star, Diamond, Pencil, Trash2
 } from "lucide-react";
+import EditCommentDialog from "@/components/EditCommentDialog";
+import EditTopicDialog from "@/components/EditTopicDialog";
+import { deleteComment, deleteTopic } from "@/utils/db-helpers";
+import { canModifyContent } from "@/utils/auth-helpers";
 
 interface TopicData {
   id: string;
@@ -58,7 +62,11 @@ const TopicView = () => {
   const [likesCount, setLikesCount] = useState(0);
   const [likedComments, setLikedComments] = useState<Record<string, boolean>>({});
   const [viewIncrementDone, setViewIncrementDone] = useState(false);
-  
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [showEditTopicDialog, setShowEditTopicDialog] = useState(false);
+  const [canModifyTopic, setCanModifyTopic] = useState(false);
+  const [canModifyComments, setCanModifyComments] = useState<Record<string, boolean>>({});
+
   useEffect(() => {
     if (user && topic) {
       const checkTopicLike = async () => {
@@ -94,6 +102,30 @@ const TopicView = () => {
       };
       
       checkCommentLikes();
+    }
+  }, [user, comments]);
+  
+  useEffect(() => {
+    if (user && topic) {
+      canModifyContent(topic.user_id, user.id).then(canModify => {
+        setCanModifyTopic(canModify);
+      });
+    }
+  }, [user, topic]);
+  
+  useEffect(() => {
+    if (user && comments.length > 0) {
+      const checkCommentPermissions = async () => {
+        const permissions: Record<string, boolean> = {};
+        
+        for (const comment of comments) {
+          permissions[comment.id] = await canModifyContent(comment.user_id, user.id);
+        }
+        
+        setCanModifyComments(permissions);
+      };
+      
+      checkCommentPermissions();
     }
   }, [user, comments]);
   
@@ -479,6 +511,123 @@ const TopicView = () => {
     navigate(`/profile/${userId}`);
   };
 
+  const handleDeleteTopic = async () => {
+    if (!user || !topic) return;
+    
+    if (window.confirm("Вы уверены, что хотите удалить эту тему? Это действие нельзя отменить.")) {
+      try {
+        const result = await deleteTopic(id as string, user.id);
+        
+        if (result.success) {
+          toast({
+            title: "Успешно",
+            description: result.message
+          });
+          navigate("/forum");
+        } else {
+          toast({
+            title: "Ошибка",
+            description: result.message,
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("Error deleting topic:", error);
+        toast({
+          title: "Ошибка",
+          description: "Произошла ошибка при удалении темы",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!user) return;
+    
+    if (window.confirm("Вы уверены, что хотите удалить этот комментарий? Это действие нельзя отменить.")) {
+      try {
+        const result = await deleteComment(commentId, user.id);
+        
+        if (result.success) {
+          toast({
+            title: "Успешно",
+            description: result.message
+          });
+          
+          setComments(comments.filter(comment => comment.id !== commentId));
+        } else {
+          toast({
+            title: "Ошибка",
+            description: result.message,
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("Error deleting comment:", error);
+        toast({
+          title: "Ошибка",
+          description: "Произошла ошибка при удалении комментария",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const refreshTopic = async () => {
+    if (!id) return;
+    
+    try {
+      const { data } = await supabase
+        .from("topics")
+        .select(`
+          id, 
+          title, 
+          content, 
+          user_id, 
+          category, 
+          created_at, 
+          updated_at, 
+          likes, 
+          views,
+          profiles:profiles!topics_user_id_fkey(username, avatar_url, subscription_type)
+        `)
+        .eq("id", id)
+        .single();
+        
+      if (data) {
+        setTopic(data as TopicData);
+      }
+    } catch (error) {
+      console.error("Error refreshing topic:", error);
+    }
+  };
+
+  const refreshComments = async () => {
+    if (!id) return;
+    
+    try {
+      const { data } = await supabase
+        .from("comments")
+        .select(`
+          id,
+          content,
+          user_id,
+          created_at,
+          likes,
+          profiles:profiles!comments_user_id_fkey(username, avatar_url, subscription_type)
+        `)
+        .eq("topic_id", id)
+        .order("created_at", { ascending: true });
+        
+      if (data) {
+        setComments(data as CommentData[]);
+      }
+    } catch (error) {
+      console.error("Error refreshing comments:", error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="container max-w-4xl mx-auto py-20 flex justify-center items-center">
@@ -680,7 +829,7 @@ const TopicView = () => {
                           {comment.content}
                         </div>
                         
-                        <div className="mt-4 flex items-center gap-4">
+                        <div className="mt-4 flex items-center justify-between">
                           <Button 
                             variant="ghost" 
                             size="sm" 
@@ -690,6 +839,29 @@ const TopicView = () => {
                             <ThumbsUp size={14} className={likedComments[comment.id] ? "fill-primary" : ""} />
                             <span>{comment.likes || 0}</span>
                           </Button>
+
+                          {canModifyComments[comment.id] && (
+                            <div className="flex gap-2">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => setEditingCommentId(comment.id)}
+                                className="flex items-center gap-1"
+                              >
+                                <Pencil size={14} />
+                                <span>Изменить</span>
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => handleDeleteComment(comment.id)}
+                                className="flex items-center gap-1 text-destructive hover:text-destructive"
+                              >
+                                <Trash2 size={14} />
+                                <span>Удалить</span>
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -747,6 +919,34 @@ const TopicView = () => {
           )}
         </Card>
       </div>
+
+      {editingCommentId && user && (
+        <EditCommentDialog
+          commentId={editingCommentId}
+          userId={user.id}
+          initialContent={comments.find(c => c.id === editingCommentId)?.content || ""}
+          open={!!editingCommentId}
+          onOpenChange={(open) => {
+            if (!open) setEditingCommentId(null);
+          }}
+          onCommentUpdated={refreshComments}
+        />
+      )}
+
+      {topic && user && (
+        <EditTopicDialog
+          topicId={topic.id}
+          userId={user.id}
+          initialData={{
+            title: topic.title,
+            content: topic.content,
+            category: topic.category
+          }}
+          open={showEditTopicDialog}
+          onOpenChange={setShowEditTopicDialog}
+          onTopicUpdated={refreshTopic}
+        />
+      )}
     </div>
   );
 };

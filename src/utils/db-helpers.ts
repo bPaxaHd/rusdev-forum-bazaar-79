@@ -278,3 +278,273 @@ export const getUserSupportDialog = async (userId: string): Promise<SupportMessa
     return [];
   }
 };
+
+// Интерфейс для темы форума
+export interface Topic {
+  id: string;
+  title: string;
+  content: string;
+  user_id: string;
+  category: string;
+  created_at: string;
+  updated_at: string;
+  likes: number;
+  views: number;
+}
+
+// Интерфейс для комментария
+export interface Comment {
+  id: string;
+  topic_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  likes: number;
+}
+
+// Удаление темы
+export const deleteTopic = async (topicId: string, userId: string): Promise<{ success: boolean; message: string }> => {
+  try {
+    // Проверяем право на удаление темы
+    const { data: topic } = await supabase
+      .from("topics")
+      .select("user_id")
+      .eq("id", topicId)
+      .single();
+      
+    if (!topic) {
+      return { success: false, message: "Тема не найдена" };
+    }
+    
+    const { error } = await supabase
+      .from("topics")
+      .delete()
+      .eq("id", topicId);
+      
+    if (error) {
+      console.error("Error deleting topic:", error);
+      
+      if (error.code === "42501") {
+        return { success: false, message: "У вас нет прав на удаление этой темы" };
+      }
+      
+      return { success: false, message: "Не удалось удалить тему" };
+    }
+    
+    return { success: true, message: "Тема успешно удалена" };
+  } catch (error) {
+    console.error("Error deleting topic:", error);
+    return { success: false, message: "Произошла ошибка при удалении темы" };
+  }
+};
+
+// Обновление темы
+export const updateTopic = async (
+  topicId: string, 
+  userId: string, 
+  data: { title?: string; content?: string; category?: string }
+): Promise<{ success: boolean; message: string }> => {
+  try {
+    // Проверяем право на редактирование темы
+    const { data: topic } = await supabase
+      .from("topics")
+      .select("user_id")
+      .eq("id", topicId)
+      .single();
+      
+    if (!topic) {
+      return { success: false, message: "Тема не найдена" };
+    }
+    
+    const { error } = await supabase
+      .from("topics")
+      .update({
+        ...data,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", topicId);
+      
+    if (error) {
+      console.error("Error updating topic:", error);
+      
+      if (error.code === "42501") {
+        return { success: false, message: "У вас нет прав на редактирование этой темы" };
+      }
+      
+      return { success: false, message: "Не удалось обновить тему" };
+    }
+    
+    return { success: true, message: "Тема успешно обновлена" };
+  } catch (error) {
+    console.error("Error updating topic:", error);
+    return { success: false, message: "Произошла ошибка при обновлении темы" };
+  }
+};
+
+// Удаление комментария
+export const deleteComment = async (commentId: string, userId: string): Promise<{ success: boolean; message: string }> => {
+  try {
+    // Проверяем право на удаление комментария
+    const { data: comment } = await supabase
+      .from("comments")
+      .select("user_id")
+      .eq("id", commentId)
+      .single();
+      
+    if (!comment) {
+      return { success: false, message: "Комментарий не найден" };
+    }
+    
+    const { error } = await supabase
+      .from("comments")
+      .delete()
+      .eq("id", commentId);
+      
+    if (error) {
+      console.error("Error deleting comment:", error);
+      
+      if (error.code === "42501") {
+        return { success: false, message: "У вас нет прав на удаление этого комментария" };
+      }
+      
+      return { success: false, message: "Не удалось удалить комментарий" };
+    }
+    
+    return { success: true, message: "Комментарий успешно удален" };
+  } catch (error) {
+    console.error("Error deleting comment:", error);
+    return { success: false, message: "Произошла ошибка при удалении комментария" };
+  }
+};
+
+// Обновление комментария
+export const updateComment = async (
+  commentId: string, 
+  userId: string, 
+  content: string
+): Promise<{ success: boolean; message: string }> => {
+  try {
+    // Проверяем право на редактирование комментария
+    const { data: comment } = await supabase
+      .from("comments")
+      .select("user_id")
+      .eq("id", commentId)
+      .single();
+      
+    if (!comment) {
+      return { success: false, message: "Комментарий не найден" };
+    }
+    
+    const { error } = await supabase
+      .from("comments")
+      .update({
+        content,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", commentId);
+      
+    if (error) {
+      console.error("Error updating comment:", error);
+      
+      if (error.code === "42501") {
+        return { success: false, message: "У вас нет прав на редактирование этого комментария" };
+      }
+      
+      return { success: false, message: "Не удалось обновить комментарий" };
+    }
+    
+    return { success: true, message: "Комментарий успешно обновлен" };
+  } catch (error) {
+    console.error("Error updating comment:", error);
+    return { success: false, message: "Произошла ошибка при обновлении комментария" };
+  }
+};
+
+// Удаление вакансии
+export const deleteJobListing = async (jobId: string, userId: string): Promise<{ success: boolean; message: string }> => {
+  try {
+    // Проверяем право на удаление вакансии
+    const { data: job } = await supabase
+      .from("job_listings")
+      .select("user_id")
+      .eq("id", jobId)
+      .single();
+      
+    if (!job) {
+      return { success: false, message: "Вакансия не найдена" };
+    }
+    
+    const { error } = await supabase
+      .from("job_listings")
+      .delete()
+      .eq("id", jobId);
+      
+    if (error) {
+      console.error("Error deleting job listing:", error);
+      
+      if (error.code === "42501") {
+        return { success: false, message: "У вас нет прав на удаление этой вакансии" };
+      }
+      
+      return { success: false, message: "Не удалось удалить вакансию" };
+    }
+    
+    return { success: true, message: "Вакансия успешно удалена" };
+  } catch (error) {
+    console.error("Error deleting job listing:", error);
+    return { success: false, message: "Произошла ошибка при удалении вакансии" };
+  }
+};
+
+// Обновление вакансии
+export const updateJobListing = async (
+  jobId: string, 
+  userId: string, 
+  data: Partial<{
+    company_name: string;
+    title: string;
+    location: string;
+    type: string;
+    salary: string;
+    description: string;
+    logo_url: string;
+    requirements: string[];
+  }>
+): Promise<{ success: boolean; message: string }> => {
+  try {
+    // Проверяем право на редактирование вакансии
+    const { data: job } = await supabase
+      .from("job_listings")
+      .select("user_id")
+      .eq("id", jobId)
+      .single();
+      
+    if (!job) {
+      return { success: false, message: "Вакансия не найдена" };
+    }
+    
+    const { error } = await supabase
+      .from("job_listings")
+      .update({
+        ...data,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", jobId);
+      
+    if (error) {
+      console.error("Error updating job listing:", error);
+      
+      if (error.code === "42501") {
+        return { success: false, message: "У вас нет прав на редактирование этой вакансии" };
+      }
+      
+      return { success: false, message: "Не удалось обновить вакансию" };
+    }
+    
+    return { success: true, message: "Вакансия успешно обновлена" };
+  } catch (error) {
+    console.error("Error updating job listing:", error);
+    return { success: false, message: "Произошла ошибка при обновлении вакансии" };
+  }
+};
