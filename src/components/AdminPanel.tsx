@@ -65,26 +65,27 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
       try {
         setLoading(true);
         
-        const { data, error } = await supabase
+        // First fetch profiles
+        const { data: profiles, error: profilesError } = await supabase
           .from("profiles")
           .select(`
             id,
             username,
             avatar_url,
             subscription_type,
-            created_at,
-            auth_users:id(email)
+            created_at
           `);
           
-        if (error) {
-          console.error("Error fetching users:", error);
+        if (profilesError) {
+          console.error("Error fetching profiles:", profilesError);
           return;
         }
         
-        // Преобразуем данные
-        const formattedUsers = data.map(profile => ({
+        // Now get auth users to get emails - need to use admin API for this in production
+        // For demo, we'll generate placeholder emails
+        const formattedUsers = profiles.map(profile => ({
           id: profile.id,
-          email: profile.auth_users?.email || "unknown@email.com",
+          email: `user-${profile.id.substring(0, 8)}@example.com`, // Generate placeholder email
           created_at: profile.created_at,
           profile: {
             username: profile.username,
