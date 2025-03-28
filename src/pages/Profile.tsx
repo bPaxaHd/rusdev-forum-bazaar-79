@@ -338,9 +338,10 @@ const Profile = () => {
                       {profile?.subscription_type && profile?.subscription_type !== "free" && (
                         <Badge 
                           className={
-                            profile.subscription_type === "premium" ? "bg-yellow-500 text-black mt-2" : 
-                            profile.subscription_type === "business" ? "bg-blue-600 text-white mt-2" : 
-                            profile.subscription_type === "sponsor" ? "bg-purple-600 text-white mt-2" : 
+                            profile.subscription_type === "premium" ? "bg-yellow-500 text-black mt-2 shadow-md hover:bg-yellow-400 transition-colors" : 
+                            profile.subscription_type === "business" ? "bg-blue-600 text-white mt-2 shadow-md hover:bg-blue-500 transition-colors" : 
+                            profile.subscription_type === "sponsor" ? "bg-purple-600 text-white mt-2 shadow-md hover:bg-purple-500 transition-colors" : 
+                            profile.subscription_type === "admin" ? "bg-red-600 text-white mt-2 shadow-md hover:bg-red-500 transition-colors animate-pulse-glow" : 
                             "mt-2"
                           }
                         >

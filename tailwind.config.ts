@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -119,6 +118,14 @@ export default {
 						opacity: '0.8',
 						filter: 'brightness(1.2) drop-shadow(0 0 8px rgba(59, 130, 246, 0.8))'
 					}
+				},
+				'admin-glow': {
+					'0%, 100%': { 
+						boxShadow: '0 0 0px rgba(239, 68, 68, 0.5)'
+					},
+					'50%': { 
+						boxShadow: '0 0 10px rgba(239, 68, 68, 0.8)'
+					}
 				}
 			},
 			animation: {
@@ -132,7 +139,8 @@ export default {
 				'scale-out': 'scale-out 0.3s ease-out',
 				'blur-in': 'blur-in 0.4s ease-out',
 				'blur-out': 'blur-out 0.4s ease-out',
-				'pulse-glow': 'pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+				'pulse-glow': 'pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+				'admin-glow': 'admin-glow 2s ease-in-out infinite'
 			}
 		}
 	},

@@ -226,6 +226,38 @@
   .responsive-card {
     @apply w-full h-full transition-all duration-200 hover:shadow-md;
   }
+
+  /* Subscription badges */
+  .badge-premium {
+    @apply bg-yellow-500 text-black shadow-md hover:bg-yellow-400 transition-colors;
+  }
+  
+  .badge-business {
+    @apply bg-blue-600 text-white shadow-md hover:bg-blue-500 transition-colors;
+  }
+  
+  .badge-sponsor {
+    @apply bg-purple-600 text-white shadow-md hover:bg-purple-500 transition-colors;
+  }
+  
+  .badge-admin {
+    @apply bg-red-600 text-white shadow-md hover:bg-red-500 transition-colors animate-admin-glow;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .badge-admin::before {
+    content: '';
+    @apply absolute inset-0 bg-white opacity-10;
+    transform: translateX(-100%);
+    animation: shimmer 2s infinite;
+  }
+  
+  @keyframes shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
 }
 
 @layer utilities {
