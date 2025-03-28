@@ -13,6 +13,7 @@ export interface UserProfile {
   company?: string | null;
   skills?: string[] | null;
   experience_years?: number | null;
+  specialty?: string | null;
   created_at: string;
   updated_at: string;
 }
