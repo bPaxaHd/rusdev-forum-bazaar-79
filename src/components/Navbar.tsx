@@ -50,6 +50,7 @@ const Navbar = () => {
 
   return <header className={`sticky top-0 z-50 w-full border-b bg-background/90 backdrop-blur transition-shadow duration-200 ${isScrolled ? "shadow-sm" : ""}`}>
       <div className="container flex h-14 sm:h-16 items-center px-2 sm:px-4">
+        {/* Кнопка мобильного меню - оставляем */}
         <Sheet>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="mr-1 sm:mr-2 md:hidden" aria-label="Toggle Menu">
@@ -65,19 +66,21 @@ const Navbar = () => {
           </SheetContent>
         </Sheet>
 
+        {/* Логотип - оставляем */}
         <Link to="/" className="mr-2 sm:mr-6 flex items-center gap-1 sm:gap-2">
           <Logo />
         </Link>
 
-        {/* Center the navbar links */}
-        <div className="flex-1 flex justify-center">
+        {/* Центральные ссылки - скрываем на мобильных устройствах */}
+        <div className="flex-1 hidden md:flex justify-center">
           <NavbarLinks />
         </div>
 
         <div className="flex items-center space-x-1 sm:space-x-2 ml-auto">
+          {/* Поиск - скрываем на мобильных устройствах */}
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="icon" className="mx-1">
+              <Button variant="ghost" size="icon" className="mx-1 hidden md:flex">
                 <Search className="h-5 w-5" />
                 <span className="sr-only">Поиск</span>
               </Button>
@@ -92,18 +95,19 @@ const Navbar = () => {
             </PopoverContent>
           </Popover>
           
-          <Button variant="ghost" size="icon" onClick={toggleTheme} className="mx-1">
+          {/* Кнопка темной темы - скрываем на мобильных устройствах */}
+          <Button variant="ghost" size="icon" onClick={toggleTheme} className="mx-1 hidden md:flex">
             {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             <span className="sr-only">Переключить тему</span>
           </Button>
           
-          {/* Admin Panel Button (only shows if user has admin/creator role) */}
+          {/* Кнопка админ-панели - отображаем только для админов, но скрываем на мобильных */}
           {canAccessAdmin && (
             <Button 
               variant="ghost" 
               size="icon" 
               onClick={() => setShowAdminPanel(true)} 
-              className="mx-1"
+              className="mx-1 hidden md:flex"
               title="Панель администратора"
             >
               <ShieldAlert className="h-5 w-5 text-purple-500" />
@@ -111,11 +115,12 @@ const Navbar = () => {
             </Button>
           )}
 
+          {/* Меню пользователя - оставляем */}
           <NavbarUserMenu />
         </div>
       </div>
       
-      {/* Admin Panel Component */}
+      {/* Админ-панель */}
       <AdminPanel 
         open={showAdminPanel} 
         onOpenChange={setShowAdminPanel}
