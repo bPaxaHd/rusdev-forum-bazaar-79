@@ -1,12 +1,55 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import SupportChat from "@/components/SupportChat";
+
 type BillingPeriod = "monthly" | "yearly";
+
 const PremiumDesktop = () => {
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("monthly");
+  const [showChat, setShowChat] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const { toast } = useToast();
+
+  // Fetch user profile when component mounts
+  React.useEffect(() => {
+    const fetchUserProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        const { data } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .single();
+          
+        setUserProfile(data);
+      }
+    };
+    
+    fetchUserProfile();
+  }, []);
+
+  const handleChatClick = () => {
+    if (!userProfile) {
+      toast({
+        title: "Необходима авторизация",
+        description: "Пожалуйста, войдите в аккаунт, чтобы использовать чат поддержки",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setShowChat(true);
+  };
+
   return <div className="space-y-8">
       <div className="flex justify-center mb-8">
         <RadioGroup className="flex items-center bg-card border rounded-lg p-1 gap-1" defaultValue={billingPeriod} onValueChange={value => setBillingPeriod(value as BillingPeriod)}>
@@ -31,7 +74,7 @@ const PremiumDesktop = () => {
           </CardHeader>
           <CardContent>
             <div className="text-4xl font-bold mb-6">
-              $0 <span className="text-base font-normal text-muted-foreground">/мес</span>
+              ₽0 <span className="text-base font-normal text-muted-foreground">/мес</span>
             </div>
             <ul className="space-y-2 mb-6">
               <li className="flex items-start">
@@ -65,7 +108,7 @@ const PremiumDesktop = () => {
           </CardHeader>
           <CardContent>
             <div className="text-4xl font-bold mb-6">
-              ${billingPeriod === "monthly" ? "9.99" : "7.99"} <span className="text-base font-normal text-muted-foreground">/мес</span>
+              ₽{billingPeriod === "monthly" ? "899" : "699"} <span className="text-base font-normal text-muted-foreground">/мес</span>
             </div>
             <ul className="space-y-2 mb-6">
               <li className="flex items-start">
@@ -91,7 +134,7 @@ const PremiumDesktop = () => {
             </ul>
           </CardContent>
           <CardFooter>
-            <Button className="w-full">Купить</Button>
+            <Button className="w-full" onClick={handleChatClick}>Купить</Button>
           </CardFooter>
         </Card>
 
@@ -102,7 +145,7 @@ const PremiumDesktop = () => {
           </CardHeader>
           <CardContent>
             <div className="text-4xl font-bold mb-6">
-              ${billingPeriod === "monthly" ? "29.99" : "23.99"} <span className="text-base font-normal text-muted-foreground">/мес</span>
+              ₽{billingPeriod === "monthly" ? "2499" : "1999"} <span className="text-base font-normal text-muted-foreground">/мес</span>
             </div>
             <ul className="space-y-2 mb-6">
               <li className="flex items-start">
@@ -128,7 +171,7 @@ const PremiumDesktop = () => {
             </ul>
           </CardContent>
           <CardFooter>
-            <Button className="w-full">Купить</Button>
+            <Button className="w-full" onClick={handleChatClick}>Купить</Button>
           </CardFooter>
         </Card>
 
@@ -139,7 +182,7 @@ const PremiumDesktop = () => {
           </CardHeader>
           <CardContent>
             <div className="text-4xl font-bold mb-6">
-              ${billingPeriod === "monthly" ? "99.99" : "79.99"} <span className="text-base font-normal text-muted-foreground">/мес</span>
+              ₽{billingPeriod === "monthly" ? "9999" : "7999"} <span className="text-base font-normal text-muted-foreground">/мес</span>
             </div>
             <ul className="space-y-2 mb-6">
               <li className="flex items-start">
@@ -169,11 +212,21 @@ const PremiumDesktop = () => {
             </ul>
           </CardContent>
           <CardFooter>
-            <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600">Купить</Button>
+            <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600" onClick={handleChatClick}>Купить</Button>
           </CardFooter>
         </Card>
       </div>
+      
+      {showChat && userProfile && (
+        <Dialog open={showChat} onOpenChange={setShowChat}>
+          <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-md">
+            <SupportChat userId={userProfile.id} onClose={() => setShowChat(false)} />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>;
 };
+
 import { Check as CheckIcon } from "lucide-react";
+
 export default PremiumDesktop;
