@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,47 +8,43 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import SupportChat from "@/components/SupportChat";
-
 type BillingPeriod = "monthly" | "yearly";
-
 const PremiumDesktop = () => {
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("monthly");
   const [showChat, setShowChat] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
 
   // Fetch user profile when component mounts
   React.useEffect(() => {
     const fetchUserProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (user) {
-        const { data } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .single();
-          
+        const {
+          data
+        } = await supabase.from("profiles").select("*").eq("id", user.id).single();
         setUserProfile(data);
       }
     };
-    
     fetchUserProfile();
   }, []);
-
   const handleChatClick = () => {
     if (!userProfile) {
       toast({
         title: "Необходима авторизация",
         description: "Пожалуйста, войдите в аккаунт, чтобы использовать чат поддержки",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-    
     setShowChat(true);
   };
-
   return <div className="space-y-8">
       <div className="flex justify-center mb-8">
         <RadioGroup className="flex items-center bg-card border rounded-lg p-1 gap-1" defaultValue={billingPeriod} onValueChange={value => setBillingPeriod(value as BillingPeriod)}>
@@ -154,7 +149,7 @@ const PremiumDesktop = () => {
               </li>
               <li className="flex items-start">
                 <CheckIcon className="mr-2 h-5 w-5 text-green-500" />
-                <span>До 5 аккаунтов команды</span>
+                <span>Возможность выставления вакансий</span>
               </li>
               <li className="flex items-start">
                 <CheckIcon className="mr-2 h-5 w-5 text-green-500" />
@@ -217,16 +212,12 @@ const PremiumDesktop = () => {
         </Card>
       </div>
       
-      {showChat && userProfile && (
-        <Dialog open={showChat} onOpenChange={setShowChat}>
+      {showChat && userProfile && <Dialog open={showChat} onOpenChange={setShowChat}>
           <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-md">
             <SupportChat userId={userProfile.id} onClose={() => setShowChat(false)} />
           </DialogContent>
-        </Dialog>
-      )}
+        </Dialog>}
     </div>;
 };
-
 import { Check as CheckIcon } from "lucide-react";
-
 export default PremiumDesktop;
