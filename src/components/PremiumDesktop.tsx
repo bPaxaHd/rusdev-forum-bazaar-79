@@ -2,7 +2,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Crown, Sparkles, Diamond } from "lucide-react";
+import { Crown, Sparkles, Diamond, Star } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
 const PremiumDesktop = () => {
@@ -14,9 +14,7 @@ const PremiumDesktop = () => {
 
   return (
     <div className="px-4 py-6">
-      <h2 className="text-2xl font-bold mb-6">Подписки DevTalk</h2>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Free Plan */}
         <Card className="p-6 relative overflow-hidden border-muted">
           <div className="mb-4">
@@ -121,6 +119,54 @@ const PremiumDesktop = () => {
           
           <Button className="w-full bg-gradient-to-r from-purple-400 to-purple-600 hover:from-purple-500 hover:to-purple-700 border-none" onClick={handleGetPremium}>
             Оформить Business
+          </Button>
+        </Card>
+        
+        {/* Sponsor Plan - NEW */}
+        <Card className="p-6 relative overflow-hidden border-blue-300">
+          <div className="absolute -right-12 -top-12 bg-blue-300/20 h-32 w-32 rotate-12"></div>
+          <div className="absolute top-2 right-2">
+            <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">Новинка</span>
+          </div>
+          <div className="mb-4">
+            <div className="flex items-center gap-1 mb-1">
+              <Diamond className="h-5 w-5 text-blue-500" />
+              <h3 className="text-xl font-semibold">Спонсор</h3>
+            </div>
+            <p className="text-muted-foreground text-sm">Эксклюзивный статус</p>
+          </div>
+          
+          <div className="text-3xl font-bold mb-6">2999 ₽<span className="text-sm font-normal text-muted-foreground">/месяц</span></div>
+          
+          <ul className="space-y-3 mb-6">
+            <li className="flex items-start">
+              <span className="mr-2 text-blue-500">✓</span>
+              <span>Все возможности Business плана</span>
+            </li>
+            <li className="flex items-start">
+              <span className="mr-2 text-blue-500">✓</span>
+              <span>Эксклюзивный спонсорский статус</span>
+            </li>
+            <li className="flex items-start">
+              <span className="mr-2 text-blue-500">✓</span>
+              <span>Брендированный профиль</span>
+            </li>
+            <li className="flex items-start">
+              <span className="mr-2 text-blue-500">✓</span>
+              <span>Выделение комментариев и постов</span>
+            </li>
+            <li className="flex items-start">
+              <span className="mr-2 text-blue-500">✓</span>
+              <span>Личный менеджер аккаунта</span>
+            </li>
+            <li className="flex items-start">
+              <span className="mr-2 text-blue-500">✓</span>
+              <span>Размещение бренда на главной странице</span>
+            </li>
+          </ul>
+          
+          <Button className="w-full bg-gradient-to-r from-blue-400 to-blue-600 hover:from-blue-500 hover:to-blue-700 border-none" onClick={handleGetPremium}>
+            Стать спонсором
           </Button>
         </Card>
       </div>

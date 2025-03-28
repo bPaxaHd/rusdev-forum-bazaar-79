@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Link } from "react-router-dom";
 import { Github, Twitter, Mail } from "lucide-react";
@@ -88,13 +89,16 @@ const Footer: React.FC<FooterProps> = ({
               <li>
                 <Link to="/help" className="text-muted-foreground hover:text-foreground text-sm">Помощь</Link>
               </li>
+              <li>
+                <Link to="/premium" className="text-muted-foreground hover:text-foreground text-sm">Подписки</Link>
+              </li>
             </ul>
           </div>
         </div>
         
-        <div className="border-t mt-8 pt-6 flex flex-col md:flex-row justify-between items-center text-sm text-muted-foreground">
-          <div>© 2025 DevTalk. Все права защищены.</div>
-          <div className="flex gap-4 mt-4 md:mt-0">
+        <div className="border-t mt-8 pt-6 flex flex-col md:flex-row justify-center items-center text-sm text-muted-foreground">
+          <div className="mb-4 md:mb-0">© 2025 DevTalk. Все права защищены.</div>
+          <div className="flex gap-4 mx-auto">
             <Link to="/terms" className="hover:text-foreground">Условия использования</Link>
             <Link to="/privacy" className="hover:text-foreground">Политика конфиденциальности</Link>
           </div>
