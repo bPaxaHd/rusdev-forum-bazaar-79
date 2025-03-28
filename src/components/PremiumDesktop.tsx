@@ -108,7 +108,7 @@ const PremiumDesktop = () => {
           </CardHeader>
           <CardContent>
             <div className="text-4xl font-bold mb-6">
-              ₽{billingPeriod === "monthly" ? "899" : "699"} <span className="text-base font-normal text-muted-foreground">/мес</span>
+              ₽{billingPeriod === "monthly" ? "499" : "399"} <span className="text-base font-normal text-muted-foreground">/мес</span>
             </div>
             <ul className="space-y-2 mb-6">
               <li className="flex items-start">
@@ -138,14 +138,14 @@ const PremiumDesktop = () => {
           </CardFooter>
         </Card>
 
-        <Card className="border-2 border-purple-200 dark:border-purple-900 transition-all hover:shadow-md">
+        <Card className="border-2 border-blue-200 dark:border-blue-900 transition-all hover:shadow-md">
           <CardHeader>
             <CardTitle>Business</CardTitle>
             <CardDescription>Для команд и профессиональных разработчиков</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-4xl font-bold mb-6">
-              ₽{billingPeriod === "monthly" ? "2499" : "1999"} <span className="text-base font-normal text-muted-foreground">/мес</span>
+              ₽{billingPeriod === "monthly" ? "999" : "799"} <span className="text-base font-normal text-muted-foreground">/мес</span>
             </div>
             <ul className="space-y-2 mb-6">
               <li className="flex items-start">
@@ -182,7 +182,7 @@ const PremiumDesktop = () => {
           </CardHeader>
           <CardContent>
             <div className="text-4xl font-bold mb-6">
-              ₽{billingPeriod === "monthly" ? "9999" : "7999"} <span className="text-base font-normal text-muted-foreground">/мес</span>
+              ₽{billingPeriod === "monthly" ? "4999" : "3999"} <span className="text-base font-normal text-muted-foreground">/мес</span>
             </div>
             <ul className="space-y-2 mb-6">
               <li className="flex items-start">
