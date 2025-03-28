@@ -12,6 +12,8 @@ import { Link } from "react-router-dom";
 import CreateJobDialog from "@/components/CreateJobDialog";
 import JobCard from "@/components/JobCard";
 import { Input } from "@/components/ui/input";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Drawer, DrawerContent, DrawerTrigger, DrawerClose, DrawerFooter, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 
 const Jobs = () => {
   const { user } = useAuth();
@@ -24,6 +26,7 @@ const Jobs = () => {
   const [showJobDetails, setShowJobDetails] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const isMobile = useIsMobile();
   
   useEffect(() => {
     fetchJobs();
@@ -113,6 +116,54 @@ const Jobs = () => {
           req.toLowerCase().includes(searchQuery.toLowerCase())
         )
       );
+
+  // Мобильная версия диалога деталей вакансии
+  const MobileJobDetailsContent = () => (
+    <>
+      <DrawerHeader>
+        <DrawerTitle className="text-xl">{selectedJob?.title}</DrawerTitle>
+        <div className="flex items-center gap-2 text-base font-medium mt-2">
+          {selectedJob?.company_name} · {selectedJob?.location}
+        </div>
+      </DrawerHeader>
+      
+      <div className="px-4 pb-6 pt-2">
+        <div className="mb-4 flex items-center gap-x-6 gap-y-2 flex-wrap">
+          <Badge variant="secondary" className="px-3 py-1">
+            <Briefcase className="h-3.5 w-3.5 mr-1.5" />
+            {selectedJob?.type}
+          </Badge>
+          {selectedJob?.salary && <span className="font-medium">{selectedJob?.salary}</span>}
+          <span className="text-sm text-muted-foreground">
+            Опубликовано {new Date(selectedJob?.created_at).toLocaleDateString("ru-RU")}
+          </span>
+        </div>
+        
+        <div className="space-y-4">
+          <div>
+            <h3 className="font-semibold mb-2">Описание вакансии</h3>
+            <p className="text-muted-foreground whitespace-pre-line">{selectedJob?.description}</p>
+          </div>
+          
+          <div>
+            <h3 className="font-semibold mb-2">Требования</h3>
+            <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+              {selectedJob?.requirements?.map((req: string, index: number) => (
+                <li key={index}>{req}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+      
+      <DrawerFooter>
+        <Button className="w-full">Откликнуться на вакансию</Button>
+        <DrawerClose asChild>
+          <Button variant="outline" className="w-full">Закрыть</Button>
+        </DrawerClose>
+      </DrawerFooter>
+    </>
+  );
 
   return (
     <div className="container mx-auto px-4 py-12 animate-fade-in">
@@ -226,52 +277,63 @@ const Jobs = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Job Details Dialog */}
-      <Dialog open={showJobDetails} onOpenChange={setShowJobDetails}>
-        <DialogContent className="sm:max-w-3xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl">{selectedJob?.title}</DialogTitle>
-            <DialogDescription className="flex items-center gap-2 text-base font-medium mt-2">
-              {selectedJob?.company_name} · {selectedJob?.location}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="grid gap-6">
-            <div>
-              <div className="mb-4 flex items-center gap-x-6 gap-y-2 flex-wrap">
-                <Badge variant="secondary" className="px-3 py-1">
-                  <Briefcase className="h-3.5 w-3.5 mr-1.5" />
-                  {selectedJob?.type}
-                </Badge>
-                {selectedJob?.salary && <span className="font-medium">{selectedJob?.salary}</span>}
-                <span className="text-sm text-muted-foreground">
-                  Опубликовано {new Date(selectedJob?.created_at).toLocaleDateString("ru-RU")}
-                </span>
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-semibold mb-2">Описание вакансии</h3>
-                  <p className="text-muted-foreground whitespace-pre-line">{selectedJob?.description}</p>
+      {/* Job Details Dialog - for desktop */}
+      {!isMobile && (
+        <Dialog open={showJobDetails} onOpenChange={setShowJobDetails}>
+          <DialogContent className="sm:max-w-3xl">
+            <DialogHeader>
+              <DialogTitle className="text-2xl">{selectedJob?.title}</DialogTitle>
+              <DialogDescription className="flex items-center gap-2 text-base font-medium mt-2">
+                {selectedJob?.company_name} · {selectedJob?.location}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="grid gap-6">
+              <div>
+                <div className="mb-4 flex items-center gap-x-6 gap-y-2 flex-wrap">
+                  <Badge variant="secondary" className="px-3 py-1">
+                    <Briefcase className="h-3.5 w-3.5 mr-1.5" />
+                    {selectedJob?.type}
+                  </Badge>
+                  {selectedJob?.salary && <span className="font-medium">{selectedJob?.salary}</span>}
+                  <span className="text-sm text-muted-foreground">
+                    Опубликовано {new Date(selectedJob?.created_at).toLocaleDateString("ru-RU")}
+                  </span>
                 </div>
                 
-                <div>
-                  <h3 className="font-semibold mb-2">Требования</h3>
-                  <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
-                    {selectedJob?.requirements?.map((req: string, index: number) => (
-                      <li key={index}>{req}</li>
-                    ))}
-                  </ul>
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="font-semibold mb-2">Описание вакансии</h3>
+                    <p className="text-muted-foreground whitespace-pre-line">{selectedJob?.description}</p>
+                  </div>
+                  
+                  <div>
+                    <h3 className="font-semibold mb-2">Требования</h3>
+                    <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+                      {selectedJob?.requirements?.map((req: string, index: number) => (
+                        <li key={index}>{req}</li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
               </div>
+              
+              <div className="mt-4">
+                <Button className="w-full sm:w-auto">Откликнуться на вакансию</Button>
+              </div>
             </div>
-            
-            <div className="mt-4">
-              <Button className="w-full sm:w-auto">Откликнуться на вакансию</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Job Details Drawer - for mobile */}
+      {isMobile && (
+        <Drawer open={showJobDetails} onOpenChange={setShowJobDetails}>
+          <DrawerContent className="max-h-[90vh]">
+            {selectedJob && <MobileJobDetailsContent />}
+          </DrawerContent>
+        </Drawer>
+      )}
 
       {/* Create Job Dialog */}
       <CreateJobDialog 

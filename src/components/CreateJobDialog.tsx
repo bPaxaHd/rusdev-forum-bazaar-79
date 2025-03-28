@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { X, Plus, Briefcase, Building, MapPin, Clock, DollarSign } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const CreateJobDialog = ({ open, onOpenChange, onJobCreated }: { 
   open: boolean; 
@@ -19,6 +20,7 @@ const CreateJobDialog = ({ open, onOpenChange, onJobCreated }: {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   
   const [formData, setFormData] = useState({
     company_name: "",
@@ -147,13 +149,16 @@ const CreateJobDialog = ({ open, onOpenChange, onJobCreated }: {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent className={`sm:max-w-3xl ${isMobile ? 'w-full p-3 max-h-[90vh] overflow-y-auto' : ''}`}>
         <DialogHeader>
           <DialogTitle className="text-2xl">Разместить новую вакансию</DialogTitle>
+          <DialogDescription className="text-muted-foreground">
+            Заполните форму ниже, чтобы опубликовать вакансию
+          </DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className={`grid grid-cols-1 ${isMobile ? '' : 'md:grid-cols-2'} gap-6`}>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Building className="h-4 w-4 text-muted-foreground" />
@@ -265,7 +270,7 @@ const CreateJobDialog = ({ open, onOpenChange, onJobCreated }: {
               </Button>
             </div>
             
-            <div className="space-y-3 max-h-64 overflow-y-auto px-1">
+            <div className={`space-y-3 ${isMobile ? 'max-h-[30vh]' : 'max-h-64'} overflow-y-auto px-1`}>
               {formData.requirements.map((requirement, index) => (
                 <div key={index} className="flex gap-2">
                   <Input
@@ -287,11 +292,20 @@ const CreateJobDialog = ({ open, onOpenChange, onJobCreated }: {
             </div>
           </div>
           
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <DialogFooter className={isMobile ? 'flex-col space-y-2' : ''}>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+              className={isMobile ? 'w-full' : ''}
+            >
               Отмена
             </Button>
-            <Button type="submit" disabled={loading} className="bg-gradient-to-r from-blue-500 to-blue-600">
+            <Button 
+              type="submit" 
+              disabled={loading} 
+              className={`bg-gradient-to-r from-blue-500 to-blue-600 ${isMobile ? 'w-full' : ''}`}
+            >
               {loading ? "Создание..." : "Опубликовать вакансию"}
             </Button>
           </DialogFooter>
