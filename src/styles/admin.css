@@ -1,0 +1,25 @@
+
+.admin-panel-container {
+  max-height: 90vh;
+  overflow-y: auto;
+  padding-right: 16px;
+  scrollbar-width: thin;
+}
+
+.admin-panel-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.admin-panel-container::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+}
+
+.admin-panel-container::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+}
+
+.admin-panel-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
