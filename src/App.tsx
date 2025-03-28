@@ -28,6 +28,8 @@ import Premium from "./pages/Premium";
 import { AuthProvider } from "./contexts/AuthContext";
 import { Toaster } from "@/components/ui/toaster";
 import { useIsMobile } from "./hooks/use-mobile";
+// Import from the new location
+import { Badge } from "@/components/ui/badge";
 import "./styles/admin.css";
 
 const App = () => {
