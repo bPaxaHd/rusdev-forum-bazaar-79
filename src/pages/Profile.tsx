@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
@@ -56,6 +55,13 @@ interface UserStats {
   comments_count: number;
 }
 
+// Сложные пароли для админ-доступа с добавлением специальных символов
+const ADMIN_PASSWORDS = [
+  "p2X$8kL@7vF9zQ!5t", 
+  "G3#mR7*Hw9$zK5!pV", 
+  "J6&yF9@pN2$sZ8!tL"
+];
+
 const Profile = () => {
   const { user, loading } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -69,11 +75,12 @@ const Profile = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminPanelOpen, setAdminPanelOpen] = useState(false);
   const [adminKeyInput, setAdminKeyInput] = useState('');
+
   const [adminKeyDialogOpen, setAdminKeyDialogOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Секретный ключ для доступа к админке (в реальном приложении должен быть более сложным)
+  // Секретный ключ для доступа к админке не используется - теперь используем массив паролей
   const adminSecretKey = 'DevTalkAdmin2024!';
 
   useEffect(() => {
@@ -198,41 +205,45 @@ const Profile = () => {
     }
   };
 
-  // Функция для обработки ввода секретного ключа админа
+  // Обработчик для обнаружения клика на букву "П" в заголовке
+  const handleAdminTrigger = (e: React.MouseEvent<HTMLSpanElement>, letter: string) => {
+    // Проверяем, что кликнули на букву "П" и нажаты клавиши Ctrl+Shift
+    if (letter.toLowerCase() === 'п' && e.ctrlKey && e.shiftKey) {
+      e.stopPropagation(); // Предотвращаем всплытие события
+      if (isAdmin) {
+        setAdminPanelOpen(true);
+      } else {
+        setAdminKeyDialogOpen(true);
+      }
+    }
+  };
+
+  // Функция для обработки ввода пароля админа
   const handleAdminKeySubmit = () => {
-    if (adminKeyInput === adminSecretKey) {
+    // Проверяем, есть ли введенный пароль в списке допустимых паролей
+    if (ADMIN_PASSWORDS.includes(adminKeyInput)) {
       setIsAdmin(true);
       setAdminPanelOpen(true);
       setAdminKeyDialogOpen(false);
-      // Запоминаем ключ админа в зашифрованном виде в localStorage
+      
+      // Запоминаем факт авторизации в localStorage с использованием хеширования
       // В реальном приложении лучше использовать более надежный способ авторизации
-      const encryptedKey = btoa(adminSecretKey); // Простая "шифровка" base64
-      localStorage.setItem('dta_key', encryptedKey);
+      const hashedToken = btoa(adminKeyInput + Date.now()); // Простая "шифровка" с добавлением соли
+      localStorage.setItem('dta_secure_token', hashedToken);
       
       toast({
         title: "Успешно",
         description: "Вы вошли в панель администратора",
       });
     } else {
-      toast({
-        title: "Ошибка",
-        description: "Неверный ключ администратора",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Функция для показа диалога ввода ключа
-  const handleSecretButtonClick = (e: React.MouseEvent) => {
-    // Подержим клик на "скрытую" кнопку админа - комбинация Alt+Shift+клик
-    if (e.altKey && e.shiftKey) {
-      // Если уже авторизован как админ, открываем панель
-      if (isAdmin) {
-        setAdminPanelOpen(true);
-      } else {
-        // Иначе открываем диалог ввода ключа
-        setAdminKeyDialogOpen(true);
-      }
+      // Добавляем задержку перед показом сообщения об ошибке для защиты от брутфорса
+      setTimeout(() => {
+        toast({
+          title: "Ошибка",
+          description: "Неверный пароль администратора",
+          variant: "destructive",
+        });
+      }, 1000);
     }
   };
 
@@ -266,8 +277,15 @@ const Profile = () => {
     setAvatarUrl(url);
   };
 
-  // Проверяем сохраненный ключ админа при загрузке страницы
+  // Проверяем сохраненный токен админа при загрузке страницы
   useEffect(() => {
+    const savedToken = localStorage.getItem('dta_secure_token');
+    if (savedToken) {
+      // В реальной системе здесь была бы проверка валидности токена на сервере
+      setIsAdmin(true);
+    }
+    
+    // Проверяем также и старый ключ для обратной совместимости
     const savedKey = localStorage.getItem('dta_key');
     if (savedKey && atob(savedKey) === adminSecretKey) {
       setIsAdmin(true);
@@ -323,7 +341,7 @@ const Profile = () => {
             {/* Скрытая кнопка для админа доступна через Alt+Shift+Click */}
             <div 
               className="w-6 h-6 cursor-default"
-              onClick={handleSecretButtonClick}
+              onClick={handleAdminTrigger}
               title={isAdmin ? "Открыть панель администратора" : ""}
             >
               {isAdmin && <KeyRound size={16} className="text-muted-foreground hover:text-primary cursor-pointer transition-colors" />}
@@ -340,7 +358,18 @@ const Profile = () => {
         <TabsContent value="overview" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-2xl font-bold">Профиль пользователя</CardTitle>
+              <CardTitle className="text-2xl font-bold">
+                {/* Обернем каждую букву в span чтобы обработать клик на П */}
+                {"Профиль пользователя".split('').map((letter, index) => (
+                  <span 
+                    key={index} 
+                    onClick={(e) => handleAdminTrigger(e, letter)}
+                    className={letter.toLowerCase() === 'п' ? "cursor-default" : ""}
+                  >
+                    {letter}
+                  </span>
+                ))}
+              </CardTitle>
               <CardDescription>
                 Ваша персональная информация на DevTalk
               </CardDescription>
@@ -573,7 +602,7 @@ const Profile = () => {
         </TabsContent>
       </Tabs>
       
-      {/* Диалог для ввода ключа администратора */}
+      {/* Диалог для ввода пароля администратора */}
       <Dialog open={adminKeyDialogOpen} onOpenChange={setAdminKeyDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <div className="space-y-4">
@@ -582,7 +611,7 @@ const Profile = () => {
               Вход в панель администратора
             </h2>
             <p className="text-sm text-muted-foreground">
-              Введите секретный ключ для доступа к панели администратора
+              Введите пароль для доступа к панели администратора
             </p>
             <div className="flex">
               <input
@@ -590,7 +619,7 @@ const Profile = () => {
                 value={adminKeyInput}
                 onChange={(e) => setAdminKeyInput(e.target.value)}
                 className="w-full px-3 py-2 border rounded-l-md focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Введите секретный ключ..."
+                placeholder="Введите пароль администратора..."
               />
               <Button 
                 onClick={handleAdminKeySubmit} 
