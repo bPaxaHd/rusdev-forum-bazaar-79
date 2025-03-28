@@ -23,8 +23,7 @@ import {
 import { UserProfile, LoginAttempt, SubscriptionLevel } from "@/types/auth";
 import CryptoJS from 'crypto-js';
 
-const ENCRYPTED_ADMIN_PASSWORD = "U2FsdGVkX1+ZnXmm8h6h+hUbw4WEQdIFAf2RU+RsGZhUfxEPbPyV3LWyFnAxKgAkfnXf3lxJlt97vp67bT6KEMXCYyM1pFsNZQXgSCqcwR81gd6EGyfSC5+qYLRXeflV";
-const ENCRYPTION_SECRET = "admin_secure_key_2024";
+const ADMIN_PASSWORD = "8033343213943354088566815767659607503141163134002992749244944048";
 const STATS_REFRESH_INTERVAL = 30000;
 
 interface AdminPanelProps {
@@ -115,12 +114,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
     try {
       setLoading(true);
       
-      const decryptedPassword = CryptoJS.AES.decrypt(
-        ENCRYPTED_ADMIN_PASSWORD, 
-        ENCRYPTION_SECRET
-      ).toString(CryptoJS.enc.Utf8);
-      
-      if (password === decryptedPassword) {
+      if (password === ADMIN_PASSWORD) {
         setAuthenticated(true);
         toast({
           title: "Успешная аутентификация",
@@ -473,6 +467,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
   
   const getSubscriptionBadge = (type: string | null) => {
     switch(type) {
+      case 'admin':
+        return <Badge className="bg-red-500 text-white">ADMIN</Badge>;
       case 'premium':
         return <Badge className="bg-yellow-500 text-black">PREMIUM</Badge>;
       case 'business':
@@ -870,19 +866,327 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
                 </TabsContent>
                 
                 <TabsContent value="users" className="h-full overflow-auto p-4">
-                  {/* User management content */}
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <h2 className="text-2xl font-bold">Управление пользователями</h2>
+                      <div className="flex items-center gap-2">
+                        <div className="relative">
+                          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            placeholder="Поиск пользователей..."
+                            className="pl-8"
+                            value={userSearch}
+                            onChange={(e) => setUserSearch(e.target.value)}
+                          />
+                        </div>
+                        <select
+                          className="h-10 rounded-md border border-input bg-background px-3 py-2"
+                          value={userFilter}
+                          onChange={(e) => setUserFilter(e.target.value)}
+                        >
+                          <option value="all">Все</option>
+                          <option value="free">Free</option>
+                          <option value="premium">Premium</option>
+                          <option value="business">Business</option>
+                          <option value="sponsor">Sponsor</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                      </div>
+                    </div>
+                    
+                    <div className="border rounded-md">
+                      <div className="grid grid-cols-12 gap-2 p-4 bg-muted font-medium text-sm">
+                        <div className="col-span-4 flex items-center gap-2">
+                          <Button variant="ghost" size="sm" className="p-0 h-7" onClick={() => sortUsers('username')}>
+                            <User size={14} className="mr-1" />
+                            Пользователь
+                            <ArrowUpDown size={14} className="ml-1" />
+                          </Button>
+                        </div>
+                        <div className="col-span-2">Тег</div>
+                        <div className="col-span-2">
+                          <Button variant="ghost" size="sm" className="p-0 h-7" onClick={() => sortUsers('subscription_type')}>
+                            <CreditCard size={14} className="mr-1" />
+                            Подписка
+                            <ArrowUpDown size={14} className="ml-1" />
+                          </Button>
+                        </div>
+                        <div className="col-span-2">Специализация</div>
+                        <div className="col-span-2 text-right">Действия</div>
+                      </div>
+                      
+                      <ScrollArea className="h-[calc(100vh-380px)]">
+                        {filteredUsers.length > 0 ? (
+                          filteredUsers.map((user) => (
+                            <div 
+                              key={user.id}
+                              className="grid grid-cols-12 gap-2 p-4 border-t hover:bg-muted/50 transition-colors"
+                            >
+                              <div className="col-span-4">
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarImage src={user.avatar_url || ""} alt={user.username} />
+                                    <AvatarFallback>{user.username.substring(0, 2).toUpperCase()}</AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <div className="font-medium">{user.username}</div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {new Date(user.created_at).toLocaleDateString()}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div className="col-span-2 flex items-center">
+                                {user.user_tag ? (
+                                  <Badge variant="outline">@{user.user_tag}</Badge>
+                                ) : (
+                                  <span className="text-muted-foreground text-sm">—</span>
+                                )}
+                              </div>
+                              
+                              <div className="col-span-2 flex items-center">
+                                <select
+                                  className="h-8 rounded-md border border-input bg-background px-2 py-1 text-sm"
+                                  value={user.subscription_type || 'free'}
+                                  onChange={(e) => updateUserSubscription(user.id, e.target.value as SubscriptionLevel)}
+                                >
+                                  <option value="free">Free</option>
+                                  <option value="premium">Premium</option>
+                                  <option value="business">Business</option>
+                                  <option value="sponsor">Sponsor</option>
+                                  <option value="admin">Admin</option>
+                                </select>
+                              </div>
+                              
+                              <div className="col-span-2 flex items-center">
+                                <select
+                                  className="h-8 rounded-md border border-input bg-background px-2 py-1 text-sm"
+                                  value={user.specialty || ''}
+                                  onChange={(e) => updateUserSpecialty(user.id, e.target.value)}
+                                >
+                                  <option value="">Не указана</option>
+                                  <option value="frontend">Frontend</option>
+                                  <option value="backend">Backend</option>
+                                  <option value="fullstack">Fullstack</option>
+                                </select>
+                              </div>
+                              
+                              <div className="col-span-2 flex items-center justify-end gap-2">
+                                <Button variant="outline" size="icon" className="h-8 w-8">
+                                  <Pencil size={14} />
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="icon" 
+                                  className="h-8 w-8 text-red-500 hover:text-red-700"
+                                  onClick={() => deleteUser(user.id)}
+                                >
+                                  <Trash2 size={14} />
+                                </Button>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="p-8 text-center">
+                            <UserX size={40} className="mx-auto text-muted-foreground mb-2" />
+                            <h3 className="text-lg font-medium">Пользователи не найдены</h3>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Попробуйте изменить параметры поиска или фильтрации
+                            </p>
+                          </div>
+                        )}
+                      </ScrollArea>
+                    </div>
+                  </div>
                 </TabsContent>
                 
                 <TabsContent value="content" className="h-full overflow-auto p-4">
-                  {/* Content management */}
+                  <div className="text-center py-10">
+                    <FileText size={40} className="mx-auto text-muted-foreground mb-2" />
+                    <h3 className="text-lg font-medium">Управление контентом</h3>
+                    <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
+                      Здесь будет располагаться функционал для управления темами, комментариями и другим контентом форума
+                    </p>
+                  </div>
                 </TabsContent>
                 
                 <TabsContent value="security" className="h-full overflow-auto p-4">
-                  {/* Security settings */}
+                  <div className="space-y-6">
+                    <div>
+                      <h2 className="text-2xl font-bold mb-4">Безопасность</h2>
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Попытки входа в админ-панель</CardTitle>
+                          <CardDescription>
+                            История попыток входа в панель администратора
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          {loginAttempts.length > 0 ? (
+                            <div className="space-y-4">
+                              {loginAttempts.map((attempt) => (
+                                <div 
+                                  key={attempt.id}
+                                  className="flex items-center justify-between p-3 rounded-md border"
+                                >
+                                  <div>
+                                    <div className="font-medium">IP: {attempt.ip_address}</div>
+                                    <div className="text-sm text-muted-foreground">
+                                      {new Date(attempt.timestamp).toLocaleString()} - {attempt.attempts} попыток
+                                    </div>
+                                  </div>
+                                  
+                                  <div>
+                                    {attempt.is_resolved ? (
+                                      <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">
+                                        Разрешено
+                                      </Badge>
+                                    ) : (
+                                      <div className="flex items-center gap-2">
+                                        {attempt.attempts >= 5 && (
+                                          <Badge variant="destructive">Заблокировано</Badge>
+                                        )}
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => resolveLoginAttempt(attempt.id)}
+                                        >
+                                          <Check size={14} className="mr-1" />
+                                          Разрешить
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8">
+                              <Shield className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+                              <p className="text-muted-foreground">Нет записей о попытках входа</p>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </div>
+                    
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Блокировки</CardTitle>
+                        <CardDescription>
+                          IP-адреса, заблокированные из-за подозрительной активности
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        {blockedIPs.length > 0 ? (
+                          <div className="space-y-2">
+                            {blockedIPs.map((ip, index) => (
+                              <div 
+                                key={index}
+                                className="flex items-center justify-between p-2 rounded-md border"
+                              >
+                                <div className="font-medium">{ip}</div>
+                                <Button variant="outline" size="sm">
+                                  <X size={14} className="mr-1" />
+                                  Разблокировать
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-6">
+                            <Shield className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                            <p className="text-muted-foreground">Нет заблокированных IP-адресов</p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
                 </TabsContent>
                 
                 <TabsContent value="settings" className="h-full overflow-auto p-4">
-                  {/* System settings */}
+                  <div className="space-y-6">
+                    <h2 className="text-2xl font-bold">Настройки</h2>
+                    
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Общие настройки</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label htmlFor="maintenance-mode">Режим обслуживания</Label>
+                            <p className="text-sm text-muted-foreground">
+                              Включить режим обслуживания сайта
+                            </p>
+                          </div>
+                          <Switch id="maintenance-mode" />
+                        </div>
+                        
+                        <Separator />
+                        
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label htmlFor="new-users">Регистрация новых пользователей</Label>
+                            <p className="text-sm text-muted-foreground">
+                              Разрешить регистрацию новых пользователей
+                            </p>
+                          </div>
+                          <Switch id="new-users" defaultChecked />
+                        </div>
+                        
+                        <Separator />
+                        
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label htmlFor="email-notifications">Уведомления по email</Label>
+                            <p className="text-sm text-muted-foreground">
+                              Отправлять уведомления о новых пользователях
+                            </p>
+                          </div>
+                          <Switch id="email-notifications" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                    
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Настройки форума</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div>
+                          <Label htmlFor="posts-per-page">Количество тем на страницу</Label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Input id="posts-per-page" type="number" defaultValue="10" className="w-24" />
+                            <span className="text-sm text-muted-foreground">тем</span>
+                          </div>
+                        </div>
+                        
+                        <Separator />
+                        
+                        <div>
+                          <Label htmlFor="comments-per-page">Количество комментариев на страницу</Label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Input id="comments-per-page" type="number" defaultValue="20" className="w-24" />
+                            <span className="text-sm text-muted-foreground">комментариев</span>
+                          </div>
+                        </div>
+                        
+                        <Separator />
+                        
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label htmlFor="moderate-comments">Модерация комментариев</Label>
+                            <p className="text-sm text-muted-foreground">
+                              Включить премодерацию комментариев
+                            </p>
+                          </div>
+                          <Switch id="moderate-comments" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
                 </TabsContent>
               </div>
             </Tabs>

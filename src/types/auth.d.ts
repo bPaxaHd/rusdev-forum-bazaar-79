@@ -26,4 +26,4 @@ export interface LoginAttempt {
   is_resolved: boolean;
 }
 
-export type SubscriptionLevel = 'free' | 'premium' | 'business' | 'sponsor';
+export type SubscriptionLevel = 'free' | 'premium' | 'business' | 'sponsor' | 'admin';
