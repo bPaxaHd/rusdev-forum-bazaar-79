@@ -1,24 +1,15 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-
 type BillingPeriod = "monthly" | "yearly";
-
 const PremiumDesktop = () => {
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("monthly");
-
-  return (
-    <div className="space-y-8">
+  return <div className="space-y-8">
       <div className="flex justify-center mb-8">
-        <RadioGroup 
-          className="flex items-center bg-card border rounded-lg p-1 gap-1" 
-          defaultValue={billingPeriod}
-          onValueChange={(value) => setBillingPeriod(value as BillingPeriod)}
-        >
+        <RadioGroup className="flex items-center bg-card border rounded-lg p-1 gap-1" defaultValue={billingPeriod} onValueChange={value => setBillingPeriod(value as BillingPeriod)}>
           <div className="flex items-center space-x-2 px-3 py-2 rounded cursor-pointer">
             <RadioGroupItem value="monthly" id="monthly" />
             <Label htmlFor="monthly" className="cursor-pointer">Помесячно</Label>
@@ -100,9 +91,7 @@ const PremiumDesktop = () => {
             </ul>
           </CardContent>
           <CardFooter>
-            <Button className="w-full">
-              Подписаться
-            </Button>
+            <Button className="w-full">Купить</Button>
           </CardFooter>
         </Card>
 
@@ -139,9 +128,7 @@ const PremiumDesktop = () => {
             </ul>
           </CardContent>
           <CardFooter>
-            <Button className="w-full">
-              Подписаться
-            </Button>
+            <Button className="w-full">Купить</Button>
           </CardFooter>
         </Card>
 
@@ -182,16 +169,11 @@ const PremiumDesktop = () => {
             </ul>
           </CardContent>
           <CardFooter>
-            <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600">
-              Стать спонсором
-            </Button>
+            <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600">Купить</Button>
           </CardFooter>
         </Card>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 import { Check as CheckIcon } from "lucide-react";
-
 export default PremiumDesktop;
