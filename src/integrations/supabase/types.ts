@@ -9,6 +9,53 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admins: {
+        Row: {
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      comment_likes: {
+        Row: {
+          comment_id: string
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comment_likes_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comments: {
         Row: {
           content: string
@@ -60,6 +107,7 @@ export type Database = {
           created_at: string
           id: string
           specialty: string | null
+          subscription_type: string | null
           updated_at: string
           username: string
         }
@@ -68,6 +116,7 @@ export type Database = {
           created_at?: string
           id: string
           specialty?: string | null
+          subscription_type?: string | null
           updated_at?: string
           username: string
         }
@@ -76,10 +125,40 @@ export type Database = {
           created_at?: string
           id?: string
           specialty?: string | null
+          subscription_type?: string | null
           updated_at?: string
           username?: string
         }
         Relationships: []
+      }
+      topic_likes: {
+        Row: {
+          created_at: string | null
+          id: string
+          topic_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          topic_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          topic_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topic_likes_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       topics: {
         Row: {
@@ -130,7 +209,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      add_subscription_type_to_profiles: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      create_admins_if_not_exists: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      create_comment_likes_if_not_exists: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      create_topic_likes_if_not_exists: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
