@@ -16,6 +16,8 @@ const Jobs = () => {
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showPremiumDialog, setShowPremiumDialog] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedJob, setSelectedJob] = useState<any>(null);
+  const [showJobDetails, setShowJobDetails] = useState(false);
 
   const jobs = [
     {
@@ -26,7 +28,9 @@ const Jobs = () => {
       type: "Полная занятость",
       salary: "180 000 - 250 000 ₽",
       posted: "3 дня назад",
-      logo: "https://via.placeholder.com/80"
+      logo: "https://via.placeholder.com/80",
+      description: "Мы ищем опытного Frontend-разработчика со знанием React для работы над нашими продуктами. От вас требуется опыт работы с современными технологиями и готовность к решению сложных задач в дружной команде.",
+      requirements: ["Опыт работы с React от 3 лет", "Знание TypeScript", "Опыт работы с Redux", "Знание CSS-in-JS библиотек", "Навыки оптимизации производительности"]
     },
     {
       id: 2,
@@ -36,7 +40,9 @@ const Jobs = () => {
       type: "Полная занятость",
       salary: "150 000 - 200 000 ₽",
       posted: "1 неделя назад",
-      logo: "https://via.placeholder.com/80"
+      logo: "https://via.placeholder.com/80",
+      description: "Требуется разработчик Node.js для работы над высоконагруженным API. Вы будете частью команды, ответственной за разработку и поддержку серверной части наших приложений.",
+      requirements: ["Опыт работы с Node.js от 2 лет", "Опыт работы с Express/Nest.js", "Знание MongoDB и PostgreSQL", "Понимание принципов RESTful API"]
     },
     {
       id: 3,
@@ -46,7 +52,9 @@ const Jobs = () => {
       type: "Полная занятость",
       salary: "180 000 - 230 000 ₽",
       posted: "2 дня назад",
-      logo: "https://via.placeholder.com/80"
+      logo: "https://via.placeholder.com/80",
+      description: "Мы ищем Full-stack разработчика для создания веб-приложений с использованием React на фронтенде и Django на бэкенде. Работа предполагает полный цикл разработки от проектирования до внедрения.",
+      requirements: ["Опыт работы с React", "Опыт работы с Django", "Знание HTML, CSS, JavaScript", "Опыт работы с БД (PostgreSQL)"]
     },
     {
       id: 4,
@@ -56,7 +64,9 @@ const Jobs = () => {
       type: "Полная занятость",
       salary: "120 000 - 160 000 ₽",
       posted: "4 дня назад",
-      logo: "https://via.placeholder.com/80"
+      logo: "https://via.placeholder.com/80",
+      description: "Ищем разработчика с опытом работы с Vue.js для работы над UI нашего основного продукта. Вы будете работать в тесном сотрудничестве с командой дизайнеров и бэкенд-разработчиков.",
+      requirements: ["Опыт работы с Vue.js от 1 года", "Знание JavaScript и TypeScript", "Опыт работы с Vuex", "Базовые знания HTML и CSS"]
     },
     {
       id: 5,
@@ -66,7 +76,9 @@ const Jobs = () => {
       type: "Полная занятость",
       salary: "200 000 - 250 000 ₽",
       posted: "5 дней назад",
-      logo: "https://via.placeholder.com/80"
+      logo: "https://via.placeholder.com/80",
+      description: "Требуется DevOps инженер для настройки и поддержки CI/CD, оптимизации инфраструктуры и автоматизации процессов развертывания. Вы будете работать над улучшением наших внутренних процессов и инфраструктуры.",
+      requirements: ["Опыт работы с Docker и Kubernetes", "Знание AWS/GCP", "Опыт работы с CI/CD инструментами", "Знание Linux", "Опыт автоматизации процессов"]
     }
   ];
 
@@ -94,6 +106,14 @@ const Jobs = () => {
     }
   };
 
+  const canPostJobs = () => {
+    if (!userProfile) return false;
+    
+    // Allow business, sponsor, admin, moderator and creator subscription types
+    const allowedTypes = ["business", "sponsor", "admin", "moderator", "creator"];
+    return allowedTypes.includes(userProfile.subscription_type);
+  };
+
   const handlePostJobClick = () => {
     if (!user) {
       toast({
@@ -104,15 +124,20 @@ const Jobs = () => {
       return;
     }
 
-    if (userProfile?.subscription_type === "business" || userProfile?.subscription_type === "sponsor") {
+    if (canPostJobs()) {
       // Proceed to job posting form logic
       toast({
         title: "Вы можете разместить вакансию",
-        description: "Доступ открыт для аккаунтов с бизнес-подпиской",
+        description: "Доступ открыт для вашего типа аккаунта",
       });
     } else {
       setShowPremiumDialog(true);
     }
+  };
+
+  const handleJobClick = (job: any) => {
+    setSelectedJob(job);
+    setShowJobDetails(true);
   };
 
   return (
@@ -139,7 +164,11 @@ const Jobs = () => {
 
         <div className="space-y-6 mb-12">
           {jobs.map(job => (
-            <div key={job.id} className="border rounded-lg p-6">
+            <div 
+              key={job.id} 
+              className="border rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => handleJobClick(job)}
+            >
               <div className="flex flex-col md:flex-row gap-6">
                 <div className="shrink-0">
                   <div className="w-16 h-16 bg-muted/50 rounded-md flex items-center justify-center">
@@ -215,6 +244,51 @@ const Jobs = () => {
               </Link>
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Job Details Dialog */}
+      <Dialog open={showJobDetails} onOpenChange={setShowJobDetails}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">{selectedJob?.title}</DialogTitle>
+            <DialogDescription className="flex items-center gap-2 text-base font-medium mt-2">
+              {selectedJob?.company} · {selectedJob?.location}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-6">
+            <div>
+              <div className="mb-4 flex items-center gap-x-6 gap-y-2 flex-wrap">
+                <Badge variant="secondary" className="px-3 py-1">
+                  <Briefcase className="h-3.5 w-3.5 mr-1.5" />
+                  {selectedJob?.type}
+                </Badge>
+                <span className="font-medium">{selectedJob?.salary}</span>
+                <span className="text-sm text-muted-foreground">Опубликовано {selectedJob?.posted}</span>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-semibold mb-2">Описание вакансии</h3>
+                  <p className="text-muted-foreground">{selectedJob?.description}</p>
+                </div>
+                
+                <div>
+                  <h3 className="font-semibold mb-2">Требования</h3>
+                  <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+                    {selectedJob?.requirements.map((req: string, index: number) => (
+                      <li key={index}>{req}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-4">
+              <Button className="w-full sm:w-auto">Откликнуться на вакансию</Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
