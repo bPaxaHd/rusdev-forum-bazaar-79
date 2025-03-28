@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import TopicCard from "./TopicCard";
 import CreateTopicDialog from "./CreateTopicDialog";
@@ -22,6 +21,9 @@ interface TopicData {
     avatar_url: string | null;
     subscription_type?: string | null;
   };
+  user_roles?: {
+    role: string;
+  }[];
   comments?: { id: string }[];
 }
 
@@ -50,6 +52,7 @@ const RecentTopics = () => {
             likes, 
             views,
             profiles:profiles!topics_user_id_fkey(username, avatar_url, subscription_type),
+            user_roles:user_roles!inner(role),
             comments:comments(id)
           `)
           .order('created_at', { ascending: false })
@@ -109,8 +112,11 @@ const RecentTopics = () => {
     // Get profile from the joined profiles data
     const profile = topic.profiles || null;
     
-    const isPremium = profile?.subscription_type && 
-      ["premium", "business", "sponsor"].includes(profile.subscription_type);
+    // Проверяем роли пользователя
+    const isAdmin = topic.user_roles?.some(role => role.role === 'admin') || false;
+    const isCreator = topic.user_roles?.some(role => role.role === 'creator') || false;
+    const isModerator = topic.user_roles?.some(role => role.role === 'moderator') || false;
+    const sponsorLevel = profile?.subscription_type as 'premium' | 'business' | 'sponsor' | undefined;
       
     return {
       id: topic.id, // Use the UUID directly instead of converting to number
@@ -129,7 +135,10 @@ const RecentTopics = () => {
       tags: [typedCategory], // Добавляем базовый тег из категории
       lastActivity: topic.updated_at || topic.created_at,
       category: typedCategory,
-      isPremium: isPremium
+      isAdmin: isAdmin,
+      isCreator: isCreator,
+      isModerator: isModerator,
+      sponsorLevel: sponsorLevel
     };
   };
 

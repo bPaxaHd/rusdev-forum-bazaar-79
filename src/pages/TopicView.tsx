@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, NavLink, useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,7 +12,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   Heart, MessageCircle, Share, BookmarkPlus, ChevronLeft, 
-  Send, ThumbsUp, Loader2, Crown, Star, Diamond, Pencil, Trash2
+  Send, ThumbsUp, Loader2, Crown, Star, Diamond, Pencil, Trash2,
+  Shield, Hammer, Award
 } from "lucide-react";
 import EditCommentDialog from "@/components/EditCommentDialog";
 import EditTopicDialog from "@/components/EditTopicDialog";
@@ -66,6 +68,7 @@ const TopicView = () => {
   const [showEditTopicDialog, setShowEditTopicDialog] = useState(false);
   const [canModifyTopic, setCanModifyTopic] = useState(false);
   const [canModifyComments, setCanModifyComments] = useState<Record<string, boolean>>({});
+  const [userRoles, setUserRoles] = useState<string[]>([]);
 
   useEffect(() => {
     if (user && topic) {
@@ -271,14 +274,38 @@ const TopicView = () => {
     };
   }, [id, navigate, viewIncrementDone, toast]);
 
-  const getSubscriptionBadge = (type?: string | null) => {
+  const getSubscriptionBadge = (type?: string | null, roles?: string[]) => {
+    if (roles && roles.includes('admin')) {
+      return (
+        <Badge className="ml-2 bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-300 animate-pulse">
+          <Shield className="h-3 w-3 mr-1" /> Админ
+        </Badge>
+      );
+    }
+    
+    if (roles && roles.includes('creator')) {
+      return (
+        <Badge className="ml-2 bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300">
+          <Award className="h-3 w-3 mr-1" /> Создатель
+        </Badge>
+      );
+    }
+    
+    if (roles && roles.includes('moderator')) {
+      return (
+        <Badge className="ml-2 bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
+          <Hammer className="h-3 w-3 mr-1" /> Модератор
+        </Badge>
+      );
+    }
+    
     if (!type || type === 'free') return null;
     
     switch(type) {
-      case 'premium':
+      case 'sponsor':
         return (
           <Badge className="ml-2 bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-300">
-            <Crown className="h-3 w-3 mr-1" /> Premium
+            <Diamond className="h-3 w-3 mr-1" /> Спонсор
           </Badge>
         );
       case 'business':
@@ -287,10 +314,10 @@ const TopicView = () => {
             <Star className="h-3 w-3 mr-1" /> Бизнес
           </Badge>
         );
-      case 'sponsor':
+      case 'premium':
         return (
           <Badge className="ml-2 bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
-            <Diamond className="h-3 w-3 mr-1" /> Спонсор
+            <Crown className="h-3 w-3 mr-1" /> Премиум
           </Badge>
         );
       default:
@@ -298,34 +325,82 @@ const TopicView = () => {
     }
   };
 
-  const getAvatarStyles = (subscriptionType?: string | null) => {
+  const getAvatarStyles = (subscriptionType?: string | null, roles?: string[]) => {
+    if (roles && roles.includes('admin')) {
+      return 'ring-3 ring-red-400 ring-offset-2';
+    }
+    
+    if (roles && roles.includes('creator')) {
+      return 'ring-3 ring-purple-400 ring-offset-2';
+    }
+    
+    if (roles && roles.includes('moderator')) {
+      return 'ring-3 ring-blue-400 ring-offset-2';
+    }
+    
     if (!subscriptionType || subscriptionType === 'free') return '';
     
     switch(subscriptionType) {
-      case 'premium':
-        return 'ring-2 ring-amber-300 ring-offset-1';
+      case 'sponsor':
+        return 'ring-3 ring-amber-300 ring-offset-2';
       case 'business':
         return 'ring-2 ring-purple-400 ring-offset-1';
-      case 'sponsor':
+      case 'premium':
         return 'ring-2 ring-blue-400 ring-offset-1';
       default:
         return '';
     }
   };
 
-  const getAvatarFallbackStyles = (subscriptionType?: string | null) => {
+  const getAvatarFallbackStyles = (subscriptionType?: string | null, roles?: string[]) => {
+    if (roles && roles.includes('admin')) {
+      return 'bg-gradient-to-r from-red-300 to-red-500 text-white';
+    }
+    
+    if (roles && roles.includes('creator')) {
+      return 'bg-gradient-to-r from-purple-300 to-purple-600 text-white';
+    }
+    
+    if (roles && roles.includes('moderator')) {
+      return 'bg-gradient-to-r from-blue-300 to-blue-500 text-white';
+    }
+    
     if (!subscriptionType || subscriptionType === 'free') return 'bg-muted';
     
     switch(subscriptionType) {
-      case 'premium':
+      case 'sponsor':
         return 'bg-gradient-to-r from-amber-200 to-amber-400 text-amber-900';
       case 'business':
         return 'bg-gradient-to-r from-purple-200 to-purple-400 text-purple-900';
-      case 'sponsor':
+      case 'premium':
         return 'bg-gradient-to-r from-blue-200 to-blue-400 text-blue-900';
       default:
         return 'bg-muted';
     }
+  };
+
+  const getCardStyles = (subscriptionType?: string | null, roles?: string[]) => {
+    if (roles && roles.includes('admin')) {
+      return 'border-red-400 shadow-md shadow-red-100 dark:shadow-red-900/20';
+    }
+    
+    if (roles && roles.includes('creator')) {
+      return 'border-purple-400 shadow-md shadow-purple-100 dark:shadow-purple-900/20';
+    }
+    
+    if (roles && roles.includes('moderator')) {
+      return 'border-blue-400 shadow-md shadow-blue-100 dark:shadow-blue-900/20';
+    }
+    
+    if (subscriptionType === 'sponsor') {
+      return 'border-amber-300 border-2 shadow-md shadow-amber-100 dark:shadow-amber-900/20';
+    }
+    
+    if (subscriptionType === 'business' || subscriptionType === 'premium') {
+      return 'border-blue-300/50 shadow-sm';
+    }
+    
+    return '';
   };
 
   const formatDate = (dateString: string) => {
@@ -366,7 +441,7 @@ const TopicView = () => {
       setNewComment("");
       toast({
         title: "Комментарий отправлен",
-        description: "Ваш комментарий успешно добавлен в обсуждение.",
+        description: "Ваш комментарий ус��ешно добавлен в обсуждение.",
       });
     } catch (error) {
       console.error("Ошибка при отправке комментария:", error);
@@ -642,20 +717,33 @@ const TopicView = () => {
   if (!topic) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-2">Тема не найдена</h2>
-          <p className="text-muted-foreground mb-4">Запрашиваемая тема не существует или была удалена.</p>
-          <NavLink to="/forum">
-            <Button>Вернуться к списку тем</Button>
-          </NavLink>
-        </div>
+        <h2 className="text-2xl font-bold">Тема не найдена</h2>
       </div>
     );
   }
 
   const topicProfile = topic.profiles || null;
-  const isPremiumUser = topicProfile?.subscription_type && 
-    ["premium", "business", "sponsor"].includes(topicProfile.subscription_type);
+
+  useEffect(() => {
+    const fetchUserRoles = async () => {
+      if (topic.user_id) {
+        try {
+          const { data, error } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', topic.user_id);
+            
+          if (data && !error) {
+            setUserRoles(data.map(r => r.role));
+          }
+        } catch (err) {
+          console.error('Error fetching user roles:', err);
+        }
+      }
+    };
+    
+    fetchUserRoles();
+  }, [topic.user_id]);
 
   return (
     <div className="animate-fade-in py-8 md:py-12">
@@ -687,20 +775,20 @@ const TopicView = () => {
                   ? "Backend" 
                   : "Fullstack"}
             </Badge>
-            {topicProfile && getSubscriptionBadge(topicProfile.subscription_type)}
+            {topicProfile && getSubscriptionBadge(topicProfile.subscription_type, userRoles)}
           </div>
         </div>
 
-        <Card className={`mb-8 p-6 ${isPremiumUser ? 'border-amber-300 dark:border-amber-700' : ''}`}>
+        <Card className={`mb-8 p-6 ${getCardStyles(topicProfile?.subscription_type, userRoles)}`}>
           <div className="flex items-start gap-4">
             <div 
               onClick={() => navigateToUserProfile(topic.user_id)} 
               className="cursor-pointer"
               title="Перейти к профилю пользователя"
             >
-              <Avatar className={`h-10 w-10 ${getAvatarStyles(topicProfile?.subscription_type)}`}>
+              <Avatar className={`h-10 w-10 ${getAvatarStyles(topicProfile?.subscription_type, userRoles)}`}>
                 <AvatarImage src={topicProfile?.avatar_url || ""} alt={topicProfile?.username || "User"} />
-                <AvatarFallback className={getAvatarFallbackStyles(topicProfile?.subscription_type)}>
+                <AvatarFallback className={getAvatarFallbackStyles(topicProfile?.subscription_type, userRoles)}>
                   {(topicProfile?.username?.[0] || "U").toUpperCase()}
                 </AvatarFallback>
               </Avatar>
@@ -715,13 +803,12 @@ const TopicView = () => {
                     title="Перейти к профилю пользователя"
                   >
                     {topicProfile?.username || "Пользователь"}
-                    {isPremiumUser && (
-                      <span className="ml-2">
-                        {topicProfile?.subscription_type === 'premium' && <Crown className="h-4 w-4 text-amber-400" />}
-                        {topicProfile?.subscription_type === 'business' && <Star className="h-4 w-4 text-purple-400" />}
-                        {topicProfile?.subscription_type === 'sponsor' && <Diamond className="h-4 w-4 text-blue-400" />}
-                      </span>
-                    )}
+                    {userRoles.includes('admin') && <Shield className="h-4 w-4 text-red-400 ml-2" />}
+                    {userRoles.includes('creator') && <Award className="h-4 w-4 text-purple-400 ml-2" />}
+                    {userRoles.includes('moderator') && <Hammer className="h-4 w-4 text-blue-400 ml-2" />}
+                    {topicProfile?.subscription_type === 'sponsor' && <Diamond className="h-4 w-4 text-amber-400 ml-2" />}
+                    {topicProfile?.subscription_type === 'business' && <Star className="h-4 w-4 text-purple-400 ml-2" />}
+                    {topicProfile?.subscription_type === 'premium' && <Crown className="h-4 w-4 text-blue-400 ml-2" />}
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {topic.category === "frontend" 
@@ -736,7 +823,17 @@ const TopicView = () => {
                 </div>
               </div>
               
-              <div className={`mt-4 prose prose-sm dark:prose-invert max-w-none ${isPremiumUser ? 'prose-headings:text-amber-700 dark:prose-headings:text-amber-300' : ''}`}>
+              <div className={`mt-4 prose prose-sm dark:prose-invert max-w-none ${
+                userRoles.includes('admin') 
+                  ? 'prose-headings:text-red-700 dark:prose-headings:text-red-300' 
+                  : userRoles.includes('creator')
+                    ? 'prose-headings:text-purple-700 dark:prose-headings:text-purple-300'
+                    : userRoles.includes('moderator')
+                      ? 'prose-headings:text-blue-700 dark:prose-headings:text-blue-300'
+                      : topicProfile?.subscription_type === 'sponsor'
+                        ? 'prose-headings:text-amber-700 dark:prose-headings:text-amber-300'
+                        : ''
+              }`}>
                 {topic.content}
               </div>
               
@@ -789,20 +886,40 @@ const TopicView = () => {
             <div className="space-y-4">
               {comments.map((comment) => {
                 const commentProfile = comment.profiles || null;
-                const isCommentPremium = commentProfile?.subscription_type && 
-                  ["premium", "business", "sponsor"].includes(commentProfile.subscription_type);
+                const [commentUserRoles, setCommentUserRoles] = useState<string[]>([]);
+                
+                useEffect(() => {
+                  const fetchCommentUserRoles = async () => {
+                    if (comment.user_id) {
+                      try {
+                        const { data, error } = await supabase
+                          .from('user_roles')
+                          .select('role')
+                          .eq('user_id', comment.user_id);
+                          
+                        if (data && !error) {
+                          setCommentUserRoles(data.map(r => r.role));
+                        }
+                      } catch (err) {
+                        console.error('Error fetching comment user roles:', err);
+                      }
+                    }
+                  };
                   
+                  fetchCommentUserRoles();
+                }, [comment.user_id]);
+                
                 return (
-                  <Card key={comment.id} className={`p-6 ${isCommentPremium ? 'border-amber-200 dark:border-amber-800' : ''}`}>
+                  <Card key={comment.id} className={`p-6 ${getCardStyles(commentProfile?.subscription_type, commentUserRoles)}`}>
                     <div className="flex items-start gap-4">
                       <div 
                         onClick={() => navigateToUserProfile(comment.user_id)}
                         className="cursor-pointer"
                         title="Перейти к профилю пользователя"
                       >
-                        <Avatar className={`h-8 w-8 ${getAvatarStyles(commentProfile?.subscription_type)}`}>
+                        <Avatar className={`h-8 w-8 ${getAvatarStyles(commentProfile?.subscription_type, commentUserRoles)}`}>
                           <AvatarImage src={commentProfile?.avatar_url || ""} alt={commentProfile?.username || "User"} />
-                          <AvatarFallback className={getAvatarFallbackStyles(commentProfile?.subscription_type)}>
+                          <AvatarFallback className={getAvatarFallbackStyles(commentProfile?.subscription_type, commentUserRoles)}>
                             {(commentProfile?.username?.[0] || "U").toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
@@ -818,14 +935,24 @@ const TopicView = () => {
                             >
                               {commentProfile?.username || "Пользователь"}
                             </div>
-                            {commentProfile && getSubscriptionBadge(commentProfile.subscription_type)}
+                            {commentProfile && getSubscriptionBadge(commentProfile.subscription_type, commentUserRoles)}
                           </div>
                           <div className="text-sm text-muted-foreground">
                             {formatDate(comment.created_at)}
                           </div>
                         </div>
                         
-                        <div className={`mt-2 ${isCommentPremium ? 'text-gray-800 dark:text-gray-100' : ''}`}>
+                        <div className={`mt-2 ${
+                          commentUserRoles.includes('admin') 
+                            ? 'text-gray-800 dark:text-gray-100' 
+                            : commentUserRoles.includes('creator')
+                              ? 'text-gray-800 dark:text-gray-100'
+                              : commentUserRoles.includes('moderator')
+                                ? 'text-gray-800 dark:text-gray-100'
+                                : commentProfile?.subscription_type === 'sponsor'
+                                  ? 'text-gray-800 dark:text-gray-100'
+                                  : ''
+                        }`}>
                           {comment.content}
                         </div>
                         
