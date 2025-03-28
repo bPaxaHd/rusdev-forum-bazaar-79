@@ -191,6 +191,33 @@ export type Database = {
         }
         Relationships: []
       }
+      support_messages: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          is_admin: boolean | null
+          read: boolean | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          is_admin?: boolean | null
+          read?: boolean | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_admin?: boolean | null
+          read?: boolean | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       topic_likes: {
         Row: {
           created_at: string | null

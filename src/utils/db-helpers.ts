@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 // Admin login attempt interface
@@ -8,6 +7,16 @@ export interface AdminLoginAttempt {
   timestamp: string;
   attempts: number;
   is_resolved: boolean;
+}
+
+// Support message interface
+export interface SupportMessage {
+  id: string;
+  user_id: string;
+  content: string;
+  is_admin: boolean;
+  read: boolean;
+  created_at: string;
 }
 
 // Функция для обновления структуры базы данных (вызывается при необходимости)
@@ -96,7 +105,6 @@ export const updateSubscriptionByTag = async (userTag: string, subscriptionType:
 };
 
 // Функции для работы с admin_login_attempts
-
 // Функция для регистрации попытки входа
 export const recordLoginAttempt = async (ipAddress: string) => {
   try {
@@ -176,5 +184,97 @@ export const resolveLoginAttempt = async (id: string) => {
   } catch (error) {
     console.error("Error resolving login attempt:", error);
     return false;
+  }
+};
+
+// Функции для работы с сообщениями поддержки
+
+// Получение всех непрочитанных сообщений (для админов)
+export const getUnreadSupportMessages = async (): Promise<SupportMessage[]> => {
+  try {
+    const { data, error } = await supabase
+      .from("support_messages")
+      .select("*, profiles!inner(*)")
+      .eq("read", false)
+      .eq("is_admin", false)
+      .order("created_at");
+      
+    if (error) {
+      console.error("Error fetching unread support messages:", error);
+      return [];
+    }
+    
+    return data as SupportMessage[];
+  } catch (error) {
+    console.error("Error fetching unread support messages:", error);
+    return [];
+  }
+};
+
+// Отметить сообщение как прочитанное
+export const markSupportMessageAsRead = async (messageId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from("support_messages")
+      .update({ read: true })
+      .eq("id", messageId);
+      
+    if (error) {
+      console.error("Error marking support message as read:", error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error marking support message as read:", error);
+    return false;
+  }
+};
+
+// Отправка сообщения от имени администратора
+export const sendAdminSupportMessage = async (
+  userId: string, 
+  content: string
+): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from("support_messages")
+      .insert({
+        user_id: userId,
+        content,
+        is_admin: true,
+        read: false
+      });
+      
+    if (error) {
+      console.error("Error sending admin support message:", error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error sending admin support message:", error);
+    return false;
+  }
+};
+
+// Получение диалога с пользователем
+export const getUserSupportDialog = async (userId: string): Promise<SupportMessage[]> => {
+  try {
+    const { data, error } = await supabase
+      .from("support_messages")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at");
+      
+    if (error) {
+      console.error("Error fetching user support dialog:", error);
+      return [];
+    }
+    
+    return data as SupportMessage[];
+  } catch (error) {
+    console.error("Error fetching user support dialog:", error);
+    return [];
   }
 };

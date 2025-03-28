@@ -3,7 +3,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SendIcon, XIcon } from "lucide-react";
@@ -12,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
   id: string;
-  sender_id: string;
+  user_id: string;
   content: string;
   is_admin: boolean;
   created_at: string;
@@ -38,6 +37,7 @@ const SupportChat: React.FC<SupportChatProps> = ({ userId, onClose }) => {
       try {
         setLoading(true);
         
+        // Get the messages from the support_messages table
         const { data, error } = await supabase
           .from("support_messages")
           .select("*")
@@ -49,7 +49,8 @@ const SupportChat: React.FC<SupportChatProps> = ({ userId, onClose }) => {
           return;
         }
         
-        setMessages(data || []);
+        // Type assertion to tell TypeScript that the data matches our Message interface
+        setMessages(data as Message[]);
         
         // Получаем информацию о пользователе
         const { data: profileData } = await supabase
@@ -62,7 +63,10 @@ const SupportChat: React.FC<SupportChatProps> = ({ userId, onClose }) => {
         
         // Помечаем сообщения как прочитанные
         if (data && data.length > 0) {
-          const unreadMessages = data.filter(msg => !msg.is_admin && !msg.read).map(msg => msg.id);
+          const unreadMessages = (data as Message[])
+            .filter(msg => !msg.is_admin && !msg.read)
+            .map(msg => msg.id);
+            
           if (unreadMessages.length > 0) {
             await supabase
               .from("support_messages")
@@ -80,7 +84,7 @@ const SupportChat: React.FC<SupportChatProps> = ({ userId, onClose }) => {
     fetchMessages();
     
     // Подписываемся на новые сообщения
-    const subscription = supabase
+    const channel = supabase
       .channel(`support_chat_${userId}`)
       .on('postgres_changes', { 
         event: 'INSERT', 
@@ -102,7 +106,7 @@ const SupportChat: React.FC<SupportChatProps> = ({ userId, onClose }) => {
       .subscribe();
       
     return () => {
-      subscription.unsubscribe();
+      supabase.removeChannel(channel);
     };
   }, [userId]);
   
@@ -116,15 +120,14 @@ const SupportChat: React.FC<SupportChatProps> = ({ userId, onClose }) => {
     if (!newMessage.trim()) return;
     
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("support_messages")
         .insert({
           user_id: userId,
           content: newMessage,
           is_admin: false,
           read: false
-        })
-        .select();
+        });
         
       if (error) {
         toast({
