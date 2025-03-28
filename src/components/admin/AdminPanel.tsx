@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,9 +20,10 @@ import { getUserSupportDialog, markSupportMessageAsRead } from "@/utils/db-helpe
 interface AdminPanelProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  isPasswordVerified?: boolean;
 }
 
-export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
+export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange, isPasswordVerified = false }) => {
   const { user, isCreator, isAdmin } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("users");
@@ -35,6 +37,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
   const [supportUsers, setSupportUsers] = useState<UserWithMessages[]>([]);
   const [loadingSupport, setLoadingSupport] = useState(false);
   const [supportSearchQuery, setSupportSearchQuery] = useState("");
+  
+  // Don't allow opening if not password verified
+  useEffect(() => {
+    if (open && !isPasswordVerified) {
+      onOpenChange(false);
+    }
+  }, [open, isPasswordVerified, onOpenChange]);
   
   const fetchUsers = async () => {
     if (!user) return;
@@ -192,19 +201,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
   }, [supportSearchQuery, supportUsers]);
   
   useEffect(() => {
-    if (open) {
+    if (open && isPasswordVerified) {
       fetchUsers();
       if (activeTab === "support") {
         fetchSupportUsers();
       }
     }
-  }, [open, activeTab]);
+  }, [open, activeTab, isPasswordVerified]);
   
   useEffect(() => {
-    if (open && activeTab === "support") {
+    if (open && activeTab === "support" && isPasswordVerified) {
       fetchSupportUsers();
     }
-  }, [activeTab, open]);
+  }, [activeTab, open, isPasswordVerified]);
   
   const handleSelectUser = (user: User) => {
     setSelectedUser(user);
@@ -218,7 +227,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
   };
   
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open && isPasswordVerified} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

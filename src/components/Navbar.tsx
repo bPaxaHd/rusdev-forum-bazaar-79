@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -31,6 +30,7 @@ const Navbar = () => {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
   const [adminLoginError, setAdminLoginError] = useState("");
+  const [isPasswordVerified, setIsPasswordVerified] = useState(false);
   const navigate = useNavigate();
   
   useEffect(() => {
@@ -66,6 +66,7 @@ const Navbar = () => {
       if (adminPassword === correctPassword) {
         setShowAdminLogin(false);
         setShowAdminPanel(true);
+        setIsPasswordVerified(true);
         setAdminPassword("");
         setAdminLoginError("");
       } else {
@@ -79,15 +80,25 @@ const Navbar = () => {
 
   const handleAdminButtonClick = () => {
     // Always show the password dialog first, never directly open the admin panel
+    setIsPasswordVerified(false); // Reset verification status
     setShowAdminLogin(true);
   };
   
   // When admin panel is closed, reset state
   const handleAdminPanelOpenChange = (open: boolean) => {
-    setShowAdminPanel(open);
-    // If panel is closed, we should require password again next time
     if (!open) {
+      // If panel is being closed, reset everything
+      setShowAdminPanel(false);
+      setIsPasswordVerified(false);
       setAdminPassword("");
+    } else if (!isPasswordVerified) {
+      // If trying to open but password not verified, show login instead
+      setShowAdminPanel(false);
+      setShowAdminLogin(true);
+      return;
+    } else {
+      // Otherwise, allow opening the panel
+      setShowAdminPanel(open);
     }
   };
 
@@ -161,7 +172,13 @@ const Navbar = () => {
       </div>
       
       {/* Admin Password Dialog */}
-      <Dialog open={showAdminLogin} onOpenChange={setShowAdminLogin}>
+      <Dialog open={showAdminLogin} onOpenChange={(open) => {
+        if (!open) {
+          setAdminPassword("");
+          setAdminLoginError("");
+        }
+        setShowAdminLogin(open);
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Вход в панель администратора</DialogTitle>
@@ -192,8 +209,12 @@ const Navbar = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Admin Panel Component */}
-      <AdminPanel open={showAdminPanel} onOpenChange={handleAdminPanelOpenChange} />
+      {/* Admin Panel Component - Only show if password is verified */}
+      <AdminPanel 
+        open={showAdminPanel && isPasswordVerified} 
+        onOpenChange={handleAdminPanelOpenChange} 
+        isPasswordVerified={isPasswordVerified}
+      />
     </header>;
 };
 
