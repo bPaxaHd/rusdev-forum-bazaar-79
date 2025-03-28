@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +17,7 @@ interface UsersTabProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   selectedUser: User | null;
-  fetchUsers: () => Promise<void>;
+  fetchUsers: () => Promise<void>; // This is now correctly typed to return Promise<void>
   handleSelectUser: (user: User) => void;
   editedProfile: Partial<UserProfile>;
   setEditedProfile: (profile: Partial<UserProfile>) => void;
@@ -39,6 +38,7 @@ const UsersTab: React.FC<UsersTabProps> = ({
   isCreator,
   isAdmin
 }) => {
+  
   return (
     <>
       <div className="flex justify-between items-center mb-4">

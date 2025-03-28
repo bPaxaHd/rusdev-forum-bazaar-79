@@ -84,7 +84,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
     }
   };
   
-  const fetchUsers = async () => {
+  // Update fetchUsers to return a Promise
+  const fetchUsers = async (): Promise<void> => {
     try {
       setLoadingUsers(true);
       
@@ -272,3 +273,4 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
 };
 
 export default AdminPanel;
+
