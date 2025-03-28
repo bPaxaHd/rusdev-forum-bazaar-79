@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -93,6 +92,23 @@
 
   body {
     @apply bg-background text-foreground antialiased font-sans;
+  }
+
+  /* Стилизация скроллбара */
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-primary/20 hover:bg-primary/30 rounded-full transition-colors;
+  }
+  
+  .dark ::-webkit-scrollbar-thumb {
+    @apply bg-primary/30 hover:bg-primary/40;
   }
 }
 
@@ -210,6 +226,20 @@
   
   .dark-card {
     @apply bg-black/40 backdrop-blur-xl border border-white/10;
+  }
+  
+  /* Утилиты для скроллбаров */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+  
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
   
   /* Анимации для интерактивности */
