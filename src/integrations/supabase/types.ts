@@ -146,6 +146,30 @@ export type Database = {
           },
         ]
       }
+      dev_scripts: {
+        Row: {
+          created_at: string | null
+          id: string
+          script_content: string
+          script_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          script_content: string
+          script_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          script_content?: string
+          script_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       job_listings: {
         Row: {
           company_name: string
@@ -429,6 +453,18 @@ export type Database = {
       create_topic_likes_if_not_exists: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      get_dev_script: {
+        Args: {
+          script_name: string
+        }
+        Returns: string
+      }
+      get_secure_script: {
+        Args: {
+          script_name: string
+        }
+        Returns: string
       }
       has_role: {
         Args: {
