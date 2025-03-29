@@ -79,10 +79,5 @@ const _loadAlt = async () => {
 // Совместимое имя функции, переименованное для безопасности
 export const loadDevTools = loadRemoteTools;
 
-// Обфускация имен и функций при экспорте
-Object.defineProperty(exports, '__esModule', { value: true });
-Object.defineProperty(exports, 'loadDevTools', { 
-  enumerable: false,
-  configurable: false,
-  value: loadRemoteTools
-});
+// Удаляем некорректное использование exports, так как мы в ES модуле
+// Вместо этого используем прямой экспорт, который уже определен выше
