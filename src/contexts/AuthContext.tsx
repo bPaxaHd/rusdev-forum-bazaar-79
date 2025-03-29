@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -46,7 +45,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [hasPremiumAccess, setHasPremiumAccess] = useState(false);
   const { toast } = useToast();
 
-  // Function to fetch and update user roles and permissions
   const fetchUserRoles = async (userId: string) => {
     if (!userId) return;
     
@@ -63,7 +61,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const effectiveType = await getEffectiveSubscriptionType(userId);
       setEffectiveSubscriptionType(effectiveType);
 
-      // Fix: Don't call Boolean as a function, just assign the value directly
       const premiumAccess = await hasPremiumAccess(userId);
       setHasPremiumAccess(premiumAccess);
     } catch (error) {
@@ -78,7 +75,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    // Check active session
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
@@ -93,13 +89,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     
     checkSession();
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        // Use setTimeout to avoid potential deadlock with Supabase auth events
         setTimeout(() => {
           fetchUserRoles(session.user.id);
         }, 0);
