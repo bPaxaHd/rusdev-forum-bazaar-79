@@ -30,3 +30,10 @@ export interface LoginAttempt {
 }
 
 export type SubscriptionLevel = 'free' | 'premium' | 'business' | 'sponsor' | 'admin';
+
+// Define proper interface for the profiles data structure
+export interface ProfileResponse {
+  username: string;
+  avatar_url: string | null;
+  subscription_type?: string | null;
+}

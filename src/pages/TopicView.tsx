@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, NavLink, useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -19,6 +18,7 @@ import EditCommentDialog from "@/components/EditCommentDialog";
 import EditTopicDialog from "@/components/EditTopicDialog";
 import { deleteComment, deleteTopic } from "@/utils/db-helpers";
 import { canModifyContent } from "@/utils/auth-helpers";
+import { ProfileResponse } from "@/types/auth";
 
 interface TopicData {
   id: string;
@@ -30,11 +30,7 @@ interface TopicData {
   updated_at: string;
   likes: number;
   views: number;
-  profiles?: {
-    username: string;
-    avatar_url: string | null;
-    subscription_type?: string | null;
-  };
+  profiles?: ProfileResponse;
 }
 
 interface CommentData {
@@ -43,11 +39,7 @@ interface CommentData {
   user_id: string;
   created_at: string;
   likes: number;
-  profiles?: {
-    username: string;
-    avatar_url: string | null;
-    subscription_type?: string | null;
-  };
+  profiles?: ProfileResponse;
 }
 
 // Interface to store comment user roles mapping
@@ -74,7 +66,6 @@ const TopicView = () => {
   const [canModifyTopic, setCanModifyTopic] = useState(false);
   const [canModifyComments, setCanModifyComments] = useState<Record<string, boolean>>({});
   const [userRoles, setUserRoles] = useState<string[]>([]);
-  // Store comment user roles in a single state instead of creating state for each comment
   const [commentUserRoles, setCommentUserRoles] = useState<CommentUserRolesMap>({});
 
   useEffect(() => {
@@ -139,7 +130,6 @@ const TopicView = () => {
     }
   }, [user, comments]);
   
-  // Fetch all comment user roles at once
   useEffect(() => {
     const fetchAllCommentUserRoles = async () => {
       if (comments.length === 0) return;
@@ -159,7 +149,6 @@ const TopicView = () => {
           if (data && !error) {
             const userRoles = data.map(r => r.role);
             
-            // Assign these roles to all comments by this user
             comments.forEach(comment => {
               if (comment.user_id === userId) {
                 roles[comment.id] = userRoles;
@@ -241,9 +230,19 @@ const TopicView = () => {
         console.log("Topic data:", topicData);
         console.log("Comments data:", commentsData);
         
-        setTopic(topicData as TopicData);
+        const transformedTopicData = {
+          ...topicData,
+          profiles: topicData.profiles?.[0] || null
+        } as TopicData;
+        
+        const transformedCommentsData = commentsData ? commentsData.map(comment => ({
+          ...comment,
+          profiles: comment.profiles?.[0] || null
+        })) as CommentData[] : [];
+        
+        setTopic(transformedTopicData);
         setLikesCount(topicData.likes || 0);
-        setComments(commentsData as CommentData[] || []);
+        setComments(transformedCommentsData);
       } catch (error) {
         console.error("Ошибка при загрузке данных:", error);
         toast({
@@ -737,7 +736,12 @@ const TopicView = () => {
         .single();
         
       if (data) {
-        setTopic(data as TopicData);
+        const transformedData = {
+          ...data,
+          profiles: data.profiles?.[0] || null
+        } as TopicData;
+        
+        setTopic(transformedData);
       }
     } catch (error) {
       console.error("Error refreshing topic:", error);
@@ -762,7 +766,12 @@ const TopicView = () => {
         .order("created_at", { ascending: true });
         
       if (data) {
-        setComments(data as CommentData[]);
+        const transformedData = data.map(comment => ({
+          ...comment,
+          profiles: comment.profiles?.[0] || null
+        })) as CommentData[];
+        
+        setComments(transformedData);
       }
     } catch (error) {
       console.error("Error refreshing comments:", error);

@@ -12,6 +12,7 @@ import { initDb } from "@/utils/db-helpers";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { ProfileResponse } from "@/types/auth";
 
 interface TopicData {
   id: string;
@@ -24,17 +25,9 @@ interface TopicData {
   likes: number;
   views: number;
   is_premium?: boolean;
-  profile?: {
-    username: string;
-    avatar_url: string | null;
-    subscription_type?: string | null;
-  };
+  profile?: ProfileResponse;
+  profiles?: ProfileResponse;
   comments?: { id: string }[];
-  profiles?: {
-    username: string;
-    avatar_url: string | null;
-    subscription_type?: string | null;
-  };
 }
 
 const Forum = () => {
@@ -97,14 +90,15 @@ const Forum = () => {
         const formattedTopics = data.map(topic => ({
           ...topic,
           profile: {
-            username: topic.profiles?.username || "Unknown",
-            avatar_url: topic.profiles?.avatar_url,
-            subscription_type: topic.profiles?.subscription_type
+            username: topic.profiles?.[0]?.username || "Unknown",
+            avatar_url: topic.profiles?.[0]?.avatar_url,
+            subscription_type: topic.profiles?.[0]?.subscription_type
           },
+          profiles: topic.profiles?.[0],
           comments: topic.comments || []
-        }));
+        })) as TopicData[];
         
-        setTopics(formattedTopics as TopicData[]);
+        setTopics(formattedTopics);
       } catch (error) {
         console.error("Ошибка при загрузке тем:", error);
       } finally {
@@ -154,14 +148,15 @@ const Forum = () => {
         const formattedTopics = data.map(topic => ({
           ...topic,
           profile: {
-            username: topic.profiles?.username || "Unknown",
-            avatar_url: topic.profiles?.avatar_url,
-            subscription_type: topic.profiles?.subscription_type
+            username: topic.profiles?.[0]?.username || "Unknown",
+            avatar_url: topic.profiles?.[0]?.avatar_url,
+            subscription_type: topic.profiles?.[0]?.subscription_type
           },
+          profiles: topic.profiles?.[0],
           comments: topic.comments || []
-        }));
+        })) as TopicData[];
         
-        setPremiumTopics(formattedTopics as TopicData[]);
+        setPremiumTopics(formattedTopics);
       } catch (error) {
         console.error("Ошибка при загрузке премиум тем:", error);
       } finally {

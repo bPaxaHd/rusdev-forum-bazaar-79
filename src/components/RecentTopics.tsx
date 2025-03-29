@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import TopicCard from "./TopicCard";
 import CreateTopicDialog from "./CreateTopicDialog";
@@ -10,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Crown } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { ProfileResponse } from "@/types/auth";
 
 interface TopicData {
   id: string; // String to match Supabase UUID format
@@ -22,11 +24,7 @@ interface TopicData {
   likes: number;
   views: number;
   is_premium?: boolean;
-  profiles?: {
-    username: string;
-    avatar_url: string | null;
-    subscription_type?: string | null;
-  };
+  profiles?: ProfileResponse;
   user_roles?: { role: string }[] | null; // Updated to be optional and nullable
   comments?: { id: string }[];
 }
@@ -82,13 +80,15 @@ const RecentTopics = () => {
         
         console.log("Fetched topics:", data);
         
-        // Process the data to ensure user_roles is properly formatted
+        // Transform the data to match the expected structure
         const processedData = data.map(topic => ({
           ...topic,
+          // Convert the profiles array to a single object
+          profiles: topic.profiles?.[0] || null,
           user_roles: Array.isArray(topic.user_roles) ? topic.user_roles : null
-        }));
+        })) as TopicData[];
         
-        setTopics(processedData as TopicData[]);
+        setTopics(processedData);
       } catch (error) {
         console.error("Ошибка при загрузке тем:", error);
         setError("Произошла ошибка при загрузке тем");
@@ -138,13 +138,15 @@ const RecentTopics = () => {
           return;
         }
         
-        // Process the data to ensure user_roles is properly formatted
+        // Transform the data to match the expected structure
         const processedData = data.map(topic => ({
           ...topic,
+          // Convert the profiles array to a single object
+          profiles: topic.profiles?.[0] || null,
           user_roles: Array.isArray(topic.user_roles) ? topic.user_roles : null
-        }));
+        })) as TopicData[];
         
-        setPremiumTopics(processedData as TopicData[]);
+        setPremiumTopics(processedData);
       } catch (error) {
         console.error("Ошибка при загрузке премиум тем:", error);
       } finally {
