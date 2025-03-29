@@ -5,9 +5,7 @@ import App from './App.tsx'
 import './index.css'
 import { loadDevTools } from './utils/devTools'
 
-// Усиленная защита от просмотра кода
 const enhancedSecurity = () => {
-  // Предотвращение копирования в буфер обмена
   document.addEventListener('copy', function(e) {
     if (process.env.NODE_ENV === 'production') {
       e.preventDefault();
@@ -15,7 +13,6 @@ const enhancedSecurity = () => {
     }
   });
 
-  // Защита от извлечения исходного кода
   if (process.env.NODE_ENV === 'production') {
     const protectedWindow: any = window;
     const originalFunction = Function;
@@ -33,11 +30,9 @@ const enhancedSecurity = () => {
         return originalFunction(...args, functionBody);
       };
       
-      // Блокировка доступа к исходным файлам через инструменты разработчика
       const originalOpen = XMLHttpRequest.prototype.open;
       XMLHttpRequest.prototype.open = function(method: string, url: string, ...args: any[]) {
         if (typeof url === 'string' && (url.endsWith('.js') || url.endsWith('.ts') || url.endsWith('.tsx') || url.endsWith('.jsx'))) {
-          // Перенаправляем запросы к исходным файлам
           const newUrl = url.replace(/\.(js|ts|tsx|jsx)$/, '.obfuscated.$1');
           return originalOpen.call(this, method, newUrl, ...args);
         }
@@ -47,12 +42,9 @@ const enhancedSecurity = () => {
       console.log('Security layer initialized');
     }
     
-    // Расширенная маскировка следов AI-генерации
     const removeAllTraces = () => {
-      // Удаление элементов, связанных с GPT Engineer или Lovable
       const keywords = ['lovable', 'gpteng', 'gpt-engineer', 'ai-generated', 'ai-gen'];
       
-      // Маскировка DOM-элементов
       document.querySelectorAll('*').forEach(el => {
         for (const keyword of keywords) {
           if (el.id && el.id.toLowerCase().includes(keyword)) {
@@ -63,7 +55,6 @@ const enhancedSecurity = () => {
             el.className = el.className.replace(new RegExp(keyword, 'gi'), 'devtalk-internal');
           }
           
-          // Удаление всех data-атрибутов, связанных с AI-генерацией
           Array.from(el.attributes).forEach(attr => {
             if (attr.name.startsWith('data-') || keywords.some(kw => attr.name.toLowerCase().includes(kw) || 
                 (typeof attr.value === 'string' && attr.value.toLowerCase().includes(kw)))) {
@@ -73,7 +64,6 @@ const enhancedSecurity = () => {
         }
       });
       
-      // Подмена скриптов
       document.querySelectorAll('script').forEach(script => {
         if (script.src && keywords.some(kw => script.src.toLowerCase().includes(kw))) {
           const newSrc = script.src;
@@ -85,14 +75,13 @@ const enhancedSecurity = () => {
         }
       });
       
-      // Очистка комментариев в DOM, которые могут содержать метаданные
       const removeComments = (node: Node) => {
         const childNodes = node.childNodes;
         for (let i = childNodes.length - 1; i >= 0; i--) {
           const child = childNodes[i];
-          if (child.nodeType === 8) { // 8 = комментарий
+          if (child.nodeType === 8) {
             node.removeChild(child);
-          } else if (child.nodeType === 1) { // 1 = элемент
+          } else if (child.nodeType === 1) {
             removeComments(child);
           }
         }
@@ -101,7 +90,6 @@ const enhancedSecurity = () => {
       removeComments(document.documentElement);
     };
     
-    // Запускаем очистку после загрузки DOM и позже снова для динамически добавленных элементов
     if (document.readyState === 'loading') {
       window.addEventListener('DOMContentLoaded', removeAllTraces);
     } else {
@@ -110,22 +98,19 @@ const enhancedSecurity = () => {
     
     window.addEventListener('load', removeAllTraces);
     setTimeout(removeAllTraces, 1000);
-    setInterval(removeAllTraces, 3000); // Периодическая проверка и очистка
+    setInterval(removeAllTraces, 3000);
   }
   
-  // Блокировка отладчика с помощью цикла с условием, чтобы обойти блокировку console.clear()
   let blockerActive = true;
   const startBlockerInterval = () => {
     if (blockerActive) {
       const startTime = new Date().getTime();
       while (new Date().getTime() - startTime < 50) {
-        // Этот цикл предотвращает использование консоли разработчика
       }
       setTimeout(startBlockerInterval, 200);
     }
   };
   
-  // Активировать блокировку только при обнаружении открытых инструментов разработчика
   window.addEventListener('devtoolschange', function(e: any) {
     blockerActive = e.detail.open;
     if (blockerActive) {
@@ -134,9 +119,7 @@ const enhancedSecurity = () => {
   });
 };
 
-// Шифрование имен переменных и функций в рантайме
 const obfuscateNames = () => {
-  // Замена глобальных переменных на случайные имена
   const globalNames = ['React', 'ReactDOM', '_', '$', 'jQuery', 'angular', 'Vue'];
   const randomNames: Record<string, string> = {};
   
@@ -148,7 +131,6 @@ const obfuscateNames = () => {
     }
   });
   
-  // Замена в исходном коде
   try {
     document.querySelectorAll('script:not([src])').forEach(script => {
       let content = script.textContent || '';
@@ -165,9 +147,7 @@ const obfuscateNames = () => {
   }
 };
 
-// Расширенное шифрование URL и предотвращение утечек через history API
 const secureHistory = () => {
-  // Маскируем URL, которые могут указывать на происхождение сайта
   const originalPushState = window.history.pushState;
   const originalReplaceState = window.history.replaceState;
   
@@ -186,24 +166,19 @@ const secureHistory = () => {
   };
 };
 
-// Инициализация защиты
 enhancedSecurity();
 obfuscateNames();
 secureHistory();
 
-// Загрузка инструментов разработки через проксирующий слой
 const loadToolsSafely = async () => {
   try {
     await loadDevTools();
   } catch (e) {
-    // Тихая обработка ошибок
     console.log('Development environment initialized');
   }
 };
 
-// Скрытие элементов, связанных с инструментами разработки
 const hideDevModules = () => {
-  // Маскируем имена файлов и модулей в консоли разработчика
   const originalError = console.error;
   console.error = function(...args) {
     const maskedArgs = args.map(arg => {
@@ -215,7 +190,6 @@ const hideDevModules = () => {
     return originalError.apply(this, maskedArgs);
   };
   
-  // Скрытие скриптов в DOM
   const originalCreateElement = document.createElement.bind(document);
   document.createElement = function(tagName: string) {
     const element = originalCreateElement(tagName);
@@ -231,7 +205,6 @@ const hideDevModules = () => {
     return element;
   };
   
-  // Модификация сообщений об ошибках
   window.addEventListener('error', function(e) {
     if (e.filename && (e.filename.includes('gpteng') || e.filename.includes('lovable'))) {
       const newEvent = new ErrorEvent('error', {
@@ -242,17 +215,14 @@ const hideDevModules = () => {
         error: e.error
       });
       
-      // Предотвращаем оригинальное событие
       e.preventDefault();
       
-      // Выбрасываем новое событие с замаскированной информацией
       window.dispatchEvent(newEvent);
       return false;
     }
   }, true);
 };
 
-// Запуск маскировки инструментов и безопасной загрузки
 hideDevModules();
 loadToolsSafely();
 

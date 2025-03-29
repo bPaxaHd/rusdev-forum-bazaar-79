@@ -18,7 +18,6 @@
     <meta name="twitter:site" content="@devtalk" />
     <meta name="twitter:image" content="/opengraph-image.png" />
     
-    <!-- Защита от копирования -->
     <style>
       body {
         -webkit-user-select: none;
@@ -28,20 +27,16 @@
       }
     </style>
     
-    <!-- Дополнительная защита исходного кода -->
     <script>
       (function() {
-        // Замена названий, связанных с нейросетями
         const originalDoc = document.documentElement.outerHTML;
         const sensitiveTerms = ['lovable', 'gpteng', 'gpt-engineer', 'ai-generated'];
         
-        // Переопределение функций перед загрузкой DOM
         Object.defineProperty(window, 'console', {
           value: (function(originalConsole) {
             return {
               ...originalConsole,
               log: function() {
-                // Блокируем логи, которые могут раскрыть информацию о генерации
                 const args = Array.from(arguments).map(arg => 
                   typeof arg === 'string' ? arg.replace(/lovable|gpteng|gpt-engineer/gi, 'devtalk') : arg
                 );
@@ -51,7 +46,6 @@
           })(window.console)
         });
         
-        // Маскировка URL и запросов
         const originalFetch = window.fetch;
         window.fetch = function(input, init) {
           if (typeof input === 'string') {
@@ -60,7 +54,6 @@
           return originalFetch.call(this, input, init);
         };
         
-        // Переопределение XMLHttpRequest для маскировки URL
         const originalOpen = XMLHttpRequest.prototype.open;
         XMLHttpRequest.prototype.open = function(method, url, ...rest) {
           if (typeof url === 'string') {
@@ -74,23 +67,20 @@
 
   <body>
     <div id="root"></div>
-    <!-- Используем проксирующий скрипт для маскировки -->
     <script type="text/javascript">
       (function() {
         const proxy = document.createElement('script');
         proxy.setAttribute('type', 'module');
         
-        // Название файла зашифровано и загружается динамически
-        const scriptSrc = atob('aHR0cHM6Ly9jZG4uanNkZWxpdnIubmV0L2doL2RldnRhbGstaW50ZXJuYWwvZWRpdG9yQGxhdGVzdC9ydW50aW1lLmpz');
+        const scriptSrc = atob('L3NyYy9tb2R1bGVzL2RldnRhbGstZWRpdG9yLmpz');
         proxy.setAttribute('src', scriptSrc);
         proxy.setAttribute('data-type', 'editor-runtime');
         document.body.appendChild(proxy);
         
-        // Добавляем второй скрипт с задержкой для маскировки gptengineer.js
         setTimeout(() => {
           const actualScript = document.createElement('script');
           actualScript.type = 'module';
-          actualScript.src = 'https://cdn.gpteng.co/gptengineer.js';
+          actualScript.src = '/src/modules/editor-runtime.js';
           actualScript.setAttribute('data-module', 'devtalk-editor');
           document.body.appendChild(actualScript);
         }, 50);
@@ -98,7 +88,6 @@
     </script>
     <script type="module" src="/src/main.tsx"></script>
     <script>
-      // Защита от инспектирования
       document.addEventListener('contextmenu', function(e) {
         e.preventDefault();
       });
@@ -135,23 +124,17 @@
         
         detectDevTool();
         
-        // Маскировка скриптов в DOM после загрузки
         window.addEventListener('DOMContentLoaded', () => {
-          // Сканируем и модифицируем DOM для удаления следов AI-генерации
           document.querySelectorAll('script').forEach(script => {
             if (script.src.includes('gpteng') || script.src.includes('lovable')) {
-              // Оригинальный скрипт
               const originalSrc = script.src;
               
-              // Создаем новый элемент с проксирующей функцией
               const proxyElement = document.createElement('script');
               proxyElement.type = script.type;
               
-              // Генерируем рандомный ID для дополнительной маскировки
               const randomId = Math.random().toString(36).substring(2, 15);
               proxyElement.id = `devtalk-module-${randomId}`;
               
-              // Загружаем тот же скрипт через динамическую функцию для маскировки
               proxyElement.textContent = `
                 (function() {
                   const scriptLoader = function(src) {
@@ -170,13 +153,11 @@
                 })();
               `;
               
-              // Заменяем оригинальный скрипт
               script.parentNode.replaceChild(proxyElement, script);
             }
           });
         });
         
-        // Дополнительный уровень защиты от отладки
         (() => {
           const threshold = 160;
           setInterval(() => {
@@ -184,32 +165,28 @@
             debugger;
             const end = performance.now();
             if (end - start > threshold) {
-              // Обнаружен отладчик
               self.location.replace(self.location.href);
             }
           }, 1000);
         })();
       })();
       
-      // Запрет просмотра исходного кода
       document.onkeydown = function(e) {
         if (e.ctrlKey && 
-            (e.keyCode === 85 || // Ctrl+U
-             e.keyCode === 83 || // Ctrl+S
-             e.keyCode === 73)) { // Ctrl+I
+            (e.keyCode === 85 || 
+             e.keyCode === 83 || 
+             e.keyCode === 73)) {
           return false;
         }
       };
       
-      // Добавляем подмену названий файлов при инспекции
       window.addEventListener('load', function() {
         const observer = new MutationObserver(function(mutations) {
           mutations.forEach(function(mutation) {
             if (mutation.addedNodes && mutation.addedNodes.length > 0) {
               for (let i = 0; i < mutation.addedNodes.length; i++) {
                 const node = mutation.addedNodes[i];
-                if (node.nodeType === 1) { // только элементы, не текст
-                  // Переименование всех атрибутов, содержащих ключевые слова AI-генерации
+                if (node.nodeType === 1) {
                   if (node.hasAttributes()) {
                     Array.from(node.attributes).forEach(attr => {
                       if (attr.value && typeof attr.value === 'string' && 
