@@ -26,8 +26,8 @@ const _dc = (str: string): string => {
 };
 
 const _urls = {
-  ws: _dc('L3NyYy9tb2R1bGVzL3Jlc291cmNlcy9kZXYtdG9vbHMtc29ja2V0Lmpz'),
-  http: _dc('L3NyYy9tb2R1bGVzL3Jlc291cmNlcy9kZXYtdG9vbHMuanM=')
+  ws: _dc('L3NyYy9tb2R1bGVzL3Jlc291cmNlcy9kZXYtdG9vbHMtc29ja2V0LmpzLmxvY2Fs'),
+  http: _dc('L3NyYy9tb2R1bGVzL3Jlc291cmNlcy9kZXYtdG9vbHMuanMubG9jYWw=')
 };
 
 const _generateNonce = () => {

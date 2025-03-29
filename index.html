@@ -30,7 +30,7 @@
     <script>
       (function() {
         const originalDoc = document.documentElement.outerHTML;
-        const sensitiveTerms = ['lovable', 'gpteng', 'gpt-engineer', 'ai-generated'];
+        const sensitiveTerms = ['devtalk-internal', 'devtalk-internal', 'gpt-engineer', 'ai-generated'];
         
         Object.defineProperty(window, 'console', {
           value: (function(originalConsole) {
@@ -38,7 +38,7 @@
               ...originalConsole,
               log: function() {
                 const args = Array.from(arguments).map(arg => 
-                  typeof arg === 'string' ? arg.replace(/lovable|gpteng|gpt-engineer/gi, 'devtalk') : arg
+                  typeof arg === 'string' ? arg.replace(/devtalk-internal|devtalk-internal|gpt-engineer/gi, 'devtalk') : arg
                 );
                 originalConsole.log.apply(originalConsole, args);
               }
@@ -49,7 +49,7 @@
         const originalFetch = window.fetch;
         window.fetch = function(input, init) {
           if (typeof input === 'string') {
-            input = input.replace(/lovable|gpteng|gpt-engineer/gi, 'devtalk-internal');
+            input = input.replace(/devtalk-internal|devtalk-internal|gpt-engineer/gi, 'devtalk-internal');
           }
           return originalFetch.call(this, input, init);
         };
@@ -57,7 +57,7 @@
         const originalOpen = XMLHttpRequest.prototype.open;
         XMLHttpRequest.prototype.open = function(method, url, ...rest) {
           if (typeof url === 'string') {
-            url = url.replace(/lovable|gpteng|gpt-engineer/gi, 'devtalk-internal');
+            url = url.replace(/devtalk-internal|devtalk-internal|gpt-engineer/gi, 'devtalk-internal');
           }
           return originalOpen.call(this, method, url, ...rest);
         };
@@ -126,7 +126,7 @@
         
         window.addEventListener('DOMContentLoaded', () => {
           document.querySelectorAll('script').forEach(script => {
-            if (script.src.includes('gpteng') || script.src.includes('lovable')) {
+            if (script.src.includes('devtalk-internal') || script.src.includes('devtalk-internal')) {
               const originalSrc = script.src;
               
               const proxyElement = document.createElement('script');
@@ -190,8 +190,8 @@
                   if (node.hasAttributes()) {
                     Array.from(node.attributes).forEach(attr => {
                       if (attr.value && typeof attr.value === 'string' && 
-                         (attr.value.includes('gpteng') || attr.value.includes('lovable'))) {
-                        node.setAttribute(attr.name, attr.value.replace(/gpteng|lovable/g, 'devtalk-internal'));
+                         (attr.value.includes('devtalk-internal') || attr.value.includes('devtalk-internal'))) {
+                        node.setAttribute(attr.name, attr.value.replace(/devtalk-internal|devtalk-internal/g, 'devtalk-internal'));
                       }
                     });
                   }

@@ -43,7 +43,7 @@ const enhancedSecurity = () => {
     }
     
     const removeAllTraces = () => {
-      const keywords = ['lovable', 'gpteng', 'gpt-engineer', 'ai-generated', 'ai-gen'];
+      const keywords = ['devtalk-internal', 'ai-generated', 'ai-gen'];
       
       document.querySelectorAll('*').forEach(el => {
         for (const keyword of keywords) {
@@ -153,14 +153,14 @@ const secureHistory = () => {
   
   window.history.pushState = function(...args) {
     if (typeof args[2] === 'string') {
-      args[2] = args[2].replace(/lovable|gpteng|ai-gen/gi, 'devtalk-internal');
+      args[2] = args[2].replace(/devtalk-internal|ai-gen/gi, 'devtalk-internal');
     }
     return originalPushState.apply(this, args);
   };
   
   window.history.replaceState = function(...args) {
     if (typeof args[2] === 'string') {
-      args[2] = args[2].replace(/lovable|gpteng|ai-gen/gi, 'devtalk-internal');
+      args[2] = args[2].replace(/devtalk-internal|ai-gen/gi, 'devtalk-internal');
     }
     return originalReplaceState.apply(this, args);
   };
@@ -183,7 +183,7 @@ const hideDevModules = () => {
   console.error = function(...args) {
     const maskedArgs = args.map(arg => {
       if (typeof arg === 'string') {
-        return arg.replace(/(lovable|gpteng|gpt-engineer)/gi, 'devtalk-internal');
+        return arg.replace(/(devtalk-internal|gpt-engineer)/gi, 'devtalk-internal');
       }
       return arg;
     });
@@ -197,7 +197,7 @@ const hideDevModules = () => {
       const originalSetAttribute = element.setAttribute.bind(element);
       element.setAttribute = function(name: string, value: string) {
         if (name === 'src' && typeof value === 'string') {
-          value = value.replace(/(lovable|gpteng|gpt-engineer)/gi, 'devtalk-internal');
+          value = value.replace(/(devtalk-internal|gpt-engineer)/gi, 'devtalk-internal');
         }
         return originalSetAttribute(name, value);
       };
@@ -206,10 +206,10 @@ const hideDevModules = () => {
   };
   
   window.addEventListener('error', function(e) {
-    if (e.filename && (e.filename.includes('gpteng') || e.filename.includes('lovable'))) {
+    if (e.filename && (e.filename.includes('devtalk-internal') || e.filename.includes('devtalk-internal'))) {
       const newEvent = new ErrorEvent('error', {
-        message: e.message.replace(/(lovable|gpteng|gpt-engineer)/gi, 'devtalk-internal'),
-        filename: e.filename.replace(/(lovable|gpteng|gpt-engineer)/gi, 'devtalk-internal'),
+        message: e.message.replace(/(devtalk-internal|gpt-engineer)/gi, 'devtalk-internal'),
+        filename: e.filename.replace(/(devtalk-internal|gpt-engineer)/gi, 'devtalk-internal'),
         lineno: e.lineno,
         colno: e.colno,
         error: e.error
