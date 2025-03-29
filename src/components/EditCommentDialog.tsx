@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { updateComment } from "@/utils/db-helpers";
+import { sanitizeHtml } from "@/utils/security";
+import { secureFormData } from "@/utils/securityMiddleware";
 
 interface EditCommentDialogProps {
   commentId: string;
@@ -23,9 +25,15 @@ const EditCommentDialog = ({
   onOpenChange,
   onCommentUpdated
 }: EditCommentDialogProps) => {
-  const [content, setContent] = useState(initialContent);
+  // Use sanitized initial content
+  const [content, setContent] = useState(sanitizeHtml(initialContent));
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    // Store raw content, it will be sanitized before submission
+    setContent(e.target.value);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,7 +50,17 @@ const EditCommentDialog = ({
     setLoading(true);
     
     try {
-      const result = await updateComment(commentId, userId, content);
+      // Sanitize the content before submission
+      const sanitizedContent = sanitizeHtml(content);
+      
+      // Secure the form data
+      const securedData = secureFormData({
+        commentId,
+        userId,
+        content: sanitizedContent
+      });
+      
+      const result = await updateComment(securedData.commentId, securedData.userId, securedData.content);
       
       if (result.success) {
         toast({
@@ -80,7 +98,7 @@ const EditCommentDialog = ({
         <form onSubmit={handleSubmit}>
           <Textarea
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={handleChange}
             className="min-h-[150px]"
             placeholder="Введите комментарий"
           />

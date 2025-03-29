@@ -1,12 +1,118 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Mail, MapPin, Phone } from "lucide-react";
+import { validateInput } from "@/utils/security";
+import { secureFormData } from "@/utils/securityMiddleware";
+import { useToast } from "@/hooks/use-toast";
 
 const Contacts = () => {
+  const { toast } = useToast();
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    subject: "",
+    message: ""
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Clear error when user starts typing again
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    
+    try {
+      // Validate each field with appropriate validation
+      if (!formData.name) {
+        newErrors.name = "Имя обязательно для заполнения";
+      } else {
+        validateInput(formData.name, 'text');
+      }
+      
+      if (!formData.email) {
+        newErrors.email = "Email обязателен для заполнения";
+      } else {
+        try {
+          validateInput(formData.email, 'email');
+        } catch (error) {
+          if (error instanceof Error) {
+            newErrors.email = error.message;
+          } else {
+            newErrors.email = "Некорректный формат email";
+          }
+        }
+      }
+      
+      if (!formData.subject) {
+        newErrors.subject = "Тема обязательна для заполнения";
+      }
+      
+      if (!formData.message) {
+        newErrors.message = "Сообщение обязательно для заполнения";
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        toast({
+          title: "Ошибка валидации",
+          description: error.message,
+          variant: "destructive"
+        });
+      }
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+    
+    setLoading(true);
+    
+    // Secure the form data before submission
+    const securedData = secureFormData(formData);
+    
+    // Simulate form submission
+    setTimeout(() => {
+      console.log("Form submitted with secure data:", securedData);
+      
+      toast({
+        title: "Успешно отправлено",
+        description: "Ваше сообщение успешно отправлено. Мы свяжемся с вами в ближайшее время."
+      });
+      
+      // Reset form
+      setFormData({
+        name: "",
+        email: "",
+        subject: "",
+        message: ""
+      });
+      
+      setLoading(false);
+    }, 1000);
+  };
+
   return (
     <div className="container mx-auto px-4 py-12 animate-fade-in">
       <div className="max-w-5xl mx-auto">
@@ -50,31 +156,74 @@ const Contacts = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           <div>
             <h2 className="text-2xl font-bold mb-6">Напишите нам</h2>
-            <form className="space-y-4">
+            <form className="space-y-4" onSubmit={handleSubmit}>
               <div>
-                <Input placeholder="Ваше имя" />
+                <Input
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder="Ваше имя" 
+                  aria-invalid={!!errors.name}
+                />
+                {errors.name && (
+                  <p className="text-sm text-red-500 mt-1">{errors.name}</p>
+                )}
               </div>
               <div>
-                <Input type="email" placeholder="Ваш email" />
+                <Input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="Ваш email"
+                  aria-invalid={!!errors.email}
+                />
+                {errors.email && (
+                  <p className="text-sm text-red-500 mt-1">{errors.email}</p>
+                )}
               </div>
               <div>
-                <Input placeholder="Тема" />
+                <Input
+                  name="subject"
+                  value={formData.subject}
+                  onChange={handleChange}
+                  placeholder="Тема"
+                  aria-invalid={!!errors.subject}
+                />
+                {errors.subject && (
+                  <p className="text-sm text-red-500 mt-1">{errors.subject}</p>
+                )}
               </div>
               <div>
-                <Textarea placeholder="Ваше сообщение" className="min-h-[150px]" />
+                <Textarea
+                  name="message"
+                  value={formData.message}
+                  onChange={handleChange}
+                  placeholder="Ваше сообщение"
+                  className="min-h-[150px]"
+                  aria-invalid={!!errors.message}
+                />
+                {errors.message && (
+                  <p className="text-sm text-red-500 mt-1">{errors.message}</p>
+                )}
               </div>
-              <Button>Отправить сообщение</Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? "Отправка..." : "Отправить сообщение"}
+              </Button>
             </form>
           </div>
           
           <div className="h-[400px] bg-gray-200 rounded-lg overflow-hidden">
+            {/* Using sandbox for the iframe to improve security */}
             <iframe 
               src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2245.215570562365!2d37.6172!3d55.7522!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNTXCsDQ1JzA4LjAiTiAzN8KwMzcnMDEuOSJF!5e0!3m2!1sru!2sru!4v1617356777694!5m2!1sru!2sru" 
               width="100%" 
               height="100%" 
               style={{ border: 0 }} 
-              allowFullScreen={true} 
+              allowFullScreen={false}
               loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              sandbox="allow-scripts allow-same-origin"
               title="Карта"
             ></iframe>
           </div>

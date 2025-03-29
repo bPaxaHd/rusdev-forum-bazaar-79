@@ -8,6 +8,8 @@ import { useToast } from "@/hooks/use-toast";
 import { updateTopic } from "@/utils/db-helpers";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { sanitizeHtml } from "@/utils/security";
+import { secureFormData } from "@/utils/securityMiddleware";
 
 interface EditTopicDialogProps {
   topicId: string;
@@ -30,7 +32,12 @@ const EditTopicDialog = ({
   onOpenChange,
   onTopicUpdated
 }: EditTopicDialogProps) => {
-  const [formData, setFormData] = useState(initialData);
+  // Use sanitized initial data
+  const [formData, setFormData] = useState({
+    title: sanitizeHtml(initialData.title),
+    content: sanitizeHtml(initialData.content),
+    category: initialData.category
+  });
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -40,7 +47,16 @@ const EditTopicDialog = ({
   };
 
   const handleCategoryChange = (value: string) => {
-    setFormData(prev => ({ ...prev, category: value }));
+    // Validate category to ensure it's one of the expected values
+    if (['frontend', 'backend', 'fullstack'].includes(value)) {
+      setFormData(prev => ({ ...prev, category: value }));
+    } else {
+      toast({
+        title: "Ошибка",
+        description: "Выбрана недопустимая категория",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -58,7 +74,14 @@ const EditTopicDialog = ({
     setLoading(true);
     
     try {
-      const result = await updateTopic(topicId, userId, formData);
+      // Sanitize and secure the form data
+      const securedData = secureFormData({
+        ...formData,
+        title: sanitizeHtml(formData.title),
+        content: sanitizeHtml(formData.content)
+      });
+      
+      const result = await updateTopic(topicId, userId, securedData);
       
       if (result.success) {
         toast({

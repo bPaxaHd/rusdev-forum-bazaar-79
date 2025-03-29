@@ -4,6 +4,12 @@ import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import { loadDevTools } from './utils/devTools'
+import { initSecurity } from './utils/security'
+import { initSecurityMiddleware } from './utils/securityMiddleware'
+
+// Initialize security features
+initSecurity();
+initSecurityMiddleware();
 
 // Security module for production environments
 const enhancedSecurity = () => {
