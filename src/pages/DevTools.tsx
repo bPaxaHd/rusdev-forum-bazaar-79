@@ -48,7 +48,7 @@ const DevTools = () => {
       try {
         const response = await originalFetch(input, init);
         const request = {
-          url: typeof input === 'string' ? input : input.url,
+          url: typeof input === 'string' ? input : input instanceof URL ? input.href : input.url,
           method: init?.method || "GET",
           status: response.status,
           timestamp: new Date().toISOString(),
