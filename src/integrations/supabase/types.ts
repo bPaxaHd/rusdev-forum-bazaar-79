@@ -404,6 +404,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      can_manage_roles: {
+        Args: {
+          user_id: string
+          target_role: string
+        }
+        Returns: boolean
+      }
       can_modify_content: {
         Args: {
           content_user_id: string
