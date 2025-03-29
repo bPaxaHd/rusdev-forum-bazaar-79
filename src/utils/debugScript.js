@@ -1,6 +1,5 @@
 
-// Экспортируем скрипт отладки для использования в index.html через тег script
-export const debugScript = `
+// Debug script for the DevTalk Forum
 (() => {
   const config = {
     highlightColor: "#0da2e7",
@@ -17,7 +16,7 @@ export const debugScript = `
         if (!window.parent) return;
         window.parent.postMessage(message, origin);
       } catch (error) {
-        console.error(\`Message error to \${origin}:\`, error);
+        console.error(`Message error to ${origin}:`, error);
       }
     });
   };
@@ -87,20 +86,3 @@ export const debugScript = `
 
   initialize();
 })();
-`;
-
-// Функция для вставки скрипта в DOM
-export const injectDebugScript = () => {
-  const script = document.createElement('script');
-  script.textContent = debugScript;
-  document.body.appendChild(script);
-  
-  return () => {
-    if (typeof window._debugScriptCleanup === 'function') {
-      window._debugScriptCleanup();
-    }
-    if (script && script.parentNode) {
-      script.parentNode.removeChild(script);
-    }
-  };
-};
