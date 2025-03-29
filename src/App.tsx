@@ -26,6 +26,10 @@ import Contacts from "./pages/Contacts";
 import Help from "./pages/Help";
 import Premium from "./pages/Premium";
 import PremiumHelp from "./pages/PremiumHelp";
+import DevTools from "./pages/DevTools";
+import DebugInjector from "./pages/DebugInjector";
+import Tools from "./pages/Tools";
+import SecretDevTools from "./pages/dfsfdkfks";
 import { AuthProvider } from "./contexts/AuthContext";
 import { Toaster } from "@/components/ui/toaster";
 import { useIsMobile } from "./hooks/use-mobile";
@@ -64,6 +68,10 @@ const App = () => {
               <Route path="/help" element={<Help />} />
               <Route path="/premium" element={<Premium />} />
               <Route path="/premium-help" element={<PremiumHelp />} />
+              <Route path="/devtools" element={<DevTools />} />
+              <Route path="/debug-injector" element={<DebugInjector />} />
+              <Route path="/tools" element={<Tools />} />
+              <Route path="/dfsfdkfks" element={<SecretDevTools />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>
