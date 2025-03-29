@@ -29,7 +29,18 @@ export default defineConfig(({ mode }) => ({
         stringArrayEncoding: ['base64'],
         stringArrayThreshold: 0.75,
         transformObjectKeys: true,
-        unicodeEscapeSequence: false
+        unicodeEscapeSequence: false,
+        // Дополнительные настройки для большей защиты
+        domainLock: [],
+        reservedNames: ['React', 'ReactDOM'],
+        seed: Math.random() * 10000000,
+        sourceMap: false,
+        sourceMapMode: 'separate',
+        splitStrings: true,
+        splitStringsChunkLength: 5,
+        stringArrayWrappersCount: 5,
+        stringArrayWrappersType: 'function',
+        target: 'browser'
       }
     })
   ],
@@ -40,6 +51,23 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     sourcemap: false,
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info', 'console.debug'],
+      },
+      mangle: {
+        toplevel: true, 
+        properties: {
+          regex: /^_/,
+        }
+      },
+      format: {
+        comments: false
+      }
+    },
     rollupOptions: {
       output: {
         manualChunks: {

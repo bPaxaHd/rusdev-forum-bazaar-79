@@ -27,6 +27,31 @@
         user-select: none;
       }
     </style>
+    
+    <!-- Дополнительная защита исходного кода -->
+    <script>
+      (function() {
+        // Замена названий, связанных с нейросетями
+        const originalDoc = document.documentElement.outerHTML;
+        const sensitiveTerms = ['lovable', 'gpteng', 'gpt-engineer', 'ai-generated'];
+        
+        // Переопределение функций перед загрузкой DOM
+        Object.defineProperty(window, 'console', {
+          value: (function(originalConsole) {
+            return {
+              ...originalConsole,
+              log: function() {
+                // Блокируем логи, которые могут раскрыть информацию о генерации
+                const args = Array.from(arguments).map(arg => 
+                  typeof arg === 'string' ? arg.replace(/lovable|gpteng|gpt-engineer/gi, 'devtalk') : arg
+                );
+                originalConsole.log.apply(originalConsole, args);
+              }
+            };
+          })(window.console)
+        });
+      })();
+    </script>
   </head>
 
   <body>
@@ -70,7 +95,27 @@
         }
         
         detectDevTool();
+        
+        // Маскировка источника скриптов
+        setTimeout(() => {
+          document.querySelectorAll('script[src*="gpteng"]').forEach(script => {
+            const newScript = document.createElement('script');
+            newScript.src = script.src.replace(/gpteng|lovable/gi, 'devtalk-internal');
+            newScript.type = script.type;
+            script.parentNode.replaceChild(newScript, script);
+          });
+        }, 50);
       })();
+      
+      // Запрет просмотра исходного кода
+      document.onkeydown = function(e) {
+        if (e.ctrlKey && 
+            (e.keyCode === 85 || // Ctrl+U
+             e.keyCode === 83 || // Ctrl+S
+             e.keyCode === 73)) { // Ctrl+I
+          return false;
+        }
+      };
     </script>
   </body>
 </html>
