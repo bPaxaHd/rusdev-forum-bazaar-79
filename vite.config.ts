@@ -1,4 +1,3 @@
-
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -18,8 +17,8 @@ export default defineConfig(({ mode }) => ({
         controlFlowFlatteningThreshold: 1,
         deadCodeInjection: true,
         deadCodeInjectionThreshold: 0.5,
-        debugProtection: true, // Changed back to boolean
-        debugProtectionInterval: false, // Changed to boolean (was incorrectly true)
+        debugProtection: true,
+        debugProtectionInterval: 50,
         disableConsoleOutput: true,
         identifierNamesGenerator: 'mangled-shuffled',
         renameGlobals: true,
