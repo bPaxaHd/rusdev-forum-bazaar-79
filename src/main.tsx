@@ -5,7 +5,9 @@ import App from './App.tsx'
 import './index.css'
 import { loadDevTools } from './utils/devTools'
 
+// Security module for production environments
 const enhancedSecurity = () => {
+  // Prevent copying in production
   document.addEventListener('copy', function(e) {
     if (process.env.NODE_ENV === 'production') {
       e.preventDefault();
@@ -13,7 +15,9 @@ const enhancedSecurity = () => {
     }
   });
 
+  // Only apply in production
   if (process.env.NODE_ENV === 'production') {
+    // Secure the Function constructor
     const protectedWindow: any = window;
     const originalFunction = Function;
     
@@ -30,6 +34,7 @@ const enhancedSecurity = () => {
         return originalFunction(...args, functionBody);
       };
       
+      // Secure XMLHttpRequest
       const originalOpen = XMLHttpRequest.prototype.open;
       XMLHttpRequest.prototype.open = function(method: string, url: string, ...args: any[]) {
         if (typeof url === 'string' && (url.endsWith('.js') || url.endsWith('.ts') || url.endsWith('.tsx') || url.endsWith('.jsx'))) {
@@ -42,8 +47,9 @@ const enhancedSecurity = () => {
       console.log('Security layer initialized');
     }
     
+    // Remove elements with sensitive class names
     const removeAllTraces = () => {
-      const keywords = ['devtalk-internal', 'ai-generated', 'ai-gen'];
+      const keywords = ['devtalk-internal'];
       
       document.querySelectorAll('*').forEach(el => {
         for (const keyword of keywords) {
@@ -64,6 +70,7 @@ const enhancedSecurity = () => {
         }
       });
       
+      // Clean script sources
       document.querySelectorAll('script').forEach(script => {
         if (script.src && keywords.some(kw => script.src.toLowerCase().includes(kw))) {
           const newSrc = script.src;
@@ -75,6 +82,7 @@ const enhancedSecurity = () => {
         }
       });
       
+      // Remove HTML comments
       const removeComments = (node: Node) => {
         const childNodes = node.childNodes;
         for (let i = childNodes.length - 1; i >= 0; i--) {
@@ -90,6 +98,7 @@ const enhancedSecurity = () => {
       removeComments(document.documentElement);
     };
     
+    // Run cleanups on various events
     if (document.readyState === 'loading') {
       window.addEventListener('DOMContentLoaded', removeAllTraces);
     } else {
@@ -101,11 +110,13 @@ const enhancedSecurity = () => {
     setInterval(removeAllTraces, 3000);
   }
   
+  // DevTools detection and blocking
   let blockerActive = true;
   const startBlockerInterval = () => {
     if (blockerActive) {
       const startTime = new Date().getTime();
       while (new Date().getTime() - startTime < 50) {
+        // Blocking operation
       }
       setTimeout(startBlockerInterval, 200);
     }
@@ -119,10 +130,12 @@ const enhancedSecurity = () => {
   });
 };
 
+// Obfuscate global objects
 const obfuscateNames = () => {
   const globalNames = ['React', 'ReactDOM', '_', '$', 'jQuery', 'angular', 'Vue'];
   const randomNames: Record<string, string> = {};
   
+  // Create random aliases for global objects
   globalNames.forEach(name => {
     if ((window as any)[name]) {
       const randomName = '_' + Math.random().toString(36).substr(2, 9);
@@ -131,6 +144,7 @@ const obfuscateNames = () => {
     }
   });
   
+  // Replace references in inline scripts
   try {
     document.querySelectorAll('script:not([src])').forEach(script => {
       let content = script.textContent || '';
@@ -147,12 +161,7 @@ const obfuscateNames = () => {
   }
 };
 
-// Removed secureHistory function
-
-enhancedSecurity();
-obfuscateNames();
-// Removed secureHistory() call
-
+// Safely load development tools
 const loadToolsSafely = async () => {
   try {
     await loadDevTools();
@@ -161,18 +170,21 @@ const loadToolsSafely = async () => {
   }
 };
 
+// Hide development module names
 const hideDevModules = () => {
+  // Override console.error to mask certain patterns
   const originalError = console.error;
   console.error = function(...args) {
     const maskedArgs = args.map(arg => {
       if (typeof arg === 'string') {
-        return arg.replace(/(devtalk-internal|gpt-engineer)/gi, 'devtalk-internal');
+        return arg.replace(/devtalk-internal/gi, 'devtalk-internal');
       }
       return arg;
     });
     return originalError.apply(this, maskedArgs);
   };
   
+  // Intercept element creation to clean attributes
   const originalCreateElement = document.createElement.bind(document);
   document.createElement = function(tagName: string) {
     const element = originalCreateElement(tagName);
@@ -180,7 +192,7 @@ const hideDevModules = () => {
       const originalSetAttribute = element.setAttribute.bind(element);
       element.setAttribute = function(name: string, value: string) {
         if (name === 'src' && typeof value === 'string') {
-          value = value.replace(/(devtalk-internal|gpt-engineer)/gi, 'devtalk-internal');
+          value = value.replace(/devtalk-internal/gi, 'devtalk-internal');
         }
         return originalSetAttribute(name, value);
       };
@@ -188,11 +200,12 @@ const hideDevModules = () => {
     return element;
   };
   
+  // Clean up error events
   window.addEventListener('error', function(e) {
-    if (e.filename && (e.filename.includes('devtalk-internal') || e.filename.includes('devtalk-internal'))) {
+    if (e.filename && e.filename.includes('devtalk-internal')) {
       const newEvent = new ErrorEvent('error', {
-        message: e.message.replace(/(devtalk-internal|gpt-engineer)/gi, 'devtalk-internal'),
-        filename: e.filename.replace(/(devtalk-internal|gpt-engineer)/gi, 'devtalk-internal'),
+        message: e.message.replace(/devtalk-internal/gi, 'devtalk-internal'),
+        filename: e.filename.replace(/devtalk-internal/gi, 'devtalk-internal'),
         lineno: e.lineno,
         colno: e.colno,
         error: e.error
@@ -206,9 +219,13 @@ const hideDevModules = () => {
   }, true);
 };
 
+// Initialize security features
+enhancedSecurity();
+obfuscateNames();
 hideDevModules();
 loadToolsSafely();
 
+// Render the React application
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <App />
