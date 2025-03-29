@@ -1,8 +1,4 @@
 
-/**
- * Development tools loader
- */
-
 export const loadDevTools = (): void => {
   if (import.meta.env.DEV) {
     const script = document.createElement('script');
