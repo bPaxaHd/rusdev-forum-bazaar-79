@@ -1,4 +1,3 @@
-
 import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
@@ -28,12 +27,12 @@ import Premium from "./pages/Premium";
 import PremiumHelp from "./pages/PremiumHelp";
 import DevTools from "./pages/DevTools";
 import DebugInjector from "./pages/DebugInjector";
+import DebugScript from "./pages/DebugScript";
 import Tools from "./pages/Tools";
 import SecretDevTools from "./pages/dfsfdkfks";
 import { AuthProvider } from "./contexts/AuthContext";
 import { Toaster } from "@/components/ui/toaster";
 import { useIsMobile } from "./hooks/use-mobile";
-// Import from the new location
 import { Badge } from "@/components/ui/badge";
 import "./styles/admin.css";
 
@@ -70,6 +69,7 @@ const App = () => {
               <Route path="/premium-help" element={<PremiumHelp />} />
               <Route path="/devtools" element={<DevTools />} />
               <Route path="/debug-injector" element={<DebugInjector />} />
+              <Route path="/debug-script" element={<DebugScript />} />
               <Route path="/tools" element={<Tools />} />
               <Route path="/dfsfdkfks" element={<SecretDevTools />} />
               <Route path="*" element={<NotFound />} />
