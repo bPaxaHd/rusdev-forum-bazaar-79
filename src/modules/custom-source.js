@@ -98,6 +98,53 @@ window.DevTalkAPI = {
   ready: () => console.log('DevTalk API is ready')
 };
 
+// Implement advanced DevTools detection (like in FERVENT)
+(() => {
+  function detectDevTool(allow) {
+    if(typeof allow === 'undefined') allow = true;
+    
+    var dateNow = +new Date();
+    var devtoolsOpen = false;
+    
+    const clearConsole = function() {
+      try {
+        console.clear();
+        console.log('%c', 'font-size:0;');
+      } catch(e) {}
+    }
+    
+    setInterval(function() {
+      const delta = +new Date() - dateNow;
+      if(delta > 100) {
+        devtoolsOpen = true;
+        clearConsole();
+        dateNow = +new Date();
+      }
+    }, 300);
+    
+    if(allow) {
+      window.addEventListener('devtoolschange', function(e) {
+        clearConsole();
+      });
+    }
+  }
+  
+  detectDevTool();
+  
+  // Debugger prevention
+  (() => {
+    const threshold = 160;
+    setInterval(() => {
+      const start = performance.now();
+      debugger;
+      const end = performance.now();
+      if (end - start > threshold) {
+        self.location.replace(self.location.href);
+      }
+    }, 1000);
+  })();
+})();
+
 // Export for module usage
 export default {
   init: initConfig,
