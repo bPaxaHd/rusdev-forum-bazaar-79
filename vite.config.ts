@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => ({
         controlFlowFlatteningThreshold: 1,
         deadCodeInjection: true,
         deadCodeInjectionThreshold: 0.5,
-        debugProtection: true,
+        debugProtection: 1, // Changed from boolean to number
         debugProtectionInterval: true,
         disableConsoleOutput: true,
         identifierNamesGenerator: 'mangled-shuffled',
