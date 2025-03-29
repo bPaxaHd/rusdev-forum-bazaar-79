@@ -1,7 +1,8 @@
+
 /**
  * Security middleware for intercepting and securing various operations
  */
-import { sanitizeHtml, sanitizeUrl } from './security';
+import { sanitizeHtml, sanitizeUrl, decryptObject, encryptObject } from './security';
 
 /**
  * Secures user input for forms
@@ -40,6 +41,73 @@ export const secureFormData = <T extends Record<string, any>>(formData: T): T =>
   });
   
   return securedData as T;
+};
+
+/**
+ * Secures and encrypts form data for transmission
+ */
+export const encryptFormData = <T extends Record<string, any>>(formData: T): string => {
+  // First secure the data (sanitize inputs)
+  const securedData = secureFormData(formData);
+  
+  // Then encrypt the secured data
+  return encryptObject(securedData);
+};
+
+/**
+ * Decrypts and validates incoming data
+ */
+export const decryptIncomingData = <T extends Record<string, any>>(encryptedData: string): T | null => {
+  // Decrypt the data
+  const decryptedData = decryptObject<T>(encryptedData);
+  
+  // Further validate the decrypted data
+  if (decryptedData) {
+    return secureFormData(decryptedData);
+  }
+  
+  return null;
+};
+
+/**
+ * Intercepts and processes fetch responses to handle encrypted data
+ */
+export const setupResponseInterceptor = (): void => {
+  const originalFetch = window.fetch;
+  
+  window.fetch = async function(input: RequestInfo | URL, init?: RequestInit) {
+    try {
+      // Make the original request
+      const response = await originalFetch(input, init);
+      
+      // Clone the response so we can read it multiple times
+      const clonedResponse = response.clone();
+      
+      // Check if response contains encrypted data
+      if (response.headers.get('X-Content-Encrypted') === 'true') {
+        // Read the response as JSON
+        const data = await clonedResponse.json();
+        
+        if (data && data.encrypted) {
+          // Decrypt the data
+          const decryptedData = decryptObject(data.encrypted);
+          
+          // Create a new response with the decrypted data
+          return new Response(JSON.stringify(decryptedData), {
+            status: response.status,
+            statusText: response.statusText,
+            headers: response.headers
+          });
+        }
+      }
+      
+      // Return the original response if not encrypted
+      return response;
+    } catch (error) {
+      console.error('Error in fetch interceptor:', error);
+      throw error;
+    }
+  } as typeof fetch;
 };
 
 /**
@@ -98,6 +166,54 @@ export const secureDOM = (): void => {
       }
     }
   }, true);
+  
+  // Prevent data exfiltration via clipboard
+  document.addEventListener('copy', (event) => {
+    const selection = document.getSelection();
+    if (selection && selection.toString().length > 1000) {
+      // Prevent copying large amounts of data
+      event.preventDefault();
+      console.warn('Security: Prevented copying large amount of text');
+    }
+  });
+  
+  // Secure postMessage communication
+  window.addEventListener('message', (event) => {
+    // Only accept messages from trusted origins
+    const trustedOrigins = [
+      window.location.origin,
+      'https://bciboexxeayylqcneuqq.supabase.co'
+    ];
+    
+    if (!trustedOrigins.includes(event.origin)) {
+      console.warn(`Security: Blocked message from untrusted origin: ${event.origin}`);
+      return;
+    }
+    
+    // Parse messages securely
+    try {
+      const message = typeof event.data === 'string' 
+        ? JSON.parse(event.data) 
+        : event.data;
+      
+      // Check for suspicious properties
+      if (message && (
+        message.script || 
+        message.eval || 
+        message.code ||
+        message.src ||
+        message.href
+      )) {
+        console.warn('Security: Blocked suspicious postMessage content', message);
+        return;
+      }
+      
+      // Now it's safe to process the message
+      // Add your message handling logic here
+    } catch (error) {
+      console.error('Error processing message:', error);
+    }
+  }, false);
 };
 
 /**
@@ -107,6 +223,7 @@ export const initSecurityMiddleware = (): void => {
   if (typeof window !== 'undefined') {
     // Only run on client-side
     secureDOM();
+    setupResponseInterceptor();
     
     // Log security middleware initialization
     console.log('Security middleware initialized');
@@ -116,5 +233,9 @@ export const initSecurityMiddleware = (): void => {
 export default {
   secureFormData,
   secureDOM,
-  initSecurityMiddleware
+  initSecurityMiddleware,
+  encryptFormData,
+  decryptIncomingData,
+  setupResponseInterceptor
 };
+

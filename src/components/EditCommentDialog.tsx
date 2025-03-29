@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { updateComment } from "@/utils/db-helpers";
 import { sanitizeHtml } from "@/utils/security";
-import { secureFormData } from "@/utils/securityMiddleware";
+import { encryptFormData } from "@/utils/securityMiddleware";
 
 interface EditCommentDialogProps {
   commentId: string;
@@ -53,14 +53,22 @@ const EditCommentDialog = ({
       // Sanitize the content before submission
       const sanitizedContent = sanitizeHtml(content);
       
-      // Secure the form data
-      const securedData = secureFormData({
+      // Create and encrypt the form data
+      const formData = {
         commentId,
         userId,
         content: sanitizedContent
-      });
+      };
       
-      const result = await updateComment(securedData.commentId, securedData.userId, securedData.content);
+      // Encrypt form data for transmission
+      const encryptedData = encryptFormData(formData);
+      
+      const result = await updateComment(
+        formData.commentId, 
+        formData.userId, 
+        formData.content,
+        { encrypted: true, data: encryptedData }
+      );
       
       if (result.success) {
         toast({
@@ -123,3 +131,4 @@ const EditCommentDialog = ({
 };
 
 export default EditCommentDialog;
+
