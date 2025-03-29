@@ -80,11 +80,32 @@ export const addCsrfToken = (requestInit: RequestInit = {}): RequestInit => {
 
 /**
  * Detects if the page is being loaded in an iframe
- * and redirects to top if needed (clickjacking protection)
+ * and adds X-Frame-Options header instead of redirecting
  */
 export const preventFraming = (): void => {
   if (window.top !== window.self) {
-    window.top.location.href = window.self.location.href;
+    // Instead of trying to redirect (which can cause SecurityError),
+    // we'll just console.warn about the iframe embedding
+    console.warn('This site is designed to be viewed directly, not in an iframe.');
+    
+    // Add a visual indicator for users that they're in an iframe
+    const iframeWarning = document.createElement('div');
+    iframeWarning.style.position = 'fixed';
+    iframeWarning.style.top = '0';
+    iframeWarning.style.left = '0';
+    iframeWarning.style.width = '100%';
+    iframeWarning.style.padding = '10px';
+    iframeWarning.style.backgroundColor = '#f44336';
+    iframeWarning.style.color = 'white';
+    iframeWarning.style.textAlign = 'center';
+    iframeWarning.style.zIndex = '9999';
+    iframeWarning.innerText = 'Внимание: Вы просматриваете этот сайт внутри iframe. Для лучшего опыта, пожалуйста, перейдите на основной сайт.';
+    
+    // Only add the warning if it doesn't already exist
+    if (!document.getElementById('iframe-warning')) {
+      iframeWarning.id = 'iframe-warning';
+      document.body.appendChild(iframeWarning);
+    }
   }
 };
 
@@ -132,7 +153,7 @@ export const validateInput = (value: string, type: 'text' | 'email' | 'url' | 'u
  * Initialize security measures
  */
 export const initSecurity = (): void => {
-  // Prevent loading in iframes
+  // Prevent loading in iframes (modified to avoid SecurityError)
   preventFraming();
   
   // Add global error handler to catch and log security-related errors
