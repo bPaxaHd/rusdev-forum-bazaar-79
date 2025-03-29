@@ -42,7 +42,6 @@ interface CommentData {
   profiles?: ProfileResponse;
 }
 
-// Interface to store comment user roles mapping
 interface CommentUserRolesMap {
   [commentId: string]: string[];
 }

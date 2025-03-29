@@ -31,7 +31,7 @@ export interface LoginAttempt {
 
 export type SubscriptionLevel = 'free' | 'premium' | 'business' | 'sponsor' | 'admin';
 
-// Define proper interface for the profiles data structure
+// Updated interface for the profiles data structure to match what Supabase returns
 export interface ProfileResponse {
   username: string;
   avatar_url: string | null;

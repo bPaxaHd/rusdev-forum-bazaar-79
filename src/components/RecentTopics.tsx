@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import TopicCard from "./TopicCard";
 import CreateTopicDialog from "./CreateTopicDialog";
@@ -83,9 +82,8 @@ const RecentTopics = () => {
         // Transform the data to match the expected structure
         const processedData = data.map(topic => ({
           ...topic,
-          // Convert the profiles array to a single object
-          profiles: topic.profiles?.[0] || null,
-          user_roles: Array.isArray(topic.user_roles) ? topic.user_roles : null
+          // Fix: Convert the profiles array to a single object
+          profiles: topic.profiles?.[0] || null
         })) as TopicData[];
         
         setTopics(processedData);
@@ -141,9 +139,8 @@ const RecentTopics = () => {
         // Transform the data to match the expected structure
         const processedData = data.map(topic => ({
           ...topic,
-          // Convert the profiles array to a single object
-          profiles: topic.profiles?.[0] || null,
-          user_roles: Array.isArray(topic.user_roles) ? topic.user_roles : null
+          // Fix: Convert the profiles array to a single object
+          profiles: topic.profiles?.[0] || null
         })) as TopicData[];
         
         setPremiumTopics(processedData);
