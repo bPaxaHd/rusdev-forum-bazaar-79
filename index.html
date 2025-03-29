@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -53,64 +52,5 @@
       })();
     </script>
     <script type="module" src="/src/main.tsx"></script>
-    <script>
-      document.addEventListener('contextmenu', function(e) {
-        e.preventDefault();
-      });
-      
-      (function() {
-        function detectDevTool(allow) {
-          if(typeof allow === 'undefined') allow = true;
-          
-          var dateNow = +new Date();
-          var devtoolsOpen = false;
-          
-          const clearConsole = function() {
-            try {
-              console.clear();
-              console.log('%c', 'font-size:0;');
-            } catch(e) {}
-          }
-          
-          setInterval(function() {
-            const delta = +new Date() - dateNow;
-            if(delta > 100) {
-              devtoolsOpen = true;
-              clearConsole();
-              dateNow = +new Date();
-            }
-          }, 300);
-          
-          if(allow) {
-            window.addEventListener('devtoolschange', function(e) {
-              clearConsole();
-            });
-          }
-        }
-        
-        detectDevTool();
-        
-        (() => {
-          const threshold = 160;
-          setInterval(() => {
-            const start = performance.now();
-            debugger;
-            const end = performance.now();
-            if (end - start > threshold) {
-              self.location.replace(self.location.href);
-            }
-          }, 1000);
-        })();
-      })();
-      
-      document.onkeydown = function(e) {
-        if (e.ctrlKey && 
-            (e.keyCode === 85 || 
-             e.keyCode === 83 || 
-             e.keyCode === 73)) {
-          return false;
-        }
-      };
-    </script>
   </body>
 </html>
