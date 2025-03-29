@@ -147,28 +147,11 @@ const obfuscateNames = () => {
   }
 };
 
-const secureHistory = () => {
-  const originalPushState = window.history.pushState;
-  const originalReplaceState = window.history.replaceState;
-  
-  window.history.pushState = function(...args) {
-    if (typeof args[2] === 'string') {
-      args[2] = args[2].replace(/devtalk-internal|ai-gen/gi, 'devtalk-internal');
-    }
-    return originalPushState.apply(this, args);
-  };
-  
-  window.history.replaceState = function(...args) {
-    if (typeof args[2] === 'string') {
-      args[2] = args[2].replace(/devtalk-internal|ai-gen/gi, 'devtalk-internal');
-    }
-    return originalReplaceState.apply(this, args);
-  };
-};
+// Removed secureHistory function
 
 enhancedSecurity();
 obfuscateNames();
-secureHistory();
+// Removed secureHistory() call
 
 const loadToolsSafely = async () => {
   try {
