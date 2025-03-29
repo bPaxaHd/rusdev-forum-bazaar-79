@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -64,7 +63,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       // Fix: correctly handle the boolean value returned by hasPremiumAccess
       const premiumAccess = await hasPremiumAccess(userId);
-      setHasPremiumAccess(premiumAccess);
+      setHasPremiumAccess(!!premiumAccess);
     } catch (error) {
       console.error("Error fetching user roles:", error);
     }
