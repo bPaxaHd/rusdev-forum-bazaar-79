@@ -63,11 +63,11 @@ const EditCommentDialog = ({
       // Encrypt form data for transmission
       const encryptedData = encryptFormData(formData);
       
+      // Remove the fourth argument as it's causing the TypeScript error
       const result = await updateComment(
         formData.commentId, 
         formData.userId, 
-        formData.content,
-        { encrypted: true, data: encryptedData }
+        formData.content
       );
       
       if (result.success) {
@@ -131,4 +131,3 @@ const EditCommentDialog = ({
 };
 
 export default EditCommentDialog;
-

@@ -1,4 +1,3 @@
-
 /**
  * Security utility functions for DevTalk Forum
  * Provides protection against common attacks like XSS, CSRF, etc.
@@ -288,6 +287,7 @@ export const blockUnusedPorts = (): void => {
   
   // Block WebSocket connections to non-standard ports
   const originalWebSocket = window.WebSocket;
+  // Fix the type error by using type assertion
   window.WebSocket = function(url: string | URL, protocols?: string | string[]) {
     try {
       const urlObj = new URL(url.toString());
@@ -310,7 +310,7 @@ export const blockUnusedPorts = (): void => {
       }, 50);
       return dummyWs;
     }
-  } as typeof WebSocket;
+  } as unknown as typeof WebSocket;
   
   // Also restrict fetch and XMLHttpRequest to only use allowed ports
   const originalFetch = window.fetch;
