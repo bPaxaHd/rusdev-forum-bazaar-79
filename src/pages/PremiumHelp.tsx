@@ -21,7 +21,7 @@ interface Message {
 }
 
 const PremiumHelp = () => {
-  const { user, userRoles } = useAuth();
+  const { user, hasPremiumAccess, effectiveSubscriptionType } = useAuth();
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -52,7 +52,7 @@ const PremiumHelp = () => {
         setUserProfile(data);
         
         // Загружаем сообщения если пользователь имеет доступ к премиум
-        if (hasPremiumAccess()) {
+        if (hasPremiumAccess) {
           fetchMessages();
         }
       } catch (error) {
@@ -63,7 +63,7 @@ const PremiumHelp = () => {
     };
 
     fetchUserProfile();
-  }, [user]);
+  }, [user, hasPremiumAccess]);
 
   const fetchMessages = async () => {
     if (!user) return;
@@ -133,7 +133,7 @@ const PremiumHelp = () => {
       return;
     }
 
-    if (!hasPremiumAccess()) {
+    if (!hasPremiumAccess) {
       toast({
         title: 'Доступно только для премиум-пользователей',
         description: 'Для доступа к чату поддержки необходима премиум-подписка',
@@ -183,23 +183,6 @@ const PremiumHelp = () => {
     }).format(date);
   };
 
-  // Проверяем, имеет ли пользователь доступ к премиум функциям
-  const hasPremiumAccess = () => {
-    if (!user) return false;
-    
-    // Проверяем наличие ролей
-    const hasStaffRole = userRoles.some(role => 
-      ['creator', 'admin', 'moderator'].includes(role)
-    );
-    
-    // Проверяем тип подписки
-    const hasPremiumSubscription = userProfile && 
-      userProfile.subscription_type && 
-      ['premium', 'business', 'sponsor'].includes(userProfile.subscription_type);
-    
-    return hasStaffRole || hasPremiumSubscription;
-  };
-
   if (loading) {
     return (
       <div className="container mx-auto py-12 px-4">
@@ -236,7 +219,7 @@ const PremiumHelp = () => {
     );
   }
 
-  if (!hasPremiumAccess()) {
+  if (!hasPremiumAccess) {
     return (
       <div className="container mx-auto py-12 px-4 text-center">
         <Card className="mx-auto max-w-lg bg-gradient-to-r from-amber-50 to-gray-50 dark:from-gray-900 dark:to-amber-900">
@@ -279,9 +262,7 @@ const PremiumHelp = () => {
             <div className="flex justify-between items-center">
               <CardTitle>Ваш диалог с поддержкой</CardTitle>
               <Badge className="bg-gradient-to-r from-blue-500 to-purple-500">
-                {userProfile?.subscription_type || (userRoles.includes('admin') ? 'admin' : 
-                  userRoles.includes('creator') ? 'creator' : 
-                  userRoles.includes('moderator') ? 'moderator' : 'premium')}
+                {effectiveSubscriptionType}
               </Badge>
             </div>
             <CardDescription>

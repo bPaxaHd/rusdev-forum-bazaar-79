@@ -43,3 +43,21 @@ export const getSubscriptionBadgeStyles = (subscriptionType: string | null): str
       return "";
   }
 };
+
+// Helper to get subscription level access
+export const getAccessLevel = (role: string | null, subscriptionType: string | null): number => {
+  const ACCESS_LEVELS = {
+    'free': 0,
+    'premium': 1,
+    'business': 2,
+    'sponsor': 3,
+    'moderator': 4,
+    'admin': 5,
+    'creator': 6
+  };
+
+  const roleLevel = role ? ACCESS_LEVELS[role as keyof typeof ACCESS_LEVELS] || 0 : 0;
+  const subscriptionLevel = subscriptionType ? ACCESS_LEVELS[subscriptionType as keyof typeof ACCESS_LEVELS] || 0 : 0;
+
+  return Math.max(roleLevel, subscriptionLevel);
+};

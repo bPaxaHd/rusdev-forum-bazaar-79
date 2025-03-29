@@ -3,7 +3,13 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { getUserRoles, UserRole, canAccessAdminPanel } from "@/utils/auth-helpers";
+import { 
+  getUserRoles, 
+  UserRole, 
+  canAccessAdminPanel, 
+  getEffectiveSubscriptionType,
+  hasPremiumAccess
+} from "@/utils/auth-helpers";
 
 interface AuthContextType {
   user: User | null;
@@ -15,6 +21,8 @@ interface AuthContextType {
   isAdmin: boolean;
   isModerator: boolean;
   canAccessAdmin: boolean;
+  effectiveSubscriptionType: string;
+  hasPremiumAccess: boolean;
   signUp: (email: string, password: string, username: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signInWithGoogle: () => Promise<void>;
@@ -34,9 +42,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isModerator, setIsModerator] = useState(false);
   const [canAccessAdmin, setCanAccessAdmin] = useState(false);
+  const [effectiveSubscriptionType, setEffectiveSubscriptionType] = useState<string>('free');
+  const [hasPremiumAccess, setHasPremiumAccess] = useState(false);
   const { toast } = useToast();
 
-  // Function to fetch and update user roles
+  // Function to fetch and update user roles and permissions
   const fetchUserRoles = async (userId: string) => {
     if (!userId) return;
     
@@ -49,6 +59,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       const hasAdminAccess = await canAccessAdminPanel(userId);
       setCanAccessAdmin(hasAdminAccess);
+
+      const effectiveType = await getEffectiveSubscriptionType(userId);
+      setEffectiveSubscriptionType(effectiveType);
+
+      const premiumAccess = await hasPremiumAccess(userId);
+      setHasPremiumAccess(premiumAccess);
     } catch (error) {
       console.error("Error fetching user roles:", error);
     }
@@ -92,6 +108,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setIsAdmin(false);
         setIsModerator(false);
         setCanAccessAdmin(false);
+        setEffectiveSubscriptionType('free');
+        setHasPremiumAccess(false);
       }
       
       setLoading(false);
@@ -224,6 +242,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       isAdmin,
       isModerator,
       canAccessAdmin,
+      effectiveSubscriptionType,
+      hasPremiumAccess,
       signUp, 
       signIn, 
       signInWithGoogle, 

@@ -2,6 +2,18 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export type UserRole = 'user' | 'moderator' | 'admin' | 'creator';
+export type SubscriptionType = 'free' | 'premium' | 'business' | 'sponsor';
+
+// Map roles and subscription types to numeric access levels
+const ACCESS_LEVELS = {
+  'free': 0,
+  'premium': 1,
+  'business': 2,
+  'sponsor': 3,
+  'moderator': 4,
+  'admin': 5,
+  'creator': 6
+};
 
 // Проверка, имеет ли пользователь определенную роль
 export const hasRole = async (userId: string, role: UserRole): Promise<boolean> => {
@@ -136,4 +148,107 @@ export const canAssignRole = async (userId: string, roleToAssign: UserRole): Pro
   if (userIsAdmin && roleToAssign !== 'creator') return true;
   
   return false;
+};
+
+// Проверка доступа к функционалу с определенным уровнем подписки
+export const hasSubscriptionAccess = async (
+  userId: string, 
+  requiredLevel: UserRole | SubscriptionType
+): Promise<boolean> => {
+  if (!userId) return false;
+
+  try {
+    // Получаем роли пользователя
+    const userRoles = await getUserRoles(userId);
+    
+    // Получаем информацию о подписке пользователя
+    const { data: profileData, error: profileError } = await supabase
+      .from("profiles")
+      .select("subscription_type")
+      .eq("id", userId)
+      .single();
+      
+    if (profileError) {
+      console.error("Error fetching user subscription:", profileError);
+      return false;
+    }
+
+    const userSubscription = profileData?.subscription_type || 'free';
+    
+    // Определяем максимальный уровень доступа пользователя
+    // (может быть основан на роли или на подписке)
+    let userAccessLevel = ACCESS_LEVELS['free']; // По умолчанию - базовый уровень
+    
+    // Проверяем уровень доступа на основе ролей
+    userRoles.forEach(role => {
+      if (ACCESS_LEVELS[role] > userAccessLevel) {
+        userAccessLevel = ACCESS_LEVELS[role];
+      }
+    });
+    
+    // Проверяем уровень доступа на основе подписки
+    if (ACCESS_LEVELS[userSubscription] > userAccessLevel) {
+      userAccessLevel = ACCESS_LEVELS[userSubscription];
+    }
+    
+    // Проверяем, достаточен ли уровень доступа пользователя для требуемого уровня
+    const requiredAccessLevel = ACCESS_LEVELS[requiredLevel];
+    
+    return userAccessLevel >= requiredAccessLevel;
+  } catch (error) {
+    console.error("Error checking subscription access:", error);
+    return false;
+  }
+};
+
+// Проверка доступа к премиум функциям
+export const hasPremiumAccess = async (userId: string): Promise<boolean> => {
+  return await hasSubscriptionAccess(userId, 'premium');
+};
+
+// Получение типа подписки пользователя с учетом ролей
+export const getEffectiveSubscriptionType = async (userId: string): Promise<string> => {
+  if (!userId) return 'free';
+
+  try {
+    // Получаем роли пользователя
+    const userRoles = await getUserRoles(userId);
+    
+    // Получаем информацию о подписке пользователя
+    const { data: profileData, error: profileError } = await supabase
+      .from("profiles")
+      .select("subscription_type")
+      .eq("id", userId)
+      .single();
+      
+    if (profileError) {
+      console.error("Error fetching user subscription:", profileError);
+      return 'free';
+    }
+
+    const userSubscription = profileData?.subscription_type || 'free';
+    
+    // Определяем максимальный уровень доступа пользователя
+    let highestAccessKey = 'free';
+    let highestAccessLevel = ACCESS_LEVELS['free'];
+    
+    // Проверяем уровень доступа на основе ролей
+    userRoles.forEach(role => {
+      if (ACCESS_LEVELS[role] > highestAccessLevel) {
+        highestAccessLevel = ACCESS_LEVELS[role];
+        highestAccessKey = role;
+      }
+    });
+    
+    // Проверяем уровень доступа на основе подписки
+    if (ACCESS_LEVELS[userSubscription] > highestAccessLevel) {
+      highestAccessLevel = ACCESS_LEVELS[userSubscription];
+      highestAccessKey = userSubscription;
+    }
+    
+    return highestAccessKey;
+  } catch (error) {
+    console.error("Error getting effective subscription type:", error);
+    return 'free';
+  }
 };
