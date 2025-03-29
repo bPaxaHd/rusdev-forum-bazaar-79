@@ -37,3 +37,8 @@ export interface ProfileResponse {
   avatar_url: string | null;
   subscription_type?: string | null;
 }
+
+// Define interface for user roles that can handle null or error cases
+export interface UserRole {
+  role: string;
+}

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import TopicCard from "./TopicCard";
 import CreateTopicDialog from "./CreateTopicDialog";
@@ -10,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Crown } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { ProfileResponse } from "@/types/auth";
+import { ProfileResponse, UserRole } from "@/types/auth";
 
 interface TopicData {
   id: string; // String to match Supabase UUID format
@@ -24,7 +25,7 @@ interface TopicData {
   views: number;
   is_premium?: boolean;
   profiles?: ProfileResponse;
-  user_roles?: { role: string }[] | null; // Updated to be optional and nullable
+  user_roles?: UserRole[] | null; // Updated to be optional and nullable
   comments?: { id: string }[];
 }
 
@@ -80,11 +81,16 @@ const RecentTopics = () => {
         console.log("Fetched topics:", data);
         
         // Transform the data to match the expected structure
-        const processedData = data.map(topic => ({
-          ...topic,
-          // Fix: Convert the profiles array to a single object
-          profiles: topic.profiles?.[0] || null
-        })) as TopicData[];
+        const processedData = data.map(topic => {
+          const processedTopic = {
+            ...topic,
+            // Fix: Convert the profiles array to a single object
+            profiles: topic.profiles?.[0] || null,
+            // Handle user_roles properly - ensure it's an array or null
+            user_roles: Array.isArray(topic.user_roles) ? topic.user_roles : null
+          };
+          return processedTopic;
+        }) as unknown as TopicData[];
         
         setTopics(processedData);
       } catch (error) {
@@ -137,11 +143,16 @@ const RecentTopics = () => {
         }
         
         // Transform the data to match the expected structure
-        const processedData = data.map(topic => ({
-          ...topic,
-          // Fix: Convert the profiles array to a single object
-          profiles: topic.profiles?.[0] || null
-        })) as TopicData[];
+        const processedData = data.map(topic => {
+          const processedTopic = {
+            ...topic,
+            // Fix: Convert the profiles array to a single object
+            profiles: topic.profiles?.[0] || null,
+            // Handle user_roles properly - ensure it's an array or null
+            user_roles: Array.isArray(topic.user_roles) ? topic.user_roles : null
+          };
+          return processedTopic;
+        }) as unknown as TopicData[];
         
         setPremiumTopics(processedData);
       } catch (error) {
