@@ -13,33 +13,36 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === 'production' && JavaScriptObfuscator({
       options: {
+        // Максимальная обфускация
         compact: true,
         controlFlowFlattening: true,
-        controlFlowFlatteningThreshold: 0.75,
+        controlFlowFlatteningThreshold: 1, // Максимальный уровень
         deadCodeInjection: true,
-        deadCodeInjectionThreshold: 0.4,
+        deadCodeInjectionThreshold: 0.5,
         debugProtection: true,
-        debugProtectionInterval: 2000,
+        debugProtectionInterval: true, // Включаем интервал для постоянной защиты
         disableConsoleOutput: true,
-        identifierNamesGenerator: 'hexadecimal',
-        renameGlobals: false,
+        identifierNamesGenerator: 'mangled-shuffled', // Улучшенная генерация имен
+        renameGlobals: true, // Переименовываем глобальные переменные
         rotateStringArray: true,
         selfDefending: true,
         stringArray: true,
-        stringArrayEncoding: ['base64'],
-        stringArrayThreshold: 0.75,
+        stringArrayEncoding: ['rc4'], // Более надежное шифрование
+        stringArrayThreshold: 1, // Максимальный уровень
         transformObjectKeys: true,
-        unicodeEscapeSequence: false,
-        // Дополнительные настройки для большей защиты
-        domainLock: [],
+        unicodeEscapeSequence: true, // Включаем для лучшей обфускации строк
+        // Расширенные настройки для максимальной защиты
+        domainLock: [], // Можно добавить домены для lock
         reservedNames: ['React', 'ReactDOM'],
         seed: Math.random() * 10000000,
         sourceMap: false,
         sourceMapMode: 'separate',
         splitStrings: true,
-        splitStringsChunkLength: 5,
+        splitStringsChunkLength: 3, // Уменьшаем для большей защиты
         stringArrayWrappersCount: 5,
         stringArrayWrappersType: 'function',
+        stringArrayWrappersParametersMaxCount: 5,
+        stringArrayWrappersChainedCalls: true,
         target: 'browser'
       }
     })
@@ -56,16 +59,23 @@ export default defineConfig(({ mode }) => ({
       compress: {
         drop_console: true,
         drop_debugger: true,
-        pure_funcs: ['console.log', 'console.info', 'console.debug'],
+        pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn'],
+        passes: 3, // Увеличиваем количество проходов для лучшей оптимизации
+        toplevel: true, // Позволяет удалять неиспользуемые функции на верхнем уровне
+        unsafe: true, // Включаем небезопасные оптимизации для лучшей обфускации
       },
       mangle: {
         toplevel: true, 
         properties: {
           regex: /^_/,
-        }
+          keep_quoted: true // Сохраняем только свойства в кавычках
+        },
+        reserved: ['React', 'ReactDOM'] // Сохраняем важные имена
       },
       format: {
-        comments: false
+        comments: false,
+        ascii_only: true, // Используем только ASCII символы
+        ecma: 5 // Совместимость со старыми браузерами для максимальной поддержки
       }
     },
     rollupOptions: {
@@ -83,8 +93,20 @@ export default defineConfig(({ mode }) => ({
             '@radix-ui/react-slot',
             '@radix-ui/react-toast',
           ],
-        }
+        },
+        // Добавляем модификацию имен файлов для затруднения определения содержимого
+        entryFileNames: 'assets/[hash].js',
+        chunkFileNames: 'assets/[hash].js',
+        assetFileNames: 'assets/[hash].[ext]'
       }
     }
   },
+  // Добавляем кастомные определения для предотвращения утечек
+  define: {
+    'process.env.NODE_ENV': JSON.stringify(mode),
+    'import.meta.env.APP_TYPE': JSON.stringify('devtalk-forum'),
+    'import.meta.env.ORIGIN': JSON.stringify('internal-development')
+  },
+  // Блокировка генерации деталей в ошибках
+  logLevel: mode === 'production' ? 'silent' : 'info'
 }));

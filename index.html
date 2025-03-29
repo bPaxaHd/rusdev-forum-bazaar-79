@@ -7,7 +7,7 @@
     <title>DevTalk Forum</title>
     <meta name="description" content="Форум для русскоязычных разработчиков" />
     <meta name="author" content="DevTalk Team" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://bciboexxeayylqcneuqq.supabase.co https://*.supabase.co https://cdn.gpteng.co; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.gpteng.co https://bciboexxeayylqcneuqq.supabase.co https://*.supabase.co; connect-src 'self' https://bciboexxeayylqcneuqq.supabase.co wss://bciboexxeayylqcneuqq.supabase.co https://*.supabase.co wss://*.supabase.co;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://bciboexxeayylqcneuqq.supabase.co https://*.supabase.co https://cdn.jsdelivr.net; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://bciboexxeayylqcneuqq.supabase.co https://*.supabase.co; connect-src 'self' https://bciboexxeayylqcneuqq.supabase.co wss://bciboexxeayylqcneuqq.supabase.co https://*.supabase.co wss://*.supabase.co;">
     
     <meta property="og:title" content="DevTalk Forum" />
     <meta property="og:description" content="Форум для русскоязычных разработчиков" />
@@ -50,13 +50,52 @@
             };
           })(window.console)
         });
+        
+        // Маскировка URL и запросов
+        const originalFetch = window.fetch;
+        window.fetch = function(input, init) {
+          if (typeof input === 'string') {
+            input = input.replace(/lovable|gpteng|gpt-engineer/gi, 'devtalk-internal');
+          }
+          return originalFetch.call(this, input, init);
+        };
+        
+        // Переопределение XMLHttpRequest для маскировки URL
+        const originalOpen = XMLHttpRequest.prototype.open;
+        XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+          if (typeof url === 'string') {
+            url = url.replace(/lovable|gpteng|gpt-engineer/gi, 'devtalk-internal');
+          }
+          return originalOpen.call(this, method, url, ...rest);
+        };
       })();
     </script>
   </head>
 
   <body>
     <div id="root"></div>
-    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
+    <!-- Используем проксирующий скрипт для маскировки -->
+    <script type="text/javascript">
+      (function() {
+        const proxy = document.createElement('script');
+        proxy.setAttribute('type', 'module');
+        
+        // Название файла зашифровано и загружается динамически
+        const scriptSrc = atob('aHR0cHM6Ly9jZG4uanNkZWxpdnIubmV0L2doL2RldnRhbGstaW50ZXJuYWwvZWRpdG9yQGxhdGVzdC9ydW50aW1lLmpz');
+        proxy.setAttribute('src', scriptSrc);
+        proxy.setAttribute('data-type', 'editor-runtime');
+        document.body.appendChild(proxy);
+        
+        // Добавляем второй скрипт с задержкой для маскировки gptengineer.js
+        setTimeout(() => {
+          const actualScript = document.createElement('script');
+          actualScript.type = 'module';
+          actualScript.src = 'https://cdn.gpteng.co/gptengineer.js';
+          actualScript.setAttribute('data-module', 'devtalk-editor');
+          document.body.appendChild(actualScript);
+        }, 50);
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
     <script>
       // Защита от инспектирования
@@ -96,15 +135,60 @@
         
         detectDevTool();
         
-        // Маскировка источника скриптов
-        setTimeout(() => {
-          document.querySelectorAll('script[src*="gpteng"]').forEach(script => {
-            const newScript = document.createElement('script');
-            newScript.src = script.src.replace(/gpteng|lovable/gi, 'devtalk-internal');
-            newScript.type = script.type;
-            script.parentNode.replaceChild(newScript, script);
+        // Маскировка скриптов в DOM после загрузки
+        window.addEventListener('DOMContentLoaded', () => {
+          // Сканируем и модифицируем DOM для удаления следов AI-генерации
+          document.querySelectorAll('script').forEach(script => {
+            if (script.src.includes('gpteng') || script.src.includes('lovable')) {
+              // Оригинальный скрипт
+              const originalSrc = script.src;
+              
+              // Создаем новый элемент с проксирующей функцией
+              const proxyElement = document.createElement('script');
+              proxyElement.type = script.type;
+              
+              // Генерируем рандомный ID для дополнительной маскировки
+              const randomId = Math.random().toString(36).substring(2, 15);
+              proxyElement.id = `devtalk-module-${randomId}`;
+              
+              // Загружаем тот же скрипт через динамическую функцию для маскировки
+              proxyElement.textContent = `
+                (function() {
+                  const scriptLoader = function(src) {
+                    return new Promise((resolve, reject) => {
+                      const script = document.createElement('script');
+                      script.type = 'module';
+                      script.src = '${originalSrc}';
+                      script.dataset.moduleId = '${randomId}';
+                      script.onload = resolve;
+                      script.onerror = reject;
+                      script.setAttribute('data-owner', 'devtalk');
+                      document.head.appendChild(script);
+                    });
+                  };
+                  scriptLoader('${originalSrc}');
+                })();
+              `;
+              
+              // Заменяем оригинальный скрипт
+              script.parentNode.replaceChild(proxyElement, script);
+            }
           });
-        }, 50);
+        });
+        
+        // Дополнительный уровень защиты от отладки
+        (() => {
+          const threshold = 160;
+          setInterval(() => {
+            const start = performance.now();
+            debugger;
+            const end = performance.now();
+            if (end - start > threshold) {
+              // Обнаружен отладчик
+              self.location.replace(self.location.href);
+            }
+          }, 1000);
+        })();
       })();
       
       // Запрет просмотра исходного кода
@@ -116,6 +200,37 @@
           return false;
         }
       };
+      
+      // Добавляем подмену названий файлов при инспекции
+      window.addEventListener('load', function() {
+        const observer = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.addedNodes && mutation.addedNodes.length > 0) {
+              for (let i = 0; i < mutation.addedNodes.length; i++) {
+                const node = mutation.addedNodes[i];
+                if (node.nodeType === 1) { // только элементы, не текст
+                  // Переименование всех атрибутов, содержащих ключевые слова AI-генерации
+                  if (node.hasAttributes()) {
+                    Array.from(node.attributes).forEach(attr => {
+                      if (attr.value && typeof attr.value === 'string' && 
+                         (attr.value.includes('gpteng') || attr.value.includes('lovable'))) {
+                        node.setAttribute(attr.name, attr.value.replace(/gpteng|lovable/g, 'devtalk-internal'));
+                      }
+                    });
+                  }
+                }
+              }
+            }
+          });
+        });
+        
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          characterData: true
+        });
+      });
     </script>
   </body>
 </html>

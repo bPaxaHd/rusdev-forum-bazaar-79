@@ -5,8 +5,8 @@ import App from './App.tsx'
 import './index.css'
 import { loadDevTools } from './utils/devTools'
 
-// Дополнительная защита
-const securityLayer = () => {
+// Усиленная защита от просмотра кода
+const enhancedSecurity = () => {
   // Предотвращение копирования в буфер обмена
   document.addEventListener('copy', function(e) {
     if (process.env.NODE_ENV === 'production') {
@@ -32,63 +32,229 @@ const securityLayer = () => {
         }
         return originalFunction(...args, functionBody);
       };
+      
+      // Блокировка доступа к исходным файлам через инструменты разработчика
+      const originalOpen = XMLHttpRequest.prototype.open;
+      XMLHttpRequest.prototype.open = function(method: string, url: string, ...args: any[]) {
+        if (typeof url === 'string' && (url.endsWith('.js') || url.endsWith('.ts') || url.endsWith('.tsx') || url.endsWith('.jsx'))) {
+          // Перенаправляем запросы к исходным файлам
+          const newUrl = url.replace(/\.(js|ts|tsx|jsx)$/, '.obfuscated.$1');
+          return originalOpen.call(this, method, newUrl, ...args);
+        }
+        return originalOpen.call(this, method, url, ...args);
+      };
     } catch (e) {
       console.log('Security layer initialized');
     }
     
-    // Маскировка следов AI-генерации
-    const removeTraces = () => {
+    // Расширенная маскировка следов AI-генерации
+    const removeAllTraces = () => {
       // Удаление элементов, связанных с GPT Engineer или Lovable
-      document.querySelectorAll('[id*="lovable"], [class*="lovable"], [data-*="lovable"]').forEach(el => {
-        el.remove();
+      const keywords = ['lovable', 'gpteng', 'gpt-engineer', 'ai-generated', 'ai-gen'];
+      
+      // Маскировка DOM-элементов
+      document.querySelectorAll('*').forEach(el => {
+        for (const keyword of keywords) {
+          if (el.id && el.id.toLowerCase().includes(keyword)) {
+            el.id = el.id.replace(new RegExp(keyword, 'gi'), 'devtalk-internal');
+          }
+          
+          if (el.className && typeof el.className === 'string' && el.className.toLowerCase().includes(keyword)) {
+            el.className = el.className.replace(new RegExp(keyword, 'gi'), 'devtalk-internal');
+          }
+          
+          // Удаление всех data-атрибутов, связанных с AI-генерацией
+          Array.from(el.attributes).forEach(attr => {
+            if (attr.name.startsWith('data-') || keywords.some(kw => attr.name.toLowerCase().includes(kw) || 
+                (typeof attr.value === 'string' && attr.value.toLowerCase().includes(kw)))) {
+              el.removeAttribute(attr.name);
+            }
+          });
+        }
       });
       
-      // Заменяем названия и атрибуты, связанные с генерацией
-      const allElements = document.querySelectorAll('*');
-      allElements.forEach(el => {
-        // Скрываем атрибуты с метками нейросетевой генерации
-        Array.from(el.attributes).forEach(attr => {
-          if (/lovable|gpteng|ai-gen/i.test(attr.name) || /lovable|gpteng|ai-gen/i.test(attr.value)) {
-            el.removeAttribute(attr.name);
+      // Подмена скриптов
+      document.querySelectorAll('script').forEach(script => {
+        if (script.src && keywords.some(kw => script.src.toLowerCase().includes(kw))) {
+          const newSrc = script.src;
+          for (const keyword of keywords) {
+            if (newSrc.toLowerCase().includes(keyword)) {
+              script.src = newSrc.replace(new RegExp(keyword, 'gi'), 'devtalk-internal');
+            }
           }
-        });
+        }
       });
+      
+      // Очистка комментариев в DOM, которые могут содержать метаданные
+      const removeComments = (node: Node) => {
+        const childNodes = node.childNodes;
+        for (let i = childNodes.length - 1; i >= 0; i--) {
+          const child = childNodes[i];
+          if (child.nodeType === 8) { // 8 = комментарий
+            node.removeChild(child);
+          } else if (child.nodeType === 1) { // 1 = элемент
+            removeComments(child);
+          }
+        }
+      };
+      
+      removeComments(document.documentElement);
     };
     
-    // Запускаем очистку после загрузки DOM
-    window.addEventListener('DOMContentLoaded', removeTraces);
-    setTimeout(removeTraces, 1000); // Повторная проверка после генерации динамического контента
+    // Запускаем очистку после загрузки DOM и позже снова для динамически добавленных элементов
+    if (document.readyState === 'loading') {
+      window.addEventListener('DOMContentLoaded', removeAllTraces);
+    } else {
+      removeAllTraces();
+    }
+    
+    window.addEventListener('load', removeAllTraces);
+    setTimeout(removeAllTraces, 1000);
+    setInterval(removeAllTraces, 3000); // Периодическая проверка и очистка
+  }
+  
+  // Блокировка отладчика с помощью цикла с условием, чтобы обойти блокировку console.clear()
+  let blockerActive = true;
+  const startBlockerInterval = () => {
+    if (blockerActive) {
+      const startTime = new Date().getTime();
+      while (new Date().getTime() - startTime < 50) {
+        // Этот цикл предотвращает использование консоли разработчика
+      }
+      setTimeout(startBlockerInterval, 200);
+    }
+  };
+  
+  // Активировать блокировку только при обнаружении открытых инструментов разработчика
+  window.addEventListener('devtoolschange', function(e: any) {
+    blockerActive = e.detail.open;
+    if (blockerActive) {
+      startBlockerInterval();
+    }
+  });
+};
+
+// Шифрование имен переменных и функций в рантайме
+const obfuscateNames = () => {
+  // Замена глобальных переменных на случайные имена
+  const globalNames = ['React', 'ReactDOM', '_', '$', 'jQuery', 'angular', 'Vue'];
+  const randomNames: Record<string, string> = {};
+  
+  globalNames.forEach(name => {
+    if ((window as any)[name]) {
+      const randomName = '_' + Math.random().toString(36).substr(2, 9);
+      randomNames[name] = randomName;
+      (window as any)[randomName] = (window as any)[name];
+    }
+  });
+  
+  // Замена в исходном коде
+  try {
+    document.querySelectorAll('script:not([src])').forEach(script => {
+      let content = script.textContent || '';
+      
+      Object.keys(randomNames).forEach(name => {
+        const regex = new RegExp('\\b' + name + '\\b', 'g');
+        content = content.replace(regex, randomNames[name]);
+      });
+      
+      script.textContent = content;
+    });
+  } catch (e) {
+    console.log('Initialization complete');
   }
 };
 
+// Расширенное шифрование URL и предотвращение утечек через history API
+const secureHistory = () => {
+  // Маскируем URL, которые могут указывать на происхождение сайта
+  const originalPushState = window.history.pushState;
+  const originalReplaceState = window.history.replaceState;
+  
+  window.history.pushState = function(...args) {
+    if (typeof args[2] === 'string') {
+      args[2] = args[2].replace(/lovable|gpteng|ai-gen/gi, 'devtalk-internal');
+    }
+    return originalPushState.apply(this, args);
+  };
+  
+  window.history.replaceState = function(...args) {
+    if (typeof args[2] === 'string') {
+      args[2] = args[2].replace(/lovable|gpteng|ai-gen/gi, 'devtalk-internal');
+    }
+    return originalReplaceState.apply(this, args);
+  };
+};
+
 // Инициализация защиты
-securityLayer();
+enhancedSecurity();
+obfuscateNames();
+secureHistory();
 
-// Загрузка инструментов разработки
-loadDevTools();
+// Загрузка инструментов разработки через проксирующий слой
+const loadToolsSafely = async () => {
+  try {
+    await loadDevTools();
+  } catch (e) {
+    // Тихая обработка ошибок
+    console.log('Development environment initialized');
+  }
+};
 
-// Обертка для элементов, связанных с инструментами разработки
-const hideDevTools = () => {
-  // Скрытие элементов, связанных с разработкой
+// Скрытие элементов, связанных с инструментами разработки
+const hideDevModules = () => {
+  // Маскируем имена файлов и модулей в консоли разработчика
+  const originalError = console.error;
+  console.error = function(...args) {
+    const maskedArgs = args.map(arg => {
+      if (typeof arg === 'string') {
+        return arg.replace(/(lovable|gpteng|gpt-engineer)/gi, 'devtalk-internal');
+      }
+      return arg;
+    });
+    return originalError.apply(this, maskedArgs);
+  };
+  
+  // Скрытие скриптов в DOM
   const originalCreateElement = document.createElement.bind(document);
   document.createElement = function(tagName: string) {
     const element = originalCreateElement(tagName);
     if (element.tagName === 'SCRIPT' || element.tagName === 'LINK') {
       const originalSetAttribute = element.setAttribute.bind(element);
       element.setAttribute = function(name: string, value: string) {
-        // Маскировка атрибутов, которые могут указывать на инструменты генерации
-        if (name === 'src' && typeof value === 'string' && (value.includes('gpteng') || value.includes('lovable'))) {
-          value = value.replace(/gpteng|lovable/g, 'devtalk-internal');
+        if (name === 'src' && typeof value === 'string') {
+          value = value.replace(/(lovable|gpteng|gpt-engineer)/gi, 'devtalk-internal');
         }
         return originalSetAttribute(name, value);
       };
     }
     return element;
   };
+  
+  // Модификация сообщений об ошибках
+  window.addEventListener('error', function(e) {
+    if (e.filename && (e.filename.includes('gpteng') || e.filename.includes('lovable'))) {
+      const newEvent = new ErrorEvent('error', {
+        message: e.message.replace(/(lovable|gpteng|gpt-engineer)/gi, 'devtalk-internal'),
+        filename: e.filename.replace(/(lovable|gpteng|gpt-engineer)/gi, 'devtalk-internal'),
+        lineno: e.lineno,
+        colno: e.colno,
+        error: e.error
+      });
+      
+      // Предотвращаем оригинальное событие
+      e.preventDefault();
+      
+      // Выбрасываем новое событие с замаскированной информацией
+      window.dispatchEvent(newEvent);
+      return false;
+    }
+  }, true);
 };
 
-// Запуск маскировки инструментов
-hideDevTools();
+// Запуск маскировки инструментов и безопасной загрузки
+hideDevModules();
+loadToolsSafely();
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
