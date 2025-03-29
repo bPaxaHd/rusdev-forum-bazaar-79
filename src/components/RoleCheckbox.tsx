@@ -69,7 +69,9 @@ const RoleCheckbox: React.FC<RoleCheckboxProps> = ({
 
   const handleToggle = async (checked: boolean) => {
     try {
+      // First update UI state optimistically
       setChecked(checked);
+      // Then call the provided toggle function
       await onToggle(userId, role, checked);
     } catch (error) {
       console.error(`Error toggling role ${role}:`, error);

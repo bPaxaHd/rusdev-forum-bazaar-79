@@ -1,4 +1,3 @@
-
 import React from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -17,6 +16,7 @@ import { formatDate } from "./utils";
 import { UserProfile } from "@/types/auth";
 import { User } from "./types";
 import { UserRole } from "@/utils/auth-helpers";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface UserProfileEditProps {
   selectedUser: User;
@@ -36,6 +36,7 @@ const UserProfileEdit: React.FC<UserProfileEditProps> = ({
   onFetchUsers
 }) => {
   const { toast } = useToast();
+  const { user: currentUser } = useAuth();
 
   const handleUpdateProfile = async () => {
     try {
@@ -82,6 +83,16 @@ const UserProfileEdit: React.FC<UserProfileEditProps> = ({
     if (!userId) return;
     
     // Check if the current user has permission to modify this role
+    if (!currentUser) {
+      toast({
+        title: "Ошибка авторизации",
+        description: "Вы должны быть авторизованы для выполнения этого действия",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Check permissions based on role hierarchy
     if (role === 'creator' && !isCreator) {
       toast({
         title: "Доступ запрещен",
@@ -206,11 +217,13 @@ const UserProfileEdit: React.FC<UserProfileEditProps> = ({
       <div>
         <div className="flex items-center mb-6">
           <Avatar className="h-16 w-16 mr-4" style={{
-            borderColor: selectedUser.profile.subscription_type === "admin" ? 'rgb(220, 38, 38)' : 
+            borderColor: selectedUser.roles.includes('creator') ? 'rgb(139, 92, 246)' : 
+              selectedUser.roles.includes('admin') ? 'rgb(220, 38, 38)' :
+              selectedUser.roles.includes('moderator') ? 'rgb(34, 197, 94)' :
               selectedUser.profile.subscription_type === "premium" ? 'rgb(234, 179, 8)' :
               selectedUser.profile.subscription_type === "business" ? 'rgb(59, 130, 246)' :
               selectedUser.profile.subscription_type === "sponsor" ? 'rgb(139, 92, 246)' : 'transparent',
-            borderWidth: selectedUser.profile.subscription_type !== "free" ? '2px' : '0',
+            borderWidth: selectedUser.roles.length > 0 || selectedUser.profile.subscription_type !== "free" ? '2px' : '0',
             borderStyle: 'solid'
           }}>
             <AvatarImage src={selectedUser.profile.avatar_url || ""} />
@@ -277,7 +290,6 @@ const UserProfileEdit: React.FC<UserProfileEditProps> = ({
             <h3 className="text-lg font-medium mb-3">Роли пользователя</h3>
             
             <div className="space-y-3 mb-4">
-              {/* User role checkboxes will be rendered here from fetched roles */}
               <RoleCheckbox 
                 userId={selectedUser.id}
                 role="creator"

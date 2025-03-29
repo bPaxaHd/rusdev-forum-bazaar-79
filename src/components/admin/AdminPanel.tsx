@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,6 +13,7 @@ import StatsTab from "./StatsTab";
 import SettingsTab from "./SettingsTab";
 import SupportTab from "./SupportTab";
 import { User } from "./types";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface AdminPanelProps {
   open: boolean;
@@ -22,14 +22,13 @@ interface AdminPanelProps {
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) => {
   const { toast } = useToast();
+  const { isCreator, isAdmin } = useAuth();
   
-  // Authentication states
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   
-  // Admin panel states
   const [activeTab, setActiveTab] = useState("users");
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
@@ -38,12 +37,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [editedProfile, setEditedProfile] = useState<any>({});
   
-  // Support chat states
   const [supportUsers, setSupportUsers] = useState<any[]>([]);
   const [loadingSupport, setLoadingSupport] = useState(false);
   const [supportSearchQuery, setSupportSearchQuery] = useState("");
   
-  // Reset authentication when panel is closed
   useEffect(() => {
     if (!open) {
       setIsAuthenticated(false);
@@ -57,18 +54,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
       setIsAuthenticating(true);
       setAuthError("");
       
-      // Record login attempt (for security monitoring)
-      const ipAddress = "unknown"; // In a real app, you would get this from the server
+      const ipAddress = "unknown";
       await recordLoginAttempt(ipAddress);
       
-      // Check password
       const correctPassword = "20000304gav";
       
       if (password === correctPassword) {
         setIsAuthenticated(true);
         setPassword("");
         
-        // Load initial data after authentication
         fetchUsers();
         fetchSupportUsers();
         
@@ -92,7 +86,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
     }
   };
   
-  // Update fetchUsers to return a Promise
   const fetchUsers = async (): Promise<void> => {
     try {
       setLoadingUsers(true);
@@ -141,12 +134,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
     }
   };
   
-  // Fetch support users with messages
   const fetchSupportUsers = async (): Promise<void> => {
     try {
       setLoadingSupport(true);
       
-      // First get unique user IDs who have sent support messages
       const { data: messageData, error: messageError } = await supabase
         .from("support_messages")
         .select("user_id, created_at, content, is_admin, read")
@@ -156,7 +147,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
         throw messageError;
       }
       
-      // Get unique user IDs
       const userIds = Array.from(new Set(messageData?.map(msg => msg.user_id) || []));
       
       if (userIds.length === 0) {
@@ -164,7 +154,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
         return;
       }
       
-      // Fetch profiles for these users
       const { data: profiles, error: profileError } = await supabase
         .from("profiles")
         .select("*")
@@ -174,7 +163,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
         throw profileError;
       }
       
-      // Prepare the support users data
       const supportUsersData = profiles?.map(profile => {
         const userMessages = messageData?.filter(msg => msg.user_id === profile.id) || [];
         const lastMessage = userMessages[0]?.content || "";
@@ -188,7 +176,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
           unreadCount
         };
       }).sort((a, b) => {
-        // Sort by unread count first, then by last message time
         if (a.unreadCount !== b.unreadCount) {
           return b.unreadCount - a.unreadCount;
         }
@@ -208,7 +195,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
     }
   };
   
-  // Filter users based on search query
   useEffect(() => {
     if (searchQuery.trim() === '') {
       setFilteredUsers(users);
@@ -224,8 +210,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
     
     setFilteredUsers(filtered);
   }, [searchQuery, users]);
-
-  // Proper implementation of handleSelectUser
+  
   const handleSelectUser = (user: User): void => {
     setSelectedUser(user);
     setEditedProfile({
@@ -330,8 +315,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ open, onOpenChange }) =>
                   handleSelectUser={handleSelectUser}
                   editedProfile={editedProfile}
                   setEditedProfile={setEditedProfile}
-                  isCreator={true}
-                  isAdmin={true}
+                  isCreator={isCreator}
+                  isAdmin={isAdmin}
                 />
               </TabsContent>
               
