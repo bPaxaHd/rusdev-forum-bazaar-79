@@ -61,9 +61,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const effectiveType = await getEffectiveSubscriptionType(userId);
       setEffectiveSubscriptionType(effectiveType);
 
-      // Fix: correctly handle the boolean value returned by hasPremiumAccess
       const premiumAccess = await hasPremiumAccess(userId);
-      setHasPremiumAccess(!!premiumAccess);
+      setHasPremiumAccess(Boolean(premiumAccess));
     } catch (error) {
       console.error("Error fetching user roles:", error);
     }
