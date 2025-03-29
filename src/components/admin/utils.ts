@@ -44,7 +44,7 @@ export const getSubscriptionBadgeStyles = (subscriptionType: string | null): str
   }
 };
 
-// Helper to get subscription level access
+// Improved helper to get access level with correct hierarchy
 export const getAccessLevel = (role: string | null, subscriptionType: string | null): number => {
   const ACCESS_LEVELS = {
     'free': 0,

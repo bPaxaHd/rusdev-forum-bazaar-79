@@ -63,6 +63,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const effectiveType = await getEffectiveSubscriptionType(userId);
       setEffectiveSubscriptionType(effectiveType);
 
+      // Fix: Don't call Boolean as a function, just assign the value directly
       const premiumAccess = await hasPremiumAccess(userId);
       setHasPremiumAccess(premiumAccess);
     } catch (error) {
