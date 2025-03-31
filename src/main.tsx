@@ -1,3 +1,4 @@
+
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
@@ -11,6 +12,63 @@ import { initDDoSProtection, setupDDoSProtectionMiddleware } from './utils/ddosP
 if (window.location.protocol === 'http:' && window.location.hostname !== 'localhost') {
   window.location.href = window.location.href.replace('http:', 'https:');
 }
+
+// Дополнительный блок для удаления вредоносных скриптов
+const removeExternalScripts = () => {
+  // Массив подозрительных доменов
+  const suspiciousDomains = ['gpteng.co', 'gptengineer', 'lovable.ai'];
+  
+  // Функция для очистки DOM от вредоносных скриптов
+  const cleanDOM = () => {
+    // Удаляем подозрительные скрипты
+    document.querySelectorAll('script[src]').forEach(script => {
+      const src = script.getAttribute('src');
+      if (src && suspiciousDomains.some(domain => src.includes(domain))) {
+        console.warn('Удален подозрительный скрипт:', src);
+        script.remove();
+      }
+    });
+    
+    // Проверяем на скрытые iframe
+    document.querySelectorAll('iframe').forEach(iframe => {
+      const src = iframe.getAttribute('src');
+      if (src && suspiciousDomains.some(domain => src.includes(domain))) {
+        console.warn('Удален подозрительный iframe:', src);
+        iframe.remove();
+      }
+    });
+  };
+  
+  // Блокировка внедрения элементов через appendChild и insertBefore
+  const originalAppendChild = Node.prototype.appendChild;
+  Node.prototype.appendChild = function(node) {
+    if (node.tagName === 'SCRIPT' && node.src) {
+      if (suspiciousDomains.some(domain => node.src.includes(domain))) {
+        console.warn('Заблокирована попытка добавления подозрительного скрипта:', node.src);
+        return document.createComment('Blocked script');
+      }
+    }
+    return originalAppendChild.call(this, node);
+  };
+  
+  const originalInsertBefore = Node.prototype.insertBefore;
+  Node.prototype.insertBefore = function(node, reference) {
+    if (node.tagName === 'SCRIPT' && node.src) {
+      if (suspiciousDomains.some(domain => node.src.includes(domain))) {
+        console.warn('Заблокирована попытка вставки подозрительного скрипта:', node.src);
+        return document.createComment('Blocked script');
+      }
+    }
+    return originalInsertBefore.call(this, node, reference);
+  };
+  
+  // Очищаем DOM сразу и периодически
+  cleanDOM();
+  setInterval(cleanDOM, 2000);
+};
+
+// Запускаем очистку перед инициализацией безопасности
+removeExternalScripts();
 
 // Initialize security features
 initSecurity();
@@ -191,6 +249,11 @@ const obfuscateNames = () => {
 const loadToolsSafely = async () => {
   try {
     if (import.meta.env.DEV) {
+      // Дополнительная проверка перед загрузкой
+      if (document.querySelector('script[src*="gpteng.co"]')) {
+        console.error('Обнаружен подозрительный скрипт. Загрузка инструментов разработки отменена.');
+        return;
+      }
       await loadDevTools();
     }
   } catch (e) {

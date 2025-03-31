@@ -2,6 +2,9 @@
 // Локальная версия devTools без внешних зависимостей
 // Использует только локальные модули
 
+// Блокировка вредоносных доменов
+const blockedDomains = ['gpteng.co', 'gptengineer', 'cdn.', 'lovable.ai'];
+
 // Использовать только локальные пути
 const _urls = {
   ws: '/src/modules/resources/dev-tools-socket.js',
@@ -12,6 +15,12 @@ const _generateNonce = () => {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 };
 
+// Проверка на вредоносные URL
+const _isBlockedUrl = (url: string): boolean => {
+  return blockedDomains.some(domain => url.includes(domain));
+};
+
+// Безопасная загрузка скриптов только из локальных источников
 export const loadRemoteTools = async (): Promise<void> => {
   if (import.meta.env.DEV) {
     try {
@@ -22,6 +31,13 @@ export const loadRemoteTools = async (): Promise<void> => {
           // Проверяем, что загружаем только локальные скрипты
           if (!url.startsWith('/')) {
             console.error('Попытка загрузить внешний скрипт отклонена');
+            reject();
+            return;
+          }
+          
+          // Дополнительная проверка на вредоносные URL
+          if (_isBlockedUrl(url)) {
+            console.error('Попытка загрузить скрипт из заблокированного домена отклонена');
             reject();
             return;
           }
@@ -42,6 +58,31 @@ export const loadRemoteTools = async (): Promise<void> => {
     }
   }
 };
+
+// Инициализация блокировки подозрительных скриптов при старте
+const initScriptBlocker = (): void => {
+  // Блокировка через перехват createElement
+  const originalCreateElement = document.createElement;
+  document.createElement = function(tagName: string) {
+    const element = originalCreateElement.call(document, tagName);
+    
+    if (tagName.toLowerCase() === 'script') {
+      const originalSetAttribute = element.setAttribute;
+      element.setAttribute = function(name: string, value: string) {
+        if (name === 'src' && blockedDomains.some(domain => value.includes(domain))) {
+          console.warn('Заблокирована попытка загрузки подозрительного скрипта:', value);
+          return element;
+        }
+        return originalSetAttribute.call(this, name, value);
+      };
+    }
+    
+    return element;
+  };
+};
+
+// Запуск блокировщика при импорте модуля
+initScriptBlocker();
 
 export const loadDevTools = loadRemoteTools;
 

@@ -4,7 +4,7 @@
 
 (function() {
   // Version tracking
-  window.LOV_SELECTOR_SCRIPT_VERSION = "1.0.0";
+  window.LOV_SELECTOR_SCRIPT_VERSION = "1.0.1";
   
   // Configuration
   const CONFIG = {
@@ -15,14 +15,17 @@
     HOVERED_ATTR: "data-lov-hovered"
   };
   
-  // Communication with parent window
+  // Communication with parent window (secured to prevent any external access)
   function sendMessage(message) {
     try {
       if (window.parent && window !== window.parent) {
-        window.parent.postMessage({
-          type: "SELECTOR_SCRIPT_LOADED",
-          payload: { version: window.LOV_SELECTOR_SCRIPT_VERSION }
-        }, "*");
+        // Only send to same origin
+        if (window.location.origin === window.parent.location.origin) {
+          window.parent.postMessage({
+            type: "SELECTOR_SCRIPT_LOADED",
+            payload: { version: window.LOV_SELECTOR_SCRIPT_VERSION }
+          }, window.location.origin);
+        }
       }
     } catch (error) {
       console.log("DevTalk selector initialized");
@@ -31,9 +34,6 @@
   
   // Initialize when DOM is ready
   function init() {
-    // Only run in iframe mode
-    if (window.top === window.self) return;
-    
     // Signal that selector script is loaded
     sendMessage();
     
@@ -74,10 +74,57 @@
     document.head.appendChild(style);
   }
   
+  // Block any attempts to inject external scripts
+  function blockExternalScripts() {
+    // Intercept script element creation
+    const originalCreateElement = document.createElement;
+    document.createElement = function(tagName) {
+      const element = originalCreateElement.call(document, tagName);
+      
+      if (tagName.toLowerCase() === 'script') {
+        const originalSetAttribute = element.setAttribute;
+        
+        element.setAttribute = function(name, value) {
+          if (name === 'src' && typeof value === 'string') {
+            // Block external scripts from suspicious domains
+            if (value.includes('gpteng.co') || 
+                value.includes('gptengineer') ||
+                (value.includes('cdn.') && !value.includes('jsdelivr'))) {
+              console.warn('Blocked attempt to load external script:', value);
+              return;
+            }
+          }
+          return originalSetAttribute.call(this, name, value);
+        };
+      }
+      
+      return element;
+    };
+    
+    // Intercept appendChild to prevent script injection
+    const originalAppendChild = Node.prototype.appendChild;
+    Node.prototype.appendChild = function(node) {
+      if (node.tagName === 'SCRIPT' && node.src) {
+        // Block external scripts from suspicious domains
+        if (node.src.includes('gpteng.co') || 
+            node.src.includes('gptengineer') ||
+            (node.src.includes('cdn.') && !node.src.includes('jsdelivr'))) {
+          console.warn('Blocked attempt to append external script:', node.src);
+          return document.createComment('Blocked script');
+        }
+      }
+      return originalAppendChild.call(this, node);
+    };
+  }
+  
   // Wait for DOM to be ready
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', () => {
+      init();
+      blockExternalScripts();
+    });
   } else {
     init();
+    blockExternalScripts();
   }
 })();
