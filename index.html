@@ -6,7 +6,7 @@
     <title>DevTalk Forum</title>
     <meta name="description" content="Форум для русскоязычных разработчиков" />
     <meta name="author" content="DevTalk Team" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://bciboexxeayylqcneuqq.supabase.co https://*.supabase.co; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://bciboexxeayylqcneuqq.supabase.co wss://bciboexxeayylqcneuqq.supabase.co https://*.supabase.co wss://*.supabase.co; frame-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; require-trusted-types-for 'script';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://bciboexxeayylqcneuqq.supabase.co https://*.supabase.co; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://bciboexxeayylqcneuqq.supabase.co wss://bciboexxeayylqcneuqq.supabase.co https://*.supabase.co wss://*.supabase.co; frame-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; require-trusted-types-for 'script';">
     
     <!-- Принудительное перенаправление на HTTPS -->
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
@@ -243,5 +243,8 @@
         });
       }
     </script>
+    
+    <!-- Local selector script instead of using external CDN -->
+    <script type="module" src="/src/utils/selectorScript.js"></script>
   </body>
 </html>
