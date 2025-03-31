@@ -5,6 +5,7 @@ export type UserRole = 'user' | 'moderator' | 'admin' | 'creator';
 export type SubscriptionType = 'free' | 'premium' | 'business' | 'sponsor';
 
 // Map roles and subscription types to numeric access levels
+// Order: free < premium < business < sponsor < moderator < admin < creator
 const ACCESS_LEVELS = {
   'free': 0,
   'premium': 1,
@@ -151,6 +152,7 @@ export const canAssignRole = async (userId: string, roleToAssign: UserRole): Pro
 };
 
 // Проверка доступа к функционалу с определенным уровнем подписки
+// Учитывает иерархию - если у пользователя есть доступ level 3, то у него есть доступ ко всем level < 3
 export const hasSubscriptionAccess = async (
   userId: string, 
   requiredLevel: UserRole | SubscriptionType

@@ -21,6 +21,7 @@ interface PricingPlan {
   buttonText: string;
   popular?: boolean;
   icon: React.ReactNode;
+  level: number;
 }
 
 const PremiumFeatures = () => {
@@ -61,37 +62,43 @@ const PremiumFeatures = () => {
     setShowChat(true);
   };
 
+  // Define all features in order of importance
+  const allFeatures = [
+    { text: "Просмотр форума", minLevel: 0 },
+    { text: "Создание тем", minLevel: 0 },
+    { text: "Базовый профиль", minLevel: 0 },
+    { text: "Просмотр вакансий", minLevel: 0 },
+    { text: "Расширенный профиль", minLevel: 1 },
+    { text: "Доступ к премиум курсам", minLevel: 1 },
+    { text: "Приоритетная поддержка", minLevel: 1 },
+    { text: "Доступ к закрытым разделам", minLevel: 1 },
+    { text: "Размещение вакансий", minLevel: 2 },
+    { text: "API доступ", minLevel: 2 },
+    { text: "Командные аккаунты", minLevel: 2 },
+    { text: "Приоритетный поиск специалистов", minLevel: 2 },
+    { text: "Корпоративные скидки", minLevel: 2 },
+    { text: "Брендированный профиль", minLevel: 3 },
+    { text: "Логотип на главной странице", minLevel: 3 },
+    { text: "Приоритетное размещение контента", minLevel: 3 },
+    { text: "Эксклюзивный доступ к новым функциям", minLevel: 3 },
+    { text: "Личный менеджер аккаунта", minLevel: 3 },
+    { text: "Модерация контента", minLevel: 4 },
+    { text: "Управление пользователями", minLevel: 5 },
+    { text: "Доступ к административной панели", minLevel: 5 },
+    { text: "Все права разработчика", minLevel: 6 }
+  ];
+
+  // Create plans with hierarchical features
   const plans: PricingPlan[] = [
     {
       name: "Free",
       price: "₽0",
       description: "Базовый доступ к сообществу разработчиков",
-      features: [
-        {
-          text: "Просмотр форума",
-          included: true
-        },
-        {
-          text: "Создание тем",
-          included: true
-        },
-        {
-          text: "Базовый профиль",
-          included: true
-        },
-        {
-          text: "Просмотр вакансий",
-          included: true
-        },
-        {
-          text: "Приоритетная поддержка",
-          included: false
-        },
-        {
-          text: "Расширенный доступ к курсам",
-          included: false
-        }
-      ],
+      level: 0,
+      features: allFeatures.map(feature => ({
+        text: feature.text,
+        included: feature.minLevel <= 0
+      })),
       buttonText: "Текущий план",
       icon: <Star className="h-5 w-5" />
     },
@@ -99,32 +106,11 @@ const PremiumFeatures = () => {
       name: "Premium",
       price: "₽899",
       description: "Расширенный доступ и дополнительные возможности",
-      features: [
-        {
-          text: "Просмотр форума",
-          included: true
-        },
-        {
-          text: "Создание тем",
-          included: true
-        },
-        {
-          text: "Расширенный профиль",
-          included: true
-        },
-        {
-          text: "Доступ к премиум курсам",
-          included: true
-        },
-        {
-          text: "Приоритетная поддержка",
-          included: true
-        },
-        {
-          text: "Доступ к закрытым разделам",
-          included: true
-        }
-      ],
+      level: 1,
+      features: allFeatures.map(feature => ({
+        text: feature.text,
+        included: feature.minLevel <= 1
+      })),
       buttonText: "Подписаться",
       popular: true,
       icon: <Crown className="h-5 w-5" />
@@ -133,32 +119,11 @@ const PremiumFeatures = () => {
       name: "Бизнес",
       price: "₽2499",
       description: "Для компаний и команд разработчиков",
-      features: [
-        {
-          text: "Все преимущества Premium",
-          included: true
-        },
-        {
-          text: "Размещение вакансий",
-          included: true
-        },
-        {
-          text: "API доступ",
-          included: true
-        },
-        {
-          text: "Командные аккаунты",
-          included: true
-        },
-        {
-          text: "Приоритетный поиск специалистов",
-          included: true
-        },
-        {
-          text: "Корпоративные скидки",
-          included: true
-        }
-      ],
+      level: 2,
+      features: allFeatures.map(feature => ({
+        text: feature.text,
+        included: feature.minLevel <= 2
+      })),
       buttonText: "Связаться с нами",
       icon: <Crown className="h-5 w-5" />
     },
@@ -166,35 +131,26 @@ const PremiumFeatures = () => {
       name: "Спонсор",
       price: "₽9999",
       description: "Эксклюзивные возможности и продвижение бренда",
-      features: [
-        {
-          text: "Все преимущества Бизнес",
-          included: true
-        },
-        {
-          text: "Брендированный профиль",
-          included: true
-        },
-        {
-          text: "Логотип на главной странице",
-          included: true
-        },
-        {
-          text: "Приоритетное размещение контента",
-          included: true
-        },
-        {
-          text: "Эксклюзивный доступ к новым функциям",
-          included: true
-        },
-        {
-          text: "Личный менеджер аккаунта",
-          included: true
-        }
-      ],
+      level: 3,
+      features: allFeatures.map(feature => ({
+        text: feature.text,
+        included: feature.minLevel <= 3
+      })),
       buttonText: "Стать спонсором",
       icon: <Diamond className="h-5 w-5" />
     }
+  ];
+
+  // Select features to display in the comparison table (to avoid making it too crowded)
+  const displayedFeatures = [
+    "Просмотр форума",
+    "Создание тем",
+    "Расширенный профиль",
+    "Доступ к премиум курсам",
+    "Приоритетная поддержка",
+    "Размещение вакансий",
+    "API доступ",
+    "Логотип на главной странице"
   ];
 
   return (
@@ -217,12 +173,12 @@ const PremiumFeatures = () => {
           </TableHeader>
           <TableBody>
             {/* Feature Rows */}
-            {plans[1].features.map((feature, index) => (
+            {allFeatures.filter(f => displayedFeatures.includes(f.text)).map((feature, index) => (
               <TableRow key={index}>
                 <TableCell className="font-medium">{feature.text}</TableCell>
                 {plans.map(plan => (
                   <TableCell key={`${plan.name}-${index}`} className="text-center">
-                    {plan.features[index].included ? 
+                    {plan.level >= feature.minLevel ? 
                       <Check className="h-5 w-5 text-green-500 mx-auto" /> : 
                       <span className="text-gray-300">—</span>
                     }
@@ -261,15 +217,17 @@ const PremiumFeatures = () => {
             <CardContent>
               <div className="text-3xl font-bold mb-4">{plan.price}<span className="text-base font-normal text-muted-foreground">/мес</span></div>
               <ul className="space-y-2">
-                {plan.features.slice(0, 4).map((feature, index) => (
+                {plan.features.filter(f => f.included).slice(0, 6).map((feature, index) => (
                   <li key={index} className="flex items-center gap-2">
-                    {feature.included ? 
-                      <Check className="h-4 w-4 text-green-500" /> : 
-                      <span className="h-4 w-4 text-gray-300">—</span>
-                    }
-                    <span className={!feature.included ? "text-muted-foreground" : ""}>{feature.text}</span>
+                    <Check className="h-4 w-4 text-green-500" />
+                    <span>{feature.text}</span>
                   </li>
                 ))}
+                {plan.features.filter(f => f.included).length > 6 && (
+                  <li className="text-muted-foreground text-sm">
+                    + ещё {plan.features.filter(f => f.included).length - 6} функций
+                  </li>
+                )}
               </ul>
             </CardContent>
             <CardFooter>
