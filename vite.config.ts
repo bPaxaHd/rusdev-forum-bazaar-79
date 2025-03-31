@@ -3,6 +3,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import JavaScriptObfuscator from 'rollup-plugin-obfuscator';
+import { componentTagger } from "lovable-tagger";
 
 export default defineConfig(({ mode }) => ({
   server: {
@@ -11,6 +12,7 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
+    mode === 'development' && componentTagger(),
     mode === 'production' && JavaScriptObfuscator({
       options: {
         compact: true,
@@ -44,7 +46,7 @@ export default defineConfig(({ mode }) => ({
         target: 'browser'
       }
     })
-  ],
+  ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
