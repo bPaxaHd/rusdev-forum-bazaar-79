@@ -1,3 +1,4 @@
+
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
@@ -7,7 +8,11 @@ import { initSecurity } from './utils/security'
 import { initSecurityMiddleware, setupClientFirewall } from './utils/securityMiddleware'
 import { initDDoSProtection, setupDDoSProtectionMiddleware } from './utils/ddosProtection'
 import { setupHtmlCleaning } from './utils/cleanHtml'
-import { initScriptBlocker, scanAndCleanDom } from './utils/scriptBlocker'
+import { initScriptBlocker } from './utils/scriptBlocker'
+import { initCDNBlocker } from './utils/cdnBlocker'
+
+// Первым делом инициализируем блокировку внешних CDN
+initCDNBlocker();
 
 // Инициализация блокировки подозрительных скриптов
 initScriptBlocker();
@@ -202,7 +207,6 @@ const loadToolsSafely = async () => {
   try {
     if (import.meta.env.DEV) {
       // Дополнительная проверка перед загрузкой
-      scanAndCleanDom(); // Повторная очистка перед загрузкой инструментов
       if (document.querySelector('script[src*="gpteng.co"]') || 
           document.querySelector('script[src*="cdn."]') ||
           document.querySelector('script[src*="lovable.ai"]')) {
