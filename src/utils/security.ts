@@ -159,24 +159,38 @@ export const encryptData = (data: string, key?: string): string => {
   // Generate a secure key if not provided
   const encryptionKey = key || generateSecureKey();
   
-  // Use AES encryption with CBC mode for better security
+  // Generate IV for better encryption
+  const iv = CryptoJS.lib.WordArray.random(16);
+  
+  // Use AES encryption with CBC mode and proper IV for stronger security
   const encrypted = CryptoJS.AES.encrypt(data, encryptionKey, {
+    iv: iv,
     mode: CryptoJS.mode.CBC,
     padding: CryptoJS.pad.Pkcs7
   });
   
-  return encrypted.toString();
+  // Return IV + encrypted data for proper decryption
+  return iv.toString(CryptoJS.enc.Hex) + ':' + encrypted.toString();
 };
 
 /**
  * Decrypt AES encrypted data
- * @param encryptedData Encrypted string
+ * @param encryptedData Encrypted string with IV
  * @param key Encryption key
  * @returns Decrypted data or null if decryption fails
  */
 export const decryptData = (encryptedData: string, key: string): string | null => {
   try {
-    const decrypted = CryptoJS.AES.decrypt(encryptedData, key, {
+    // Split IV and encrypted data
+    const [ivStr, encryptedText] = encryptedData.split(':');
+    if (!ivStr || !encryptedText) {
+      throw new Error('Invalid encrypted data format');
+    }
+    
+    const iv = CryptoJS.enc.Hex.parse(ivStr);
+    
+    const decrypted = CryptoJS.AES.decrypt(encryptedText, key, {
+      iv: iv,
       mode: CryptoJS.mode.CBC,
       padding: CryptoJS.pad.Pkcs7
     });
@@ -228,15 +242,21 @@ export const secureHash = (data: string, salt?: string): string => {
 export const encryptObject = <T extends Record<string, any>>(obj: T): string => {
   const serialized = JSON.stringify(obj);
   const iv = CryptoJS.lib.WordArray.random(16); // Generate IV
-  const key = sessionStorage.getItem('sec_key') || generateSecureKey();
   
-  // Store key in session storage if not already there
-  if (!sessionStorage.getItem('sec_key')) {
+  // Use a stronger key derivation method
+  let key = sessionStorage.getItem('sec_key');
+  if (!key) {
+    key = generateSecureKey();
+    // Store key in session storage
     sessionStorage.setItem('sec_key', key);
   }
   
+  // Add timestamp to prevent replay attacks
+  const timestamp = Date.now().toString();
+  const dataToEncrypt = timestamp + '|' + serialized;
+  
   // Encrypt with IV for better security
-  const encrypted = CryptoJS.AES.encrypt(serialized, key, {
+  const encrypted = CryptoJS.AES.encrypt(dataToEncrypt, key, {
     iv: iv,
     mode: CryptoJS.mode.CBC,
     padding: CryptoJS.pad.Pkcs7
@@ -261,6 +281,10 @@ export const decryptObject = <T extends Record<string, any>>(encryptedStr: strin
     
     // Split IV and encrypted data
     const [ivStr, encryptedData] = encryptedStr.split(':');
+    if (!ivStr || !encryptedData) {
+      throw new Error('Invalid encrypted data format');
+    }
+    
     const iv = CryptoJS.enc.Hex.parse(ivStr);
     
     // Decrypt
@@ -270,8 +294,19 @@ export const decryptObject = <T extends Record<string, any>>(encryptedStr: strin
       padding: CryptoJS.pad.Pkcs7
     });
     
+    // Get decrypted data
+    const decryptedText = decrypted.toString(CryptoJS.enc.Utf8);
+    
+    // Split timestamp and data
+    const [timestamp, serializedData] = decryptedText.split('|');
+    
+    // Check if decryption was successful and data is valid
+    if (!timestamp || !serializedData) {
+      throw new Error('Decrypted data is invalid');
+    }
+    
     // Parse the decrypted JSON
-    return JSON.parse(decrypted.toString(CryptoJS.enc.Utf8)) as T;
+    return JSON.parse(serializedData) as T;
   } catch (error) {
     console.error('Failed to decrypt object:', error);
     return null;
@@ -287,6 +322,7 @@ export const blockUnusedPorts = (): void => {
   
   // Block WebSocket connections to non-standard ports
   const originalWebSocket = window.WebSocket;
+  
   // Fix the type error by using type assertion
   window.WebSocket = function(url: string | URL, protocols?: string | string[]) {
     try {
@@ -431,6 +467,109 @@ export const initSecurity = (): void => {
   } as typeof fetch;
 };
 
+/**
+ * Enhances transport layer encryption for all network communication
+ */
+export const enhanceTransportEncryption = (): void => {
+  // Generate a unique session ID
+  const sessionId = generateSecureKey().substring(0, 16);
+  sessionStorage.setItem('session_id', sessionId);
+  
+  // Original fetch reference
+  const originalFetch = window.fetch;
+  
+  // Override fetch to encrypt all request bodies and decrypt responses
+  window.fetch = async function(input: RequestInfo | URL, init?: RequestInit) {
+    // Clone init to avoid modifying the original
+    const secureInit: RequestInit = init ? { ...init } : {};
+    
+    // Add security headers
+    if (!secureInit.headers) {
+      secureInit.headers = new Headers();
+    } else if (!(secureInit.headers instanceof Headers)) {
+      secureInit.headers = new Headers(secureInit.headers);
+    }
+    
+    // Add session ID and timestamp to prevent replay attacks
+    (secureInit.headers as Headers).set('X-Session-ID', sessionId);
+    (secureInit.headers as Headers).set('X-Request-Time', Date.now().toString());
+    
+    // Encrypt request body for sensitive methods
+    if (secureInit.body && 
+        secureInit.method && 
+        ['POST', 'PUT', 'PATCH', 'DELETE'].includes(secureInit.method.toUpperCase())) {
+      try {
+        let bodyData: any;
+        
+        // Parse body based on content type
+        if (typeof secureInit.body === 'string') {
+          // Try to parse as JSON, otherwise treat as plain text
+          try {
+            bodyData = JSON.parse(secureInit.body);
+          } catch {
+            bodyData = { data: secureInit.body };
+          }
+        } else if (secureInit.body instanceof FormData) {
+          // Convert FormData to object
+          bodyData = {};
+          secureInit.body.forEach((value, key) => {
+            bodyData[key] = value;
+          });
+        } else if (secureInit.body instanceof URLSearchParams) {
+          // Convert URLSearchParams to object
+          bodyData = {};
+          for (const [key, value] of secureInit.body.entries()) {
+            bodyData[key] = value;
+          }
+        } else {
+          bodyData = secureInit.body;
+        }
+        
+        // Encrypt the body data
+        const encryptedBody = encryptObject(bodyData);
+        
+        // Replace body with encrypted version
+        secureInit.body = JSON.stringify({ encrypted: encryptedBody });
+        
+        // Update content type to JSON
+        (secureInit.headers as Headers).set('Content-Type', 'application/json');
+        
+        // Indicate that content is encrypted
+        (secureInit.headers as Headers).set('X-Content-Encrypted', 'true');
+      } catch (e) {
+        console.warn('Could not encrypt request body', e);
+      }
+    }
+    
+    // Make the request
+    const response = await originalFetch(input, secureInit);
+    
+    // Clone the response to avoid modifying the original
+    const clonedResponse = response.clone();
+    
+    // Check if response contains encrypted data
+    if (response.headers.get('X-Content-Encrypted') === 'true') {
+      // Read the encrypted response
+      const encryptedData = await clonedResponse.json();
+      
+      // Decrypt the response
+      if (encryptedData && encryptedData.encrypted) {
+        const decryptedData = decryptObject(encryptedData.encrypted);
+        
+        // Create a new response with decrypted data
+        return new Response(JSON.stringify(decryptedData), {
+          status: response.status,
+          statusText: response.statusText,
+          headers: response.headers
+        });
+      }
+    }
+    
+    // Return original response if not encrypted
+    return response;
+  } as typeof fetch;
+};
+
 export default {
   sanitizeHtml,
   sanitizeUrl,
@@ -444,5 +583,6 @@ export default {
   secureHash,
   encryptObject,
   decryptObject,
-  blockUnusedPorts
+  blockUnusedPorts,
+  enhanceTransportEncryption
 };

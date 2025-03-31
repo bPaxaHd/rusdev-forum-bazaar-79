@@ -63,7 +63,7 @@ const EditCommentDialog = ({
       // Encrypt form data for transmission
       const encryptedData = encryptFormData(formData);
       
-      // Remove the fourth argument as it's causing the TypeScript error
+      // Fixed: Removed the fourth argument to match function signature
       const result = await updateComment(
         formData.commentId, 
         formData.userId, 

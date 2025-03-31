@@ -1,8 +1,7 @@
-
 /**
  * Security middleware for intercepting and securing various operations
  */
-import { sanitizeHtml, sanitizeUrl, decryptObject, encryptObject } from './security';
+import { sanitizeHtml, sanitizeUrl, decryptObject, encryptObject, enhanceTransportEncryption } from './security';
 
 /**
  * Secures user input for forms
@@ -44,41 +43,83 @@ export const secureFormData = <T extends Record<string, any>>(formData: T): T =>
 };
 
 /**
- * Secures and encrypts form data for transmission
+ * Secures and encrypts form data for transmission with enhanced security
  */
 export const encryptFormData = <T extends Record<string, any>>(formData: T): string => {
   // First secure the data (sanitize inputs)
   const securedData = secureFormData(formData);
   
-  // Then encrypt the secured data
-  return encryptObject(securedData);
+  // Add timestamp to prevent replay attacks
+  const dataWithTimestamp = {
+    ...securedData,
+    _timestamp: Date.now(),
+    _nonce: Math.random().toString(36).substring(2, 15)
+  };
+  
+  // Encrypt with strong AES encryption
+  return encryptObject(dataWithTimestamp);
 };
 
 /**
- * Decrypts and validates incoming data
+ * Decrypts and validates incoming data with enhanced security checks
  */
 export const decryptIncomingData = <T extends Record<string, any>>(encryptedData: string): T | null => {
   // Decrypt the data
-  const decryptedData = decryptObject<T>(encryptedData);
+  const decryptedData = decryptObject<T & { _timestamp?: number, _nonce?: string }>(encryptedData);
   
-  // Further validate the decrypted data
-  if (decryptedData) {
-    return secureFormData(decryptedData);
+  if (!decryptedData) {
+    return null;
   }
   
-  return null;
+  // Verify timestamp to prevent replay attacks (data must be recent)
+  if (decryptedData._timestamp) {
+    const currentTime = Date.now();
+    const dataTime = decryptedData._timestamp;
+    
+    // Reject data older than 5 minutes
+    if (currentTime - dataTime > 5 * 60 * 1000) {
+      console.warn('Rejected old data (possible replay attack)');
+      return null;
+    }
+    
+    // Remove timestamp and nonce before returning
+    const { _timestamp, _nonce, ...cleanData } = decryptedData;
+    
+    // Further validate the decrypted data
+    return secureFormData(cleanData as T);
+  }
+  
+  // Further validate the decrypted data
+  return secureFormData(decryptedData);
 };
 
 /**
- * Intercepts and processes fetch responses to handle encrypted data
+ * Enhanced interceptor for fetch responses with improved encryption
  */
 export const setupResponseInterceptor = (): void => {
   const originalFetch = window.fetch;
   
   window.fetch = async function(input: RequestInfo | URL, init?: RequestInit) {
     try {
-      // Make the original request
-      const response = await originalFetch(input, init);
+      // Add encryption headers
+      const secureInit: RequestInit = init || {};
+      if (!secureInit.headers) {
+        secureInit.headers = {};
+      }
+      
+      const headers = new Headers(secureInit.headers);
+      headers.set('X-Secure-Request', 'true');
+      headers.set('X-Request-Time', Date.now().toString());
+      
+      // Unique request ID to prevent replay attacks
+      const requestId = Math.random().toString(36).substring(2, 15) + 
+                       Math.random().toString(36).substring(2, 15);
+      headers.set('X-Request-ID', requestId);
+      
+      secureInit.headers = headers;
+      
+      // Make the original request with security headers
+      const response = await originalFetch(input, secureInit);
       
       // Clone the response so we can read it multiple times
       const clonedResponse = response.clone();
@@ -217,16 +258,23 @@ export const secureDOM = (): void => {
 };
 
 /**
- * Initialize all security middleware
+ * Initialize all security middleware with enhanced encryption
  */
 export const initSecurityMiddleware = (): void => {
   if (typeof window !== 'undefined') {
     // Only run on client-side
     secureDOM();
     setupResponseInterceptor();
+    enhanceTransportEncryption();
+    
+    // Add additional content security policy
+    const meta = document.createElement('meta');
+    meta.httpEquiv = 'Content-Security-Policy';
+    meta.content = "default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self' https://*.supabase.co; img-src 'self' data: https:; style-src 'self' 'unsafe-inline';";
+    document.head.appendChild(meta);
     
     // Log security middleware initialization
-    console.log('Security middleware initialized');
+    console.log('Enhanced security middleware initialized');
   }
 };
 
@@ -238,4 +286,3 @@ export default {
   decryptIncomingData,
   setupResponseInterceptor
 };
-
