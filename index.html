@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -31,6 +30,14 @@
     <meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=()">
     <meta http-equiv="Strict-Transport-Security" content="max-age=31536000; includeSubDomains; preload">
     
+    <!-- DDoS Protection Headers -->
+    <meta http-equiv="Cache-Control" content="max-age=300">
+    <meta name="ddos-protection" content="enabled">
+    
+    <!-- Preconnect to reduce latency for critical resources -->
+    <link rel="preconnect" href="https://bciboexxeayylqcneuqq.supabase.co">
+    <link rel="dns-prefetch" href="https://bciboexxeayylqcneuqq.supabase.co">
+    
     <style>
       body {
         -webkit-user-select: none;
@@ -38,7 +45,120 @@
         -ms-user-select: none;
         user-select: none;
       }
+      
+      /* Attack detection CSS */
+      .ddos-detection {
+        position: fixed;
+        top: -9999px;
+        left: -9999px;
+        z-index: -1;
+        opacity: 0.01;
+        pointer-events: none;
+        animation: detect-frame 0.1s infinite;
+      }
+      
+      @keyframes detect-frame {
+        0% { opacity: 0.01; }
+        100% { opacity: 0.011; }
+      }
     </style>
+    
+    <!-- DDoS Detection Elements -->
+    <script>
+      (function() {
+        // Simple honeypot monitoring for automated attack detection
+        const honeyTokens = ['admin', 'login', 'password', 'config', 'backup'];
+        const honeyParams = new URLSearchParams(window.location.search);
+        
+        for (const token of honeyTokens) {
+          if (honeyParams.has(token)) {
+            // Log potential attack attempt
+            console.warn('Suspicious query parameter detected');
+            
+            // In a real scenario, this would report to a security monitoring system
+            // but for this example we're just storing a flag in sessionStorage
+            sessionStorage.setItem('security_alert', 'suspicious_params');
+          }
+        }
+        
+        // Create honey pot elements that regular users won't interact with
+        // but bots and scrapers might
+        window.addEventListener('DOMContentLoaded', () => {
+          const honeyDiv = document.createElement('div');
+          honeyDiv.className = 'ddos-detection';
+          honeyDiv.id = 'admin-login';
+          honeyDiv.setAttribute('data-sensitive', 'true');
+          
+          const honeyLink = document.createElement('a');
+          honeyLink.href = '/admin-panel';
+          honeyLink.textContent = 'Admin Login';
+          honeyLink.style.opacity = '0.01';
+          honeyLink.id = 'admin-link';
+          
+          // Add event listeners to detect interactions with honeypot elements
+          honeyLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.warn('Honeypot link clicked - possible bot activity');
+            sessionStorage.setItem('security_alert', 'honeypot_triggered');
+          });
+          
+          honeyDiv.appendChild(honeyLink);
+          document.body.appendChild(honeyDiv);
+          
+          // Create decoy form fields that are hidden from regular users
+          const decoyForm = document.createElement('form');
+          decoyForm.style.position = 'absolute';
+          decoyForm.style.left = '-9999px';
+          decoyForm.style.top = '-9999px';
+          decoyForm.id = 'login-form';
+          decoyForm.setAttribute('aria-hidden', 'true');
+          
+          const decoyUsername = document.createElement('input');
+          decoyUsername.type = 'text';
+          decoyUsername.name = 'username';
+          decoyUsername.id = 'admin-username';
+          
+          const decoyPassword = document.createElement('input');
+          decoyPassword.type = 'password';
+          decoyPassword.name = 'password';
+          decoyPassword.id = 'admin-password';
+          
+          decoyForm.appendChild(decoyUsername);
+          decoyForm.appendChild(decoyPassword);
+          document.body.appendChild(decoyForm);
+          
+          // Monitor for interactions with decoy form
+          decoyForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            console.warn('Decoy form submitted - possible bot activity');
+            sessionStorage.setItem('security_alert', 'honeypot_form_submitted');
+          });
+          
+          [decoyUsername, decoyPassword].forEach(field => {
+            field.addEventListener('input', () => {
+              console.warn('Decoy form field interaction - possible bot activity');
+              sessionStorage.setItem('security_alert', 'honeypot_form_interaction');
+            });
+          });
+        });
+        
+        // Simple browser fingerprinting for detecting unusual clients
+        const fingerprint = {
+          userAgent: navigator.userAgent,
+          language: navigator.language,
+          platform: navigator.platform,
+          screenWidth: window.screen.width,
+          screenHeight: window.screen.height,
+          colorDepth: window.screen.colorDepth,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          touchpoints: navigator.maxTouchPoints || 0
+        };
+        
+        // Store fingerprint for comparison
+        sessionStorage.setItem('browser_fingerprint', JSON.stringify(fingerprint));
+      })();
+    </script>
   </head>
 
   <body>
@@ -51,6 +171,31 @@
         // Проверка HTTPS
         if (window.location.protocol === 'http:' && window.location.hostname !== 'localhost') {
           window.location.href = window.location.href.replace('http:', 'https:');
+        }
+        
+        // DDoS protection - Basic request rate limiting
+        const requestTimestamps = JSON.parse(sessionStorage.getItem('request_timestamps') || '[]');
+        const now = Date.now();
+        
+        // Keep only timestamps from the last minute
+        const oneMinuteAgo = now - 60000;
+        const recentRequests = requestTimestamps.filter(time => time > oneMinuteAgo);
+        
+        // Add current request
+        recentRequests.push(now);
+        
+        // Store updated timestamps
+        sessionStorage.setItem('request_timestamps', JSON.stringify(recentRequests));
+        
+        // Check if too many page loads in short period
+        if (recentRequests.length > 20) {
+          console.warn('Possible DoS attack: Too many page refreshes');
+          
+          // In a real system, this would trigger stronger protections
+          if (!sessionStorage.getItem('ddos_warning_shown')) {
+            sessionStorage.setItem('ddos_warning_shown', 'true');
+            alert('Обнаружено слишком много запросов. Пожалуйста, уменьшите частоту обновления страницы.');
+          }
         }
         
         const proxy = document.createElement('script');
@@ -71,5 +216,33 @@
       })();
     </script>
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Additional DDoS protection script -->
+    <script>
+      // Resource timing monitoring to detect performance attacks
+      if (window.performance && window.performance.getEntriesByType) {
+        window.addEventListener('load', () => {
+          // Measure page load performance
+          setTimeout(() => {
+            const resources = window.performance.getEntriesByType('resource');
+            const totalBytes = resources.reduce((total, resource) => {
+              return total + (resource.transferSize || 0);
+            }, 0);
+            
+            // Detect abnormally large resource loads
+            if (totalBytes > 15000000) { // 15MB
+              console.warn('Possible DoS attack: Excessive bandwidth usage');
+              sessionStorage.setItem('security_alert', 'excessive_bandwidth');
+            }
+            
+            // Check for too many resources
+            if (resources.length > 150) {
+              console.warn('Possible DoS attack: Excessive resource count');
+              sessionStorage.setItem('security_alert', 'excessive_resources');
+            }
+          }, 1000);
+        });
+      }
+    </script>
   </body>
 </html>

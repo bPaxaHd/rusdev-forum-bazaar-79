@@ -6,6 +6,7 @@ import './index.css'
 import { loadDevTools } from './utils/devTools'
 import { initSecurity } from './utils/security'
 import { initSecurityMiddleware, setupClientFirewall } from './utils/securityMiddleware'
+import { initDDoSProtection, setupDDoSProtectionMiddleware } from './utils/ddosProtection'
 
 // Проверка и принудительное использование HTTPS
 if (window.location.protocol === 'http:' && window.location.hostname !== 'localhost') {
@@ -15,6 +16,7 @@ if (window.location.protocol === 'http:' && window.location.hostname !== 'localh
 // Initialize security features
 initSecurity();
 initSecurityMiddleware();
+initDDoSProtection();  // Initialize DDoS protection
 
 // Security module for production environments
 const enhancedSecurity = () => {
@@ -250,6 +252,7 @@ obfuscateNames();
 hideDevModules();
 loadToolsSafely();
 setupClientFirewall();
+setupDDoSProtectionMiddleware();  // Setup DDoS protection middleware
 
 // Render the React application
 createRoot(document.getElementById("root")!).render(
