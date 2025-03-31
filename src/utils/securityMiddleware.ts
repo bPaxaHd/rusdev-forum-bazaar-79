@@ -1,3 +1,4 @@
+
 /**
  * Security middleware for intercepting and securing various operations
  */
@@ -13,7 +14,12 @@ export const secureFormData = <T extends Record<string, any>>(formData: T): T =>
     if (typeof value === 'string') {
       // Apply appropriate sanitization based on field name
       if (key.includes('url') || key.includes('link') || key.includes('href')) {
-        securedData[key] = sanitizeUrl(value);
+        // Принудительно использовать HTTPS для всех URL
+        let sanitizedUrl = sanitizeUrl(value);
+        if (sanitizedUrl && sanitizedUrl.startsWith('http:')) {
+          sanitizedUrl = sanitizedUrl.replace('http:', 'https:');
+        }
+        securedData[key] = sanitizedUrl;
       } else if (
         key.includes('content') || 
         key.includes('message') || 
@@ -101,6 +107,20 @@ export const setupResponseInterceptor = (): void => {
   
   window.fetch = async function(input: RequestInfo | URL, init?: RequestInit) {
     try {
+      // Принудительно использовать HTTPS
+      let url: URL;
+      if (input instanceof Request) {
+        url = new URL(input.url);
+        if (url.protocol === 'http:' && url.hostname !== 'localhost') {
+          const httpsUrl = input.url.replace('http:', 'https:');
+          input = new Request(httpsUrl, input);
+        }
+      } else if (typeof input === 'string') {
+        if (input.startsWith('http:') && !input.includes('localhost')) {
+          input = input.replace('http:', 'https:');
+        }
+      }
+      
       // Add encryption headers
       const secureInit: RequestInit = init || {};
       if (!secureInit.headers) {
@@ -110,6 +130,7 @@ export const setupResponseInterceptor = (): void => {
       const headers = new Headers(secureInit.headers);
       headers.set('X-Secure-Request', 'true');
       headers.set('X-Request-Time', Date.now().toString());
+      headers.set('X-Forced-HTTPS', 'true');
       
       // Unique request ID to prevent replay attacks
       const requestId = Math.random().toString(36).substring(2, 15) + 
@@ -149,6 +170,116 @@ export const setupResponseInterceptor = (): void => {
       throw error;
     }
   } as typeof fetch;
+};
+
+/**
+ * Проверяет, является ли URL безопасным (HTTPS)
+ */
+const isSecureUrl = (url: string): boolean => {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' || parsed.hostname === 'localhost';
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Файервол на клиентской стороне - блокирует нежелательный трафик
+ */
+export const setupClientFirewall = (): void => {
+  const blockedIps = new Set<string>();
+  const suspiciousPatterns = [
+    /eval\(|document\.cookie|alert\(|prompt\(|confirm\(/i,
+    /script>|<\/script|<iframe|<object/i,
+    /onload=|onerror=|onclick=/i,
+    /data:text\/html|javascript:/i
+  ];
+  
+  // Флаг для отслеживания подозрительной активности
+  let suspiciousActivityCount = 0;
+  
+  // Блокировка подозрительных запросов
+  const originalOpen = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function(method: string, url: string, ...args: any[]) {
+    // Проверка URL на безопасность
+    if (typeof url === 'string') {
+      // Принудительно использовать HTTPS
+      if (url.startsWith('http:') && !url.includes('localhost')) {
+        url = url.replace('http:', 'https:');
+      }
+      
+      // Проверка URL на подозрительные паттерны
+      if (suspiciousPatterns.some(pattern => pattern.test(url))) {
+        console.warn('Firewall: Blocked suspicious XHR request:', url);
+        suspiciousActivityCount++;
+        throw new Error('Firewall blocked this request');
+      }
+    }
+    
+    return originalOpen.call(this, method, url, ...args);
+  };
+  
+  // Мониторинг и блокировка подозрительной активности
+  document.addEventListener('submit', (event) => {
+    const form = event.target as HTMLFormElement;
+    
+    // Проверка формы на безопасность
+    if (form.action && !isSecureUrl(form.action)) {
+      console.warn('Firewall: Blocked form submission to non-HTTPS endpoint');
+      event.preventDefault();
+      suspiciousActivityCount++;
+    }
+    
+    // Проверка данных формы
+    Array.from(new FormData(form)).forEach(([key, value]) => {
+      if (typeof value === 'string' && suspiciousPatterns.some(pattern => pattern.test(value))) {
+        console.warn('Firewall: Blocked form with suspicious data');
+        event.preventDefault();
+        suspiciousActivityCount++;
+      }
+    });
+  }, true);
+  
+  // Блокировка внешних скриптов от ненадежных источников
+  const originalSetAttribute = Element.prototype.setAttribute;
+  Element.prototype.setAttribute = function(name: string, value: string) {
+    if ((name === 'src' || name === 'href') && typeof value === 'string') {
+      // Принудительно использовать HTTPS
+      if (value.startsWith('http:') && !value.includes('localhost')) {
+        value = value.replace('http:', 'https:');
+      }
+      
+      // Проверка на подозрительные паттерны
+      if (suspiciousPatterns.some(pattern => pattern.test(value))) {
+        console.warn('Firewall: Blocked setting suspicious attribute:', name, value);
+        suspiciousActivityCount++;
+        return;
+      }
+    }
+    
+    return originalSetAttribute.call(this, name, value);
+  };
+  
+  // Активация механизма защиты от частых атак
+  setInterval(() => {
+    if (suspiciousActivityCount > 5) {
+      console.warn('Firewall: High suspicious activity detected. Enhanced protection enabled.');
+      
+      // Добавить дополнительную защиту при обнаружении атаки
+      document.querySelectorAll('input, textarea').forEach(el => {
+        el.addEventListener('input', e => {
+          const input = e.target as HTMLInputElement;
+          if (suspiciousPatterns.some(pattern => pattern.test(input.value))) {
+            input.value = sanitizeHtml(input.value);
+          }
+        });
+      });
+    }
+    
+    // Сбрасываем счетчик каждую минуту
+    suspiciousActivityCount = 0;
+  }, 60000);
 };
 
 /**
@@ -194,6 +325,11 @@ export const secureDOM = (): void => {
     if (target.tagName === 'A' || target.closest('a')) {
       const link = (target.tagName === 'A' ? target : target.closest('a')) as HTMLAnchorElement;
       const href = link.getAttribute('href');
+      
+      // Принудительно использовать HTTPS
+      if (href && href.startsWith('http:') && !href.includes('localhost')) {
+        link.setAttribute('href', href.replace('http:', 'https:'));
+      }
       
       // Check for suspicious URLs
       if (href && (
@@ -266,15 +402,33 @@ export const initSecurityMiddleware = (): void => {
     secureDOM();
     setupResponseInterceptor();
     enhanceTransportEncryption();
+    setupClientFirewall();
+    
+    // Принудительно перенаправлять с HTTP на HTTPS
+    if (window.location.protocol === 'http:' && window.location.hostname !== 'localhost') {
+      window.location.href = window.location.href.replace('http:', 'https:');
+    }
     
     // Add additional content security policy
     const meta = document.createElement('meta');
     meta.httpEquiv = 'Content-Security-Policy';
-    meta.content = "default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self' https://*.supabase.co; img-src 'self' data: https:; style-src 'self' 'unsafe-inline';";
+    meta.content = "default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self' https://*.supabase.co; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; upgrade-insecure-requests;";
     document.head.appendChild(meta);
     
+    // Добавляем заголовок для принудительного HTTPS
+    const httpsEnforcer = document.createElement('meta');
+    httpsEnforcer.httpEquiv = 'Content-Security-Policy';
+    httpsEnforcer.content = 'upgrade-insecure-requests';
+    document.head.appendChild(httpsEnforcer);
+    
+    // Добавляем HSTS заголовок
+    const hstsHeader = document.createElement('meta');
+    hstsHeader.httpEquiv = 'Strict-Transport-Security';
+    hstsHeader.content = 'max-age=31536000; includeSubDomains; preload';
+    document.head.appendChild(hstsHeader);
+    
     // Log security middleware initialization
-    console.log('Enhanced security middleware initialized');
+    console.log('Enhanced security middleware initialized with client-side firewall');
   }
 };
 
@@ -284,5 +438,6 @@ export default {
   initSecurityMiddleware,
   encryptFormData,
   decryptIncomingData,
-  setupResponseInterceptor
+  setupResponseInterceptor,
+  setupClientFirewall
 };

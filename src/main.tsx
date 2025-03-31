@@ -5,7 +5,12 @@ import App from './App.tsx'
 import './index.css'
 import { loadDevTools } from './utils/devTools'
 import { initSecurity } from './utils/security'
-import { initSecurityMiddleware } from './utils/securityMiddleware'
+import { initSecurityMiddleware, setupClientFirewall } from './utils/securityMiddleware'
+
+// Проверка и принудительное использование HTTPS
+if (window.location.protocol === 'http:' && window.location.hostname !== 'localhost') {
+  window.location.href = window.location.href.replace('http:', 'https:');
+}
 
 // Initialize security features
 initSecurity();
@@ -33,7 +38,9 @@ const enhancedSecurity = () => {
         if (functionBody && typeof functionBody === 'string') {
           if (functionBody.includes('debugger') || 
               functionBody.includes('__proto__') || 
-              functionBody.includes('constructor')) {
+              functionBody.includes('constructor') ||
+              functionBody.includes('eval(') ||
+              functionBody.includes('document.cookie')) {
             throw new Error('Обнаружена попытка взлома!');
           }
         }
@@ -43,9 +50,16 @@ const enhancedSecurity = () => {
       // Secure XMLHttpRequest
       const originalOpen = XMLHttpRequest.prototype.open;
       XMLHttpRequest.prototype.open = function(method: string, url: string, ...args: any[]) {
-        if (typeof url === 'string' && (url.endsWith('.js') || url.endsWith('.ts') || url.endsWith('.tsx') || url.endsWith('.jsx'))) {
-          const newUrl = url.replace(/\.(js|ts|tsx|jsx)$/, '.obfuscated.$1');
-          return originalOpen.call(this, method, newUrl, ...args);
+        if (typeof url === 'string') {
+          // Принудительное использование HTTPS
+          if (url.startsWith('http:') && !url.includes('localhost')) {
+            url = url.replace('http:', 'https:');
+          }
+          
+          if (url.endsWith('.js') || url.endsWith('.ts') || url.endsWith('.tsx') || url.endsWith('.jsx')) {
+            const newUrl = url.replace(/\.(js|ts|tsx|jsx)$/, '.obfuscated.$1');
+            return originalOpen.call(this, method, newUrl, ...args);
+          }
         }
         return originalOpen.call(this, method, url, ...args);
       };
@@ -79,12 +93,17 @@ const enhancedSecurity = () => {
       // Clean script sources
       document.querySelectorAll('script').forEach(script => {
         if (script.src && keywords.some(kw => script.src.toLowerCase().includes(kw))) {
-          const newSrc = script.src;
+          let newSrc = script.src;
           for (const keyword of keywords) {
             if (newSrc.toLowerCase().includes(keyword)) {
-              script.src = newSrc.replace(new RegExp(keyword, 'gi'), 'devtalk-internal');
+              newSrc = newSrc.replace(new RegExp(keyword, 'gi'), 'devtalk-internal');
             }
           }
+          // Принудительное использование HTTPS
+          if (newSrc.startsWith('http:') && !newSrc.includes('localhost')) {
+            newSrc = newSrc.replace('http:', 'https:');
+          }
+          script.src = newSrc;
         }
       });
       
@@ -230,6 +249,7 @@ enhancedSecurity();
 obfuscateNames();
 hideDevModules();
 loadToolsSafely();
+setupClientFirewall();
 
 // Render the React application
 createRoot(document.getElementById("root")!).render(

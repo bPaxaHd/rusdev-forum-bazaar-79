@@ -63,7 +63,7 @@ const EditCommentDialog = ({
       // Encrypt form data for transmission
       const encryptedData = encryptFormData(formData);
       
-      // Fixed: Removed the fourth argument to match function signature
+      // Исправление: Удален четвертый аргумент для соответствия сигнатуре функции
       const result = await updateComment(
         formData.commentId, 
         formData.userId, 
