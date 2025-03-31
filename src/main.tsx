@@ -1,4 +1,3 @@
-
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
@@ -16,7 +15,7 @@ if (window.location.protocol === 'http:' && window.location.hostname !== 'localh
 // Initialize security features
 initSecurity();
 initSecurityMiddleware();
-initDDoSProtection();  // Initialize DDoS protection
+initDDoSProtection();
 
 // Security module for production environments
 const enhancedSecurity = () => {
@@ -188,10 +187,12 @@ const obfuscateNames = () => {
   }
 };
 
-// Safely load development tools
+// Безопасная загрузка инструментов разработки
 const loadToolsSafely = async () => {
   try {
-    await loadDevTools();
+    if (import.meta.env.DEV) {
+      await loadDevTools();
+    }
   } catch (e) {
     console.log('Development environment initialized');
   }
@@ -252,7 +253,7 @@ obfuscateNames();
 hideDevModules();
 loadToolsSafely();
 setupClientFirewall();
-setupDDoSProtectionMiddleware();  // Setup DDoS protection middleware
+setupDDoSProtectionMiddleware();
 
 // Render the React application
 createRoot(document.getElementById("root")!).render(
