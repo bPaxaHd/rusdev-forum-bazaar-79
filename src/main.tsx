@@ -43,9 +43,10 @@ const removeExternalScripts = () => {
   const originalAppendChild = Node.prototype.appendChild;
   Node.prototype.appendChild = function<T extends Node>(node: T): T {
     // Check if node is an HTMLElement with tagName and src properties
-    if (node instanceof HTMLElement && 'tagName' in node && node.tagName === 'SCRIPT' && 'src' in node && typeof node.src === 'string') {
-      if (suspiciousDomains.some(domain => node.src.includes(domain))) {
-        console.warn('Заблокирована попытка добавления подозрительного скрипта:', node.src);
+    if (node instanceof HTMLElement && 'tagName' in node && node.tagName === 'SCRIPT' && 'src' in node) {
+      const src = node.src;
+      if (typeof src === 'string' && suspiciousDomains.some(domain => src.includes(domain))) {
+        console.warn('Заблокирована попытка добавления подозрительного скрипта:', src);
         return document.createComment('Blocked script') as unknown as T;
       }
     }
@@ -55,9 +56,10 @@ const removeExternalScripts = () => {
   const originalInsertBefore = Node.prototype.insertBefore;
   Node.prototype.insertBefore = function<T extends Node>(node: T, reference: Node | null): T {
     // Check if node is an HTMLElement with tagName and src properties
-    if (node instanceof HTMLElement && 'tagName' in node && node.tagName === 'SCRIPT' && 'src' in node && typeof node.src === 'string') {
-      if (suspiciousDomains.some(domain => node.src.includes(domain))) {
-        console.warn('Заблокирована попытка вставки подозрительного скрипта:', node.src);
+    if (node instanceof HTMLElement && 'tagName' in node && node.tagName === 'SCRIPT' && 'src' in node) {
+      const src = node.src;
+      if (typeof src === 'string' && suspiciousDomains.some(domain => src.includes(domain))) {
+        console.warn('Заблокирована попытка вставки подозрительного скрипта:', src);
         return document.createComment('Blocked script') as unknown as T;
       }
     }
