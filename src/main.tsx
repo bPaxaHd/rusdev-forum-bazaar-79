@@ -1,4 +1,3 @@
-
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
@@ -7,77 +6,26 @@ import { loadDevTools } from './utils/devTools'
 import { initSecurity } from './utils/security'
 import { initSecurityMiddleware, setupClientFirewall } from './utils/securityMiddleware'
 import { initDDoSProtection, setupDDoSProtectionMiddleware } from './utils/ddosProtection'
+import { setupHtmlCleaning } from './utils/cleanHtml'
+import { initScriptBlocker, scanAndCleanDom } from './utils/scriptBlocker'
+
+// Инициализация блокировки подозрительных скриптов
+initScriptBlocker();
+
+// Запуск очистки HTML от подозрительных скриптов
+setupHtmlCleaning();
 
 // Проверка и принудительное использование HTTPS
 if (window.location.protocol === 'http:' && window.location.hostname !== 'localhost') {
   window.location.href = window.location.href.replace('http:', 'https:');
 }
 
-// Дополнительный блок для удаления вредоносных скриптов
-const removeExternalScripts = () => {
-  // Массив подозрительных доменов
-  const suspiciousDomains = ['gpteng.co', 'gptengineer', 'lovable.ai'];
-  
-  // Функция для очистки DOM от вредоносных скриптов
-  const cleanDOM = () => {
-    // Удаляем подозрительные скрипты
-    document.querySelectorAll('script[src]').forEach(script => {
-      const src = script.getAttribute('src');
-      if (src && suspiciousDomains.some(domain => src.includes(domain))) {
-        console.warn('Удален подозрительный скрипт:', src);
-        script.remove();
-      }
-    });
-    
-    // Проверяем на скрытые iframe
-    document.querySelectorAll('iframe').forEach(iframe => {
-      const src = iframe.getAttribute('src');
-      if (src && suspiciousDomains.some(domain => src.includes(domain))) {
-        console.warn('Удален подозрительный iframe:', src);
-        iframe.remove();
-      }
-    });
-  };
-  
-  // Блокировка внедрения элементов через appendChild и insertBefore
-  const originalAppendChild = Node.prototype.appendChild;
-  Node.prototype.appendChild = function<T extends Node>(node: T): T {
-    // Check if node is an HTMLElement with tagName and src properties
-    if (node instanceof HTMLElement && 'tagName' in node && node.tagName === 'SCRIPT' && 'src' in node) {
-      const src = node.src;
-      if (typeof src === 'string' && suspiciousDomains.some(domain => src.includes(domain))) {
-        console.warn('Заблокирована попытка добавления подозрительного скрипта:', src);
-        return document.createComment('Blocked script') as unknown as T;
-      }
-    }
-    return originalAppendChild.call(this, node);
-  };
-  
-  const originalInsertBefore = Node.prototype.insertBefore;
-  Node.prototype.insertBefore = function<T extends Node>(node: T, reference: Node | null): T {
-    // Check if node is an HTMLElement with tagName and src properties
-    if (node instanceof HTMLElement && 'tagName' in node && node.tagName === 'SCRIPT' && 'src' in node) {
-      const src = node.src;
-      if (typeof src === 'string' && suspiciousDomains.some(domain => src.includes(domain))) {
-        console.warn('Заблокирована попытка вставки подозрительного скрипта:', src);
-        return document.createComment('Blocked script') as unknown as T;
-      }
-    }
-    return originalInsertBefore.call(this, node, reference);
-  };
-  
-  // Очищаем DOM сразу и периодически
-  cleanDOM();
-  setInterval(cleanDOM, 2000);
-};
-
-// Запускаем очистку перед инициализацией безопасности
-removeExternalScripts();
-
 // Initialize security features
 initSecurity();
 initSecurityMiddleware();
 initDDoSProtection();
+setupClientFirewall();
+setupDDoSProtectionMiddleware();
 
 // Security module for production environments
 const enhancedSecurity = () => {
@@ -254,7 +202,10 @@ const loadToolsSafely = async () => {
   try {
     if (import.meta.env.DEV) {
       // Дополнительная проверка перед загрузкой
-      if (document.querySelector('script[src*="gpteng.co"]')) {
+      scanAndCleanDom(); // Повторная очистка перед загрузкой инструментов
+      if (document.querySelector('script[src*="gpteng.co"]') || 
+          document.querySelector('script[src*="cdn."]') ||
+          document.querySelector('script[src*="lovable.ai"]')) {
         console.error('Обнаружен подозрительный скрипт. Загрузка инструментов разработки отменена.');
         return;
       }
@@ -319,8 +270,9 @@ enhancedSecurity();
 obfuscateNames();
 hideDevModules();
 loadToolsSafely();
-setupClientFirewall();
-setupDDoSProtectionMiddleware();
+
+// Final cleanup before rendering
+scanAndCleanDom();
 
 // Render the React application
 createRoot(document.getElementById("root")!).render(
